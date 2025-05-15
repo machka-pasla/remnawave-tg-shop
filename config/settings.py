@@ -32,9 +32,9 @@ class Settings(BaseSettings):
         default=None,
         description="Default email for YooKassa receipts (REQUIRED for 54-FZ)")
     YOOKASSA_VAT_CODE: int = Field(
-        default=6,
+        default=1,
         description=
-        "YooKassa VAT code (e.g., 1=20%, 2=10%, 4=0%, 6=No VAT - check YooKassa docs!)"
+        "YooKassa VAT code (e.g., 1=No VAT - check YooKassa docs!)"
     )
     YOOKASSA_PAYMENT_MODE: str = Field(
         default="full_prepayment",
