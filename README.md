@@ -1,4 +1,5 @@
 
+  
 # Remnawave Subscription Sales Telegram Bot
 
 This Telegram bot is designed to automate the sale and management of subscriptions for a **Remnawave panel**. It integrates with the Remnawave API for user and subscription management and uses YooKassa for processing payments.
@@ -163,6 +164,8 @@ services:
     build: .
     container_name: vpn-shop
     hostname: vpn-shop
+    env_file:
+      - .env
     networks:
       - remnawave-network # Ensure this external network exists or define it
     volumes:
