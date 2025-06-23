@@ -113,3 +113,23 @@ async def get_recent_payment_logs_with_user(session: AsyncSession,
         Payment.created_at.desc()).limit(limit).offset(offset))
     result = await session.execute(stmt)
     return result.scalars().all()
+
+
+async def update_provider_payment_and_status(
+        session: AsyncSession, payment_db_id: int,
+        provider_payment_id: str, new_status: str) -> Optional[Payment]:
+    payment = await get_payment_by_db_id(session, payment_db_id)
+    if payment:
+        payment.status = new_status
+        payment.provider_payment_id = provider_payment_id
+        payment.updated_at = func.now()
+        await session.flush()
+        await session.refresh(payment)
+        logging.info(
+            f"Payment record {payment.payment_id} updated with provider id {provider_payment_id} and status {new_status}."
+        )
+    else:
+        logging.warning(
+            f"Payment record with DB ID {payment_db_id} not found for provider update."
+        )
+    return payment

@@ -22,9 +22,11 @@
   "select_subscription_period": "Выберите срок подписки:",
   "no_subscription_options_available": "В данный момент нет доступных вариантов подписки.",
   "subscribe_for_months_button": "{months} мес. - {price} {currency_symbol}",
-  "confirm_subscription_prompt": "Подтвердите покупку подписки:\nСрок: {months} мес.\nЦена: {price} {currency_symbol}",
+  "choose_payment_method": "Выберите способ оплаты:",
   "pay_button": "💳 Оплатить",
-  "confirm_payment_button": "✅ Да ({price} {currency_symbol})",
+  "pay_with_yookassa_button": "💳 ЮKassa",
+  "pay_with_tribute_button": "❤️ Tribute",
+  "pay_with_stars_button": "🌟 Звезды Telegram",
   "cancel_button": "❌ Отмена",
   "payment_description_subscription": "Оплата подписки на {months} мес.",
   "payment_service_unavailable": "Платежный сервис временно недоступен. Пожалуйста, попробуйте позже.",
@@ -201,6 +203,7 @@
   "stub_page_display": "Страница",
 
   "subscription_ending_soon_notification": "👋 Привет, {user_name}!\n\n⏳ Ваша подписка на VPN истекает {end_date} (через {days_left} дн.).\n\nЧтобы не потерять доступ, пожалуйста, продлите ее заранее в главном меню бота.",
+  "subscription_cancelled_notification": "Ваша подписка отменена. Доступ сохранится до конца оплаченного периода.",
 
   "error_unknown": "Произошла неизвестная ошибка."
 }

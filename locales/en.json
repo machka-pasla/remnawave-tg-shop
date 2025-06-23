@@ -22,9 +22,11 @@
   "select_subscription_period": "Select subscription period:",
   "no_subscription_options_available": "No subscription options available at the moment.",
   "subscribe_for_months_button": "{months} mo. - {price} {currency_symbol}",
-  "confirm_subscription_prompt": "Confirm subscription purchase:\nDuration: {months} mo.\nPrice: {price} {currency_symbol}",
+  "choose_payment_method": "Choose payment method:",
   "pay_button": "💳 Pay",
-  "confirm_payment_button": "✅ Yes ({price} {currency_symbol})",
+  "pay_with_yookassa_button": "💳 YooKassa",
+  "pay_with_tribute_button": "❤️ Tribute",
+  "pay_with_stars_button": "🌟 Telegram Stars",
   "cancel_button": "❌ Cancel",
   "payment_description_subscription": "Subscription payment for {months} mo.",
   "payment_service_unavailable": "Payment service temporarily unavailable. Please try again later.",
@@ -201,6 +203,7 @@
   "stub_page_display": "Page",
 
   "subscription_ending_soon_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends on {end_date} (in {days_left} days).\n\nTo avoid interruption, please renew it in the main menu.",
+  "subscription_cancelled_notification": "Your recurring subscription was cancelled. You will keep access until the paid period ends.",
 
   "error_unknown": "An unknown error occurred."
 }
