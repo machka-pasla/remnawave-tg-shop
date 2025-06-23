@@ -105,7 +105,8 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
             subscription_months,
             payment_value,
             payment_db_id,
-            promo_code_id_from_payment=promo_code_id)
+            promo_code_id_from_payment=promo_code_id,
+            provider="yookassa")
 
         if not activation_details or not activation_details.get('end_date'):
             logging.error(

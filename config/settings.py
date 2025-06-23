@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     PRICE_6_MONTHS: Optional[int] = Field(default=None)
     PRICE_12_MONTHS: Optional[int] = Field(default=None)
 
+    STARS_PRICE_1_MONTH: Optional[int] = Field(default=None)
+    STARS_PRICE_3_MONTHS: Optional[int] = Field(default=None)
+    STARS_PRICE_6_MONTHS: Optional[int] = Field(default=None)
+    STARS_PRICE_12_MONTHS: Optional[int] = Field(default=None)
+
+
+    TRIBUTE_LINK_1_MONTH: Optional[str] = Field(default=None)
+    TRIBUTE_LINK_3_MONTHS: Optional[str] = Field(default=None)
+    TRIBUTE_LINK_6_MONTHS: Optional[str] = Field(default=None)
+    TRIBUTE_LINK_12_MONTHS: Optional[str] = Field(default=None)
+    TRIBUTE_API_KEY: Optional[str] = Field(default=None)
+
     SUBSCRIPTION_EXPIRATION_NOTIFICATION_DAYS: int = Field(default=7)
     SUBSCRIPTION_NOTIFICATION_HOUR_UTC: int = Field(default=9)
     SUBSCRIPTION_NOTIFICATION_MINUTE_UTC: int = Field(default=0)
@@ -143,18 +155,58 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
+    def tribute_webhook_path(self) -> str:
+        return "/webhook/tribute"
+
+    @computed_field
+    @property
+    def tribute_full_webhook_url(self) -> Optional[str]:
+        if self.YOOKASSA_WEBHOOK_BASE_URL:
+            return f"{self.YOOKASSA_WEBHOOK_BASE_URL.rstrip('/')}{self.tribute_webhook_path}"
+        return None
+
+    @computed_field
+    @property
     def subscription_options(self) -> Dict[int, float]:
         options: Dict[int, float] = {}
 
         if self.PRICE_1_MONTH is not None:
-            options[1] = float(self.PRICE_1_MONTH / 100.0)
+            options[1] = float(self.PRICE_1_MONTH)
         if self.PRICE_3_MONTHS is not None:
-            options[3] = float(self.PRICE_3_MONTHS / 100.0)
+            options[3] = float(self.PRICE_3_MONTHS)
         if self.PRICE_6_MONTHS is not None:
-            options[6] = float(self.PRICE_6_MONTHS / 100.0)
+            options[6] = float(self.PRICE_6_MONTHS)
         if self.PRICE_12_MONTHS is not None:
-            options[12] = float(self.PRICE_12_MONTHS / 100.0)
+            options[12] = float(self.PRICE_12_MONTHS)
         return options
+
+    @computed_field
+    @property
+    def stars_subscription_options(self) -> Dict[int, int]:
+        options: Dict[int, int] = {}
+        if self.STARS_PRICE_1_MONTH is not None:
+            options[1] = self.STARS_PRICE_1_MONTH
+        if self.STARS_PRICE_3_MONTHS is not None:
+            options[3] = self.STARS_PRICE_3_MONTHS
+        if self.STARS_PRICE_6_MONTHS is not None:
+            options[6] = self.STARS_PRICE_6_MONTHS
+        if self.STARS_PRICE_12_MONTHS is not None:
+            options[12] = self.STARS_PRICE_12_MONTHS
+        return options
+
+    @computed_field
+    @property
+    def tribute_payment_links(self) -> Dict[int, str]:
+        links: Dict[int, str] = {}
+        if self.TRIBUTE_LINK_1_MONTH:
+            links[1] = self.TRIBUTE_LINK_1_MONTH
+        if self.TRIBUTE_LINK_3_MONTHS:
+            links[3] = self.TRIBUTE_LINK_3_MONTHS
+        if self.TRIBUTE_LINK_6_MONTHS:
+            links[6] = self.TRIBUTE_LINK_6_MONTHS
+        if self.TRIBUTE_LINK_12_MONTHS:
+            links[12] = self.TRIBUTE_LINK_12_MONTHS
+        return links
 
     @computed_field
     @property

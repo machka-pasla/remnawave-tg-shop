@@ -70,6 +70,8 @@ class Subscription(Base):
     traffic_limit_bytes = Column(BigInteger, nullable=True)
     traffic_used_bytes = Column(BigInteger, nullable=True)
     last_notification_sent = Column(DateTime(timezone=True), nullable=True)
+    provider = Column(String, nullable=True)
+    skip_notifications = Column(Boolean, default=False)
 
     user = relationship("User", back_populates="subscriptions")
 
@@ -89,6 +91,8 @@ class Payment(Base):
                                  unique=True,
                                  index=True,
                                  nullable=True)
+    provider_payment_id = Column(String, unique=True, nullable=True)
+    provider = Column(String, nullable=False, default="yookassa", index=True)
     idempotence_key = Column(String, unique=True, nullable=True)
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=False)

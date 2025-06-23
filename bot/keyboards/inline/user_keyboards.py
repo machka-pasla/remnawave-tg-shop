@@ -108,16 +108,20 @@ def get_subscription_options_keyboard(subscription_options: Dict[
     return builder.as_markup()
 
 
-def get_confirm_subscription_keyboard(months: int, price: float,
-                                      currency_symbol_val: str, lang: str,
-                                      i18n_instance) -> InlineKeyboardMarkup:
+def get_payment_method_keyboard(months: int, price: float,
+                                tribute_url: Optional[str],
+                                stars_price: Optional[int],
+                                currency_symbol_val: str, lang: str,
+                                i18n_instance) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
-    confirm_text = _(key="confirm_payment_button",
-                     price=price,
-                     currency_symbol=currency_symbol_val)
-    builder.button(text=confirm_text,
-                   callback_data=f"confirm_sub:{months}:{price}")
+    if stars_price is not None:
+        builder.button(text=_("pay_with_stars_button"),
+                       callback_data=f"pay_stars:{months}:{stars_price}")
+    if tribute_url:
+        builder.button(text=_("pay_with_tribute_button"), url=tribute_url)
+    builder.button(text=_("pay_with_yookassa_button"),
+                   callback_data=f"pay_yk:{months}:{price}")
     builder.button(text=_(key="cancel_button"),
                    callback_data="main_action:subscribe")
     builder.adjust(1)

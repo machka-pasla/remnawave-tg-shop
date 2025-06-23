@@ -318,7 +318,8 @@ class SubscriptionService:
         months: int,
         payment_amount: float,
         payment_db_id: int,
-        promo_code_id_from_payment: Optional[int] = None
+        promo_code_id_from_payment: Optional[int] = None,
+        provider: str = "yookassa"
     ) -> Optional[Dict[str, Any]]:
 
         db_user = await user_dal.get_user_by_id(session, user_id)
@@ -386,6 +387,8 @@ class SubscriptionService:
             "status_from_panel": "ACTIVE",
             "traffic_limit_bytes":
             self.settings.PANEL_USER_DEFAULT_TRAFFIC_BYTES,
+            "provider": provider,
+            "skip_notifications": provider == "tribute",
         }
         try:
             new_or_updated_sub = await subscription_dal.upsert_subscription(
@@ -601,7 +604,7 @@ class SubscriptionService:
             session, days_threshold)
         results = []
         for sub_model in subs_models_with_users:
-            if sub_model.user and sub_model.end_date:
+            if sub_model.user and sub_model.end_date and not sub_model.skip_notifications:
                 days_left = (sub_model.end_date - datetime.now(
                     timezone.utc)).total_seconds() / (24 * 3600)
                 results.append({
