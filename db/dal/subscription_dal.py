@@ -156,7 +156,9 @@ async def get_subscriptions_near_expiration(
     threshold_date = now_utc + timedelta(days=days_threshold)
 
     stmt = (select(Subscription).join(Subscription.user).where(
-        Subscription.is_active == True, Subscription.end_date > now_utc,
+        Subscription.is_active == True,
+        Subscription.skip_notifications == False,
+        Subscription.end_date > now_utc,
         Subscription.end_date <= threshold_date,
         or_(
             Subscription.last_notification_sent == None,
@@ -203,3 +205,14 @@ async def find_subscription_for_notification_update(
         <= subscription_end_date_to_match + timedelta(seconds=1)).limit(1)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def set_skip_notifications_for_provider(
+        session: AsyncSession, user_id: int, provider: str,
+        skip: bool) -> int:
+    stmt = (update(Subscription).where(
+        Subscription.user_id == user_id,
+        Subscription.is_active == True,
+        Subscription.provider == provider).values(skip_notifications=skip))
+    result = await session.execute(stmt)
+    return result.rowcount

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config.settings import Settings
 from db.dal import payment_dal
 from bot.keyboards.inline.user_keyboards import (
-    get_subscription_options_keyboard, get_confirm_subscription_keyboard,
+    get_subscription_options_keyboard, get_payment_method_keyboard,
     get_payment_url_keyboard, get_back_to_main_menu_markup)
 from bot.services.payment_service import YooKassaService
 from bot.services.subscription_service import SubscriptionService
@@ -99,28 +99,31 @@ async def select_subscription_period_callback_handler(
         return
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
-    confirmation_text_content = get_text("confirm_subscription_prompt",
-                                         months=months,
-                                         price=f"{price_rub:.2f}",
-                                         currency_symbol=currency_symbol_val)
-    reply_markup = get_confirm_subscription_keyboard(months, price_rub,
-                                                     currency_symbol_val,
-                                                     current_lang, i18n)
+    text_content = get_text("choose_payment_method")
+    tribute_url = settings.tribute_payment_links.get(months)
+    reply_markup = get_payment_method_keyboard(
+        months,
+        price_rub,
+        tribute_url,
+        currency_symbol_val,
+        current_lang,
+        i18n,
+    )
 
     try:
-        await callback.message.edit_text(confirmation_text_content,
+        await callback.message.edit_text(text_content,
                                          reply_markup=reply_markup)
     except Exception as e_edit:
         logging.warning(
-            f"Edit message for subscription confirmation failed: {e_edit}. Sending new one."
+            f"Edit message for payment method selection failed: {e_edit}. Sending new one."
         )
-        await callback.message.answer(confirmation_text_content,
+        await callback.message.answer(text_content,
                                       reply_markup=reply_markup)
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("confirm_sub:"))
-async def confirm_subscription_callback_handler(
+@router.callback_query(F.data.startswith("pay_yk:"))
+async def pay_yk_callback_handler(
         callback: types.CallbackQuery, settings: Settings, i18n_data: dict,
         yookassa_service: YooKassaService, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
@@ -151,7 +154,7 @@ async def confirm_subscription_callback_handler(
         price_rub = float(price_str)
     except (ValueError, IndexError):
         logging.error(
-            f"Invalid confirmation data in callback: {callback.data}")
+            f"Invalid pay_yk data in callback: {callback.data}")
         await callback.answer(get_text("error_try_again"), show_alert=True)
         return
 
