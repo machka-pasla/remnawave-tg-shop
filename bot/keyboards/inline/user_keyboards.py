@@ -153,6 +153,19 @@ def get_back_to_main_menu_markup(lang: str,
     return builder.as_markup()
 
 
+def get_autorenew_toggle_keyboard(lang: str, i18n_instance,
+                                   enabled: bool) -> InlineKeyboardMarkup:
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+    if enabled:
+        builder.button(text=_("toggle_autorenew_off"), callback_data="autorenew:disable")
+    else:
+        builder.button(text=_("toggle_autorenew_on"), callback_data="autorenew:enable")
+    builder.row(
+        InlineKeyboardButton(text=_("back_to_main_menu_button"), callback_data="main_action:back_to_main"))
+    return builder.as_markup()
+
+
 def get_user_banned_keyboard(support_link: Optional[str], lang: str,
                              i18n_instance) -> Optional[InlineKeyboardMarkup]:
     if not support_link:

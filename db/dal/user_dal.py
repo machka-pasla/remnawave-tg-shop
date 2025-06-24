@@ -77,6 +77,22 @@ async def set_user_ban_status(session: AsyncSession, user_id: int,
     return False
 
 
+async def set_auto_renew_status(session: AsyncSession, user_id: int,
+                                enabled: bool) -> bool:
+    stmt = update(User).where(User.user_id == user_id).values(
+        auto_renew_enabled=enabled)
+    result = await session.execute(stmt)
+    return result.rowcount > 0
+
+
+async def update_yk_payment_method(session: AsyncSession, user_id: int,
+                                   method_id: str) -> bool:
+    stmt = update(User).where(User.user_id == user_id).values(
+        yk_payment_method_id=method_id)
+    result = await session.execute(stmt)
+    return result.rowcount > 0
+
+
 async def get_banned_users_paginated(session: AsyncSession, limit: int,
                                      offset: int) -> Tuple[List[User], int]:
     stmt_users = select(User).where(User.is_banned == True).order_by(

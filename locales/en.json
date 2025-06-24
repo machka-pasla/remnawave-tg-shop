@@ -202,5 +202,12 @@
 
   "subscription_ending_soon_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends on {end_date} (in {days_left} days).\n\nTo avoid interruption, please renew it in the main menu.",
 
+  "autorenew_enabled_text": "Auto-renewal is <b>ON</b>. Use the button below to disable it.",
+  "autorenew_disabled_text": "Auto-renewal is <b>OFF</b>. Use the button below to enable it.",
+  "toggle_autorenew_off": "❌ Disable Auto-Renew",
+  "toggle_autorenew_on": "✅ Enable Auto-Renew",
+  "subscription_renewed": "✅ Subscription renewed automatically!",
+  "autorenew_failed": "❌ Failed to charge for auto-renewal. Please pay manually.",
+
   "error_unknown": "An unknown error occurred."
 }

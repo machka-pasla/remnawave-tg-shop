@@ -7,10 +7,11 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
-from db.dal import payment_dal
+from db.dal import payment_dal, user_dal
 from bot.keyboards.inline.user_keyboards import (
     get_subscription_options_keyboard, get_confirm_subscription_keyboard,
-    get_payment_url_keyboard, get_back_to_main_menu_markup)
+    get_payment_url_keyboard, get_back_to_main_menu_markup,
+    get_autorenew_toggle_keyboard)
 from bot.services.payment_service import YooKassaService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
@@ -330,7 +331,9 @@ async def my_subscription_command_handler(
             else get_text("traffic_na")
         )
     )
-    markup = get_back_to_main_menu_markup(current_lang, i18n)
+    auto_enabled = active.get("auto_renew_enabled", False)
+    text += "\n\n" + get_text("autorenew_enabled_text" if auto_enabled else "autorenew_disabled_text")
+    markup = get_autorenew_toggle_keyboard(current_lang, i18n, auto_enabled)
 
     if isinstance(event, types.CallbackQuery):
         await event.answer()
@@ -352,3 +355,16 @@ async def connect_command_handler(message: types.Message, i18n_data: dict,
     await my_subscription_command_handler(message, i18n_data, settings,
                                           panel_service, subscription_service,
                                           session, bot)
+
+
+@router.callback_query(F.data.startswith("autorenew:"))
+async def autorenew_toggle_callback(callback: types.CallbackQuery, session: AsyncSession,
+                                    i18n_data: dict, settings: Settings,
+                                    panel_service: PanelApiService,
+                                    subscription_service: SubscriptionService,
+                                    bot: Bot):
+    enable = callback.data.split(":")[1] == "enable"
+    await user_dal.set_auto_renew_status(session, callback.from_user.id, enable)
+    await my_subscription_command_handler(callback, i18n_data, settings, panel_service,
+                                          subscription_service, session, bot)
+    await callback.answer()

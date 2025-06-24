@@ -69,6 +69,12 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
 
             return
 
+        payment_method_info = payment_info_from_webhook.get("payment_method", {})
+        method_id = payment_method_info.get("id") if isinstance(payment_method_info, dict) else None
+        if method_id:
+            await user_dal.update_yk_payment_method(session, user_id, method_id)
+            await user_dal.set_auto_renew_status(session, user_id, True)
+
     except (TypeError, ValueError) as e:
         logging.error(
             f"Invalid metadata format for payment processing: {metadata} - {e}"

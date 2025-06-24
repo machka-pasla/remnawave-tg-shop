@@ -24,6 +24,8 @@ class User(Base):
     referred_by_id = Column(BigInteger,
                             ForeignKey("users.user_id"),
                             nullable=True)
+    yk_payment_method_id = Column(String, nullable=True)
+    auto_renew_enabled = Column(Boolean, default=True)
 
     referrer = relationship("User", remote_side=[user_id], backref="referrals")
     subscriptions = relationship("Subscription",

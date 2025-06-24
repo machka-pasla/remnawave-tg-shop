@@ -191,6 +191,40 @@ class YooKassaService:
             logging.error(
                 "YooKassa is not configured. Cannot get payment info.")
             return None
+
+    async def create_recurring_payment(
+            self,
+            amount: float,
+            currency: str,
+            description: str,
+            metadata: Dict[str, Any],
+            payment_method_id: str) -> Optional[Dict[str, Any]]:
+        if not self.configured:
+            logging.error("YooKassa not configured. Cannot create recurring payment.")
+            return None
+        try:
+            builder = PaymentRequestBuilder()
+            builder.set_amount({"value": str(round(amount, 2)), "currency": currency.upper()})
+            builder.set_payment_method_id(payment_method_id)
+            builder.set_capture(True)
+            builder.set_description(description)
+            builder.set_metadata(metadata)
+
+            idempotence_key = str(uuid.uuid4())
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, lambda: YooKassaPayment.create(builder.build(), idempotence_key))
+
+            return {
+                "id": response.id,
+                "status": response.status,
+                "paid": response.paid,
+                "amount_value": float(response.amount.value),
+                "amount_currency": response.amount.currency,
+            }
+        except Exception as e:
+            logging.error(f"YooKassa recurring payment failed: {e}", exc_info=True)
+            return None
         try:
             logging.info(
                 f"Fetching payment info from YooKassa for ID: {payment_id_in_yookassa}"

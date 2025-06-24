@@ -160,8 +160,9 @@ async def get_subscriptions_near_expiration(
         Subscription.end_date <= threshold_date,
         or_(
             Subscription.last_notification_sent == None,
-            func.date(Subscription.last_notification_sent)
-            < func.date(now_utc))).order_by(
+            func.date(Subscription.last_notification_sent) < func.date(now_utc)),
+        or_(User.auto_renew_enabled == False,
+            User.yk_payment_method_id == None)).order_by(
                 Subscription.end_date.asc()).options(
                     selectinload(Subscription.user)))
     result = await session.execute(stmt)
@@ -203,3 +204,19 @@ async def find_subscription_for_notification_update(
         <= subscription_end_date_to_match + timedelta(seconds=1)).limit(1)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_subscriptions_for_autorenew(
+        session: AsyncSession,
+        days_before: int = 1) -> List[Subscription]:
+    now_utc = datetime.now(timezone.utc)
+    target_date = now_utc + timedelta(days=days_before)
+    stmt = (select(Subscription).join(Subscription.user).where(
+        Subscription.is_active == True,
+        Subscription.end_date > now_utc,
+        Subscription.end_date <= target_date,
+        User.auto_renew_enabled == True,
+        User.yk_payment_method_id != None).options(
+            selectinload(Subscription.user)))
+    result = await session.execute(stmt)
+    return result.scalars().all()

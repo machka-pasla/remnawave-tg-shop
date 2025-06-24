@@ -100,7 +100,7 @@ async def on_startup_configured(dispatcher: Dispatcher):
         try:
             await schedule_subscription_notifications(
                 bot, settings, i18n_instance, scheduler, panel_service,
-                async_session_factory)
+                async_session_factory, yookassa_service)
             scheduler.start()
             dispatcher["scheduler"] = scheduler
             logging.info("STARTUP: APScheduler started.")

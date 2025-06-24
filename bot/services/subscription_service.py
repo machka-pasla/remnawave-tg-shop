@@ -527,7 +527,9 @@ class SubscriptionService:
                     "user_bot_username":
                     db_user.username,
                     "is_panel_data":
-                    False
+                    False,
+                    "auto_renew_enabled": db_user.auto_renew_enabled,
+                    "payment_method_saved": bool(db_user.yk_payment_method_id)
                 }
             return None
 
@@ -591,7 +593,9 @@ class SubscriptionService:
             "user_bot_username":
             db_user.username,
             "is_panel_data":
-            True
+            True,
+            "auto_renew_enabled": db_user.auto_renew_enabled,
+            "payment_method_saved": bool(db_user.yk_payment_method_id)
         }
 
     async def get_subscriptions_ending_soon(
@@ -620,6 +624,12 @@ class SubscriptionService:
                     sub_model.end_date
                 })
         return results
+
+    async def get_autorenew_candidates(
+            self, session: AsyncSession,
+            days_before: int = 1) -> List[Subscription]:
+        return await subscription_dal.get_subscriptions_for_autorenew(
+            session, days_before)
 
     async def update_last_notification_sent(self, session: AsyncSession,
                                             user_id: int,
