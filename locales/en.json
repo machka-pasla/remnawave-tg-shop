@@ -198,6 +198,7 @@
   "sync_completed_with_errors_details": "Checked: {total_checked} entries.\nUsers synced/updated: {users_synced}.\nSubscriptions synced/updated: {subs_synced}.\nErrors: {errors_count}.\n\nFirst errors:\n{error_details_preview}",
   "no_errors_placeholder": "none",
   "admin_sync_initiated_from_panel": "Sync initiated...",
+  "admin_panel_user_creation_failed": "❌ Failed to create panel user for TG ID {user_id}. Panel unreachable?",
   "error_displaying_logs_too_long": "Error: logs too long to display in one message. Try viewing logs for a specific user.",
   "error_displaying_statistics": "Error displaying statistics.",
   "stub_page_display": "Page",

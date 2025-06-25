@@ -198,6 +198,7 @@
   "sync_completed_with_errors_details": "Проверено: {total_checked} записей.\nПользователей синхронизировано/обновлено: {users_synced}.\nПодписок синхронизировано/обновлено: {subs_synced}.\nОшибок: {errors_count}.\n\nПервые ошибки:\n{error_details_preview}",
   "no_errors_placeholder": "нет",
   "admin_sync_initiated_from_panel": "Синхронизация запущена...",
+  "admin_panel_user_creation_failed": "❌ Не удалось создать пользователя на панели для TG ID {user_id}. Панель недоступна?",
   "error_displaying_logs_too_long": "Ошибка: логи слишком длинные для отображения одним сообщением. Попробуйте найти логи по конкретному пользователю.",
   "error_displaying_statistics": "Ошибка отображения статистики.",
   "stub_page_display": "Страница",

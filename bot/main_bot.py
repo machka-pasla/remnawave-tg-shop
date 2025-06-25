@@ -43,14 +43,17 @@ class DBSessionMiddleware(BaseMiddleware):
         super().__init__()
         self.async_session_factory = async_session_factory
 
-    async def __call__(self, handler: Callable[[Update, Dict[str, Any]],
-                                               Awaitable[Any]], event: Update,
-                       data: Dict[str, Any]) -> Any:
+    async def __call__(
+        self,
+        handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
+        event: Update,
+        data: Dict[str, Any],
+    ) -> Any:
         if self.async_session_factory is None:
-            logging.critical(
-                "DBSessionMiddleware: async_session_factory is None!")
+            logging.critical("DBSessionMiddleware: async_session_factory is None!")
             raise RuntimeError(
-                "async_session_factory not provided to DBSessionMiddleware")
+                "async_session_factory not provided to DBSessionMiddleware"
+            )
 
         async with self.async_session_factory() as session:
             data["session"] = session
@@ -62,8 +65,8 @@ class DBSessionMiddleware(BaseMiddleware):
             except Exception:
                 await session.rollback()
                 logging.error(
-                    "DBSessionMiddleware: Exception caused rollback.",
-                    exc_info=True)
+                    "DBSessionMiddleware: Exception caused rollback.", exc_info=True
+                )
                 raise
 
 
@@ -95,25 +98,29 @@ async def on_startup_configured(dispatcher: Dispatcher):
     existing_scheduler: Optional[AsyncIOScheduler] = dispatcher.get("scheduler")
 
     if existing_scheduler and existing_scheduler.running:
-        logging.warning(
-            "STARTUP: Scheduler already running, skipping initialization.")
+        logging.warning("STARTUP: Scheduler already running, skipping initialization.")
     else:
         scheduler = AsyncIOScheduler(timezone="UTC")
         try:
             await schedule_subscription_notifications(
-                bot, settings, i18n_instance, scheduler, panel_service,
-                async_session_factory)
+                bot,
+                settings,
+                i18n_instance,
+                scheduler,
+                panel_service,
+                async_session_factory,
+            )
             scheduler.start()
             dispatcher["scheduler"] = scheduler
             logging.info("STARTUP: APScheduler started.")
         except Exception as e:
-            logging.error(
-                f"STARTUP: Failed to start APScheduler: {e}", exc_info=True)
+            logging.error(f"STARTUP: Failed to start APScheduler: {e}", exc_info=True)
 
-    telegram_webhook_url_to_set = getattr(settings,
-                                          'TELEGRAM_WEBHOOK_BASE_URL', None)
+    telegram_webhook_url_to_set = getattr(settings, "TELEGRAM_WEBHOOK_BASE_URL", None)
     if telegram_webhook_url_to_set:
-        full_telegram_webhook_url = f"{str(telegram_webhook_url_to_set).rstrip('/')}/{settings.BOT_TOKEN}"
+        full_telegram_webhook_url = (
+            f"{str(telegram_webhook_url_to_set).rstrip('/')}/{settings.BOT_TOKEN}"
+        )
 
         logging.info(
             f"STARTUP: Attempting to set Telegram webhook to: {full_telegram_webhook_url if full_telegram_webhook_url != 'ERROR_URL_TOKEN_DETECTED' else 'HIDDEN DUE TO TOKEN'}"
@@ -129,7 +136,8 @@ async def on_startup_configured(dispatcher: Dispatcher):
                 set_success = await bot.set_webhook(
                     url=full_telegram_webhook_url,
                     drop_pending_updates=True,
-                    allowed_updates=dispatcher.resolve_used_update_types())
+                    allowed_updates=dispatcher.resolve_used_update_types(),
+                )
                 if set_success:
                     logging.info(
                         f"STARTUP: bot.set_webhook to {full_telegram_webhook_url} returned SUCCESS (True)."
@@ -151,7 +159,8 @@ async def on_startup_configured(dispatcher: Dispatcher):
             except Exception as e_setwebhook:
                 logging.error(
                     f"STARTUP: EXCEPTION during set/get Telegram webhook: {e_setwebhook}",
-                    exc_info=True)
+                    exc_info=True,
+                )
         else:
             logging.error(
                 "STARTUP: Skipped setting Telegram webhook due to security or configuration error."
@@ -174,11 +183,12 @@ async def on_shutdown_configured(dispatcher: Dispatcher):
             scheduler.shutdown(wait=False)
             logging.info("SHUTDOWN: APScheduler shut down.")
         except Exception as e:
-            logging.error(f"SHUTDOWN: Error shutting down APScheduler: {e}",
-                          exc_info=True)
+            logging.error(
+                f"SHUTDOWN: Error shutting down APScheduler: {e}", exc_info=True
+            )
 
     panel_service: Optional[PanelApiService] = dispatcher.get("panel_service")
-    if panel_service and hasattr(panel_service, 'close_session'):
+    if panel_service and hasattr(panel_service, "close_session"):
         await panel_service.close_session()
         logging.info("Panel API service session closed on shutdown.")
 
@@ -191,6 +201,7 @@ async def on_shutdown_configured(dispatcher: Dispatcher):
             logging.warning(f"SHUTDOWN: Failed to close bot session: {e}")
 
     from db.database_setup import async_engine as global_async_engine
+
     if global_async_engine:
         logging.info("SHUTDOWN: Disposing SQLAlchemy engine...")
         await global_async_engine.dispose()
@@ -223,28 +234,40 @@ async def run_bot(settings_param: Settings):
             f"Failed to get bot info (e.g., for YooKassa default URL): {e}. Using fallback: {actual_bot_username}"
         )
 
-    i18n_instance = get_i18n_instance(path="locales",
-                                      default=settings_param.DEFAULT_LANGUAGE)
+    i18n_instance = get_i18n_instance(
+        path="locales", default=settings_param.DEFAULT_LANGUAGE
+    )
 
     yookassa_service = YooKassaService(
         shop_id=settings_param.YOOKASSA_SHOP_ID,
         secret_key=settings_param.YOOKASSA_SECRET_KEY,
         configured_return_url=settings_param.YOOKASSA_RETURN_URL,
         bot_username_for_default_return=actual_bot_username,
-        settings_obj=settings_param)
+        settings_obj=settings_param,
+    )
     panel_service = PanelApiService(settings_param)
 
-    subscription_service = SubscriptionService(settings_param, panel_service)
-    referral_service = ReferralService(settings_param, subscription_service,
-                                       bot, i18n_instance)
-    promo_code_service = PromoCodeService(settings_param, subscription_service,
-                                          bot, i18n_instance)
-    stars_service = StarsService(bot, settings_param, i18n_instance,
-                                 subscription_service, referral_service)
-    tribute_service = TributeService(bot, settings_param, i18n_instance,
-                                     local_async_session_factory,
-                                     panel_service, subscription_service,
-                                     referral_service)
+    subscription_service = SubscriptionService(
+        settings_param, panel_service, bot, i18n_instance
+    )
+    referral_service = ReferralService(
+        settings_param, subscription_service, bot, i18n_instance
+    )
+    promo_code_service = PromoCodeService(
+        settings_param, subscription_service, bot, i18n_instance
+    )
+    stars_service = StarsService(
+        bot, settings_param, i18n_instance, subscription_service, referral_service
+    )
+    tribute_service = TributeService(
+        bot,
+        settings_param,
+        i18n_instance,
+        local_async_session_factory,
+        panel_service,
+        subscription_service,
+        referral_service,
+    )
 
     dp["i18n_instance"] = i18n_instance
     dp["yookassa_service"] = yookassa_service
@@ -256,13 +279,13 @@ async def run_bot(settings_param: Settings):
     dp["tribute_service"] = tribute_service
     dp["async_session_factory"] = local_async_session_factory
 
+    dp.update.outer_middleware(DBSessionMiddleware(local_async_session_factory))
     dp.update.outer_middleware(
-        DBSessionMiddleware(local_async_session_factory))
+        I18nMiddleware(i18n=i18n_instance, settings=settings_param)
+    )
     dp.update.outer_middleware(
-        I18nMiddleware(i18n=i18n_instance, settings=settings_param))
-    dp.update.outer_middleware(
-        BanCheckMiddleware(settings=settings_param,
-                           i18n_instance=i18n_instance))
+        BanCheckMiddleware(settings=settings_param, i18n_instance=i18n_instance)
+    )
     dp.update.outer_middleware(ActionLoggerMiddleware(settings=settings_param))
 
     dp.startup.register(on_startup_configured)
@@ -270,13 +293,12 @@ async def run_bot(settings_param: Settings):
 
     await register_all_routers(dp, settings_param)
 
-    tg_webhook_base = getattr(settings_param, 'TELEGRAM_WEBHOOK_BASE_URL',
-                              None)
-    yk_webhook_base = getattr(settings_param, 'YOOKASSA_WEBHOOK_BASE_URL',
-                              None)
+    tg_webhook_base = getattr(settings_param, "TELEGRAM_WEBHOOK_BASE_URL", None)
+    yk_webhook_base = getattr(settings_param, "YOOKASSA_WEBHOOK_BASE_URL", None)
 
     should_run_aiohttp_server = bool(tg_webhook_base) or (
-        bool(yk_webhook_base) and bool(settings_param.yookassa_webhook_path))
+        bool(yk_webhook_base) and bool(settings_param.yookassa_webhook_path)
+    )
 
     telegram_uses_webhook_mode = bool(tg_webhook_base)
     run_telegram_polling = not telegram_uses_webhook_mode
@@ -297,27 +319,28 @@ async def run_bot(settings_param: Settings):
 
     if should_run_aiohttp_server:
         app = web.Application()
-        app['bot'] = bot
-        app['dp'] = dp
-        app['settings'] = settings_param
-        app['i18n'] = i18n_instance
-        app['async_session_factory'] = local_async_session_factory
+        app["bot"] = bot
+        app["dp"] = dp
+        app["settings"] = settings_param
+        app["i18n"] = i18n_instance
+        app["async_session_factory"] = local_async_session_factory
 
-        app['yookassa_service'] = yookassa_service
-        app['subscription_service'] = subscription_service
-        app['referral_service'] = referral_service
-        app['panel_service'] = panel_service
-        app['stars_service'] = stars_service
-        app['tribute_service'] = tribute_service
+        app["yookassa_service"] = yookassa_service
+        app["subscription_service"] = subscription_service
+        app["referral_service"] = referral_service
+        app["panel_service"] = panel_service
+        app["stars_service"] = stars_service
+        app["tribute_service"] = tribute_service
 
         setup_application(app, dp, bot=bot)
 
         if telegram_uses_webhook_mode:
             telegram_webhook_path = f"/{settings_param.BOT_TOKEN}"
-            if not telegram_webhook_path.startswith('/'):
-                telegram_webhook_path = '/' + telegram_webhook_path
-            app.router.add_post(telegram_webhook_path,
-                                SimpleRequestHandler(dispatcher=dp, bot=bot))
+            if not telegram_webhook_path.startswith("/"):
+                telegram_webhook_path = "/" + telegram_webhook_path
+            app.router.add_post(
+                telegram_webhook_path, SimpleRequestHandler(dispatcher=dp, bot=bot)
+            )
             logging.info(
                 f"Telegram webhook route configured at: [POST] {telegram_webhook_path} (relative to base URL)"
             )
@@ -328,48 +351,52 @@ async def run_bot(settings_param: Settings):
                 logging.error(
                     f"YooKassa webhook path is invalid or not configured in settings: {yk_path}. Skipping YooKassa webhook setup."
                 )
-            elif not yk_path.startswith('/'):
+            elif not yk_path.startswith("/"):
                 logging.error(
                     f"CRITICAL: YooKassa webhook path '{yk_path}' from settings does not start with '/'. Correct settings.py or .env. Skipping YooKassa webhook."
                 )
             else:
                 app.router.add_post(
-                    yk_path,
-                    user_payment_webhook_module.yookassa_webhook_route)
-                logging.info(
-                    f"YooKassa webhook route configured at: [POST] {yk_path}")
+                    yk_path, user_payment_webhook_module.yookassa_webhook_route
+                )
+                logging.info(f"YooKassa webhook route configured at: [POST] {yk_path}")
 
         tribute_path = settings_param.tribute_webhook_path
-        if tribute_path.startswith('/'):
-            app.router.add_post(
-                tribute_path,
-                tribute_webhook_route)
-            logging.info(
-                f"Tribute webhook route configured at: [POST] {tribute_path}")
+        if tribute_path.startswith("/"):
+            app.router.add_post(tribute_path, tribute_webhook_route)
+            logging.info(f"Tribute webhook route configured at: [POST] {tribute_path}")
 
         web_app_runner = web.AppRunner(app)
         await web_app_runner.setup()
-        site = web.TCPSite(web_app_runner,
-                           host=settings_param.WEB_SERVER_HOST,
-                           port=settings_param.WEB_SERVER_PORT)
+        site = web.TCPSite(
+            web_app_runner,
+            host=settings_param.WEB_SERVER_HOST,
+            port=settings_param.WEB_SERVER_PORT,
+        )
 
         async def web_server_task():
             await site.start()
             logging.info(
                 f"AIOHTTP server started on http://{settings_param.WEB_SERVER_HOST}:{settings_param.WEB_SERVER_PORT}"
             )
-            await asyncio.Event().wait(
-            ) if not run_telegram_polling else await asyncio.sleep(31536000)
+            (
+                await asyncio.Event().wait()
+                if not run_telegram_polling
+                else await asyncio.sleep(31536000)
+            )
 
         main_tasks.append(
-            asyncio.create_task(web_server_task(), name="AIOHTTPServerTask"))
+            asyncio.create_task(web_server_task(), name="AIOHTTPServerTask")
+        )
 
     if run_telegram_polling:
         logging.info("Starting bot in Telegram Polling mode...")
         main_tasks.append(
-            asyncio.create_task(dp.start_polling(
-                bot, allowed_updates=dp.resolve_used_update_types()),
-                                name="TelegramPollingTask"))
+            asyncio.create_task(
+                dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types()),
+                name="TelegramPollingTask",
+            )
+        )
 
     if not main_tasks:
         logging.error(
@@ -385,8 +412,7 @@ async def run_bot(settings_param: Settings):
     try:
         await asyncio.gather(*main_tasks)
     except (KeyboardInterrupt, SystemExit, asyncio.CancelledError) as e:
-        logging.info(
-            f"Main bot loop interrupted/cancelled: {type(e).__name__} - {e}")
+        logging.info(f"Main bot loop interrupted/cancelled: {type(e).__name__} - {e}")
     finally:
         logging.info("Initiating final bot shutdown sequence...")
         for task in main_tasks:
@@ -401,7 +427,8 @@ async def run_bot(settings_param: Settings):
                 except Exception as e_task_cancel:
                     logging.error(
                         f"Error during cancellation of task '{task.get_name()}': {e_task_cancel}",
-                        exc_info=True)
+                        exc_info=True,
+                    )
 
         if web_app_runner:
             await web_app_runner.cleanup()
