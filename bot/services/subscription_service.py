@@ -520,36 +520,63 @@ class SubscriptionService:
         reason: str = "bonus",
     ) -> Optional[datetime]:
         user = await user_dal.get_user_by_id(session, user_id)
-        if not user or not user.panel_user_uuid:
+        if not user:
             logging.warning(
-                f"Cannot extend subscription for user {user_id}: User or panel_user_uuid not found."
+                f"Cannot extend subscription for user {user_id}: user not found."
+            )
+            return None
+
+        panel_uuid, panel_sub_uuid, _, _ = await self._get_or_create_panel_user_link_details(
+            session, user_id, user
+        )
+        if not panel_uuid or not panel_sub_uuid:
+            logging.error(
+                f"Failed to ensure panel user for subscription extension of user {user_id}."
             )
             return None
 
         active_sub = await subscription_dal.get_active_subscription_by_user_id(
-            session, user_id, user.panel_user_uuid
+            session, user_id, panel_uuid
         )
         if not active_sub or not active_sub.end_date:
             logging.info(
-                f"No active extendable subscription found for user {user_id} (panel: {user.panel_user_uuid}) for reason: {reason}."
+                f"No active subscription found for user {user_id}. Creating new one for {bonus_days} days."
             )
-            return None
+            start_date = datetime.now(timezone.utc)
+            new_end_date_obj = start_date + timedelta(days=bonus_days)
+            bonus_sub_payload = {
+                "user_id": user_id,
+                "panel_user_uuid": panel_uuid,
+                "panel_subscription_uuid": panel_sub_uuid,
+                "start_date": start_date,
+                "end_date": new_end_date_obj,
+                "duration_months": 0,
+                "is_active": True,
+                "status_from_panel": "ACTIVE_BONUS",
+                "traffic_limit_bytes": self.settings.PANEL_USER_DEFAULT_TRAFFIC_BYTES,
+            }
+            await subscription_dal.deactivate_other_active_subscriptions(
+                session, panel_uuid, panel_sub_uuid
+            )
+            updated_sub_model = await subscription_dal.upsert_subscription(
+                session, bonus_sub_payload
+            )
+        else:
+            current_end_date = active_sub.end_date
+            now_utc = datetime.now(timezone.utc)
+            start_point_for_bonus = (
+                current_end_date if current_end_date > now_utc else now_utc
+            )
+            new_end_date_obj = start_point_for_bonus + timedelta(days=bonus_days)
 
-        current_end_date = active_sub.end_date
-        now_utc = datetime.now(timezone.utc)
-        start_point_for_bonus = (
-            current_end_date if current_end_date > now_utc else now_utc
-        )
-        new_end_date_obj = start_point_for_bonus + timedelta(days=bonus_days)
-
-        updated_sub_model = await subscription_dal.update_subscription_end_date(
-            session, active_sub.subscription_id, new_end_date_obj
-        )
+            updated_sub_model = await subscription_dal.update_subscription_end_date(
+                session, active_sub.subscription_id, new_end_date_obj
+            )
 
         if updated_sub_model:
             panel_update_success = (
                 await self.panel_service.update_user_details_on_panel(
-                    user.panel_user_uuid,
+                    panel_uuid,
                     {
                         "expireAt": new_end_date_obj.isoformat(
                             timespec="milliseconds"
@@ -559,7 +586,7 @@ class SubscriptionService:
             )
             if not panel_update_success:
                 logging.warning(
-                    f"Panel expiry update failed for {user.panel_user_uuid} after {reason} bonus. Local DB was updated to {new_end_date_obj}."
+                    f"Panel expiry update failed for {panel_uuid} after {reason} bonus. Local DB was updated to {new_end_date_obj}."
                 )
 
             logging.info(
@@ -590,23 +617,10 @@ class SubscriptionService:
 
         if not panel_user_data:
             logging.warning(
-                f"Panel user {panel_user_uuid} not found on panel for user {user_id}. Using local data if available."
+                f"Panel user {panel_user_uuid} not found on panel for user {user_id}. Clearing local linkage."
             )
-            if (
-                local_active_sub
-                and local_active_sub.end_date
-                and local_active_sub.end_date > datetime.now(timezone.utc)
-            ):
-                return {
-                    "end_date": local_active_sub.end_date,
-                    "status_from_panel": local_active_sub.status_from_panel
-                    or "UNKNOWN",
-                    "config_link": None,
-                    "traffic_limit_bytes": local_active_sub.traffic_limit_bytes,
-                    "traffic_used_bytes": local_active_sub.traffic_used_bytes,
-                    "user_bot_username": db_user.username,
-                    "is_panel_data": False,
-                }
+            await subscription_dal.deactivate_all_user_subscriptions(session, user_id)
+            await user_dal.update_user(session, user_id, {"panel_user_uuid": None})
             return None
 
         if local_active_sub:

@@ -129,6 +129,21 @@ async def deactivate_other_active_subscriptions(
         )
 
 
+async def deactivate_all_user_subscriptions(
+        session: AsyncSession, user_id: int) -> int:
+    stmt = (
+        update(Subscription)
+        .where(Subscription.user_id == user_id, Subscription.is_active == True)
+        .values(is_active=False, status_from_panel="INACTIVE_USER_NOT_FOUND")
+    )
+    result = await session.execute(stmt)
+    if result.rowcount > 0:
+        logging.info(
+            f"Deactivated {result.rowcount} subscriptions for user {user_id} due to missing panel user."
+        )
+    return result.rowcount
+
+
 async def update_subscription_end_date(
         session: AsyncSession, subscription_id: int,
         new_end_date: datetime) -> Optional[Subscription]:

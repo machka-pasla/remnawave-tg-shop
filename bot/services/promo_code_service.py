@@ -5,7 +5,7 @@ from aiogram import Bot
 
 from config.settings import Settings
 
-from db.dal import promo_code_dal, user_dal, subscription_dal
+from db.dal import promo_code_dal, user_dal
 from db.models import PromoCode, User
 
 from .subscription_service import SubscriptionService
@@ -39,11 +39,6 @@ class PromoCodeService:
         if existing_activation:
             return False, _("promo_code_already_used_by_user",
                             code=code_input_upper)
-
-        active_sub = await subscription_dal.get_active_subscription_by_user_id(
-            session, user_id)
-        if not active_sub:
-            return False, _("promo_code_no_active_subscription")
 
         bonus_days = promo_data.bonus_days
 
