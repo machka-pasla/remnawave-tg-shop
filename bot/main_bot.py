@@ -3,7 +3,7 @@ import asyncio
 from typing import Callable, Dict, Any, Awaitable, Optional
 
 from aiogram import Bot, Dispatcher, BaseMiddleware, Router, F
-from aiogram.types import Update
+from aiogram.types import Update, MenuButtonWebApp, WebAppInfo
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.client.default import DefaultBotProperties
@@ -170,6 +170,14 @@ async def on_startup_configured(dispatcher: Dispatcher):
             "STARTUP: TELEGRAM_WEBHOOK_BASE_URL not set in environment. Attempting to delete any existing webhook (running in polling mode)."
         )
         await bot.delete_webhook(drop_pending_updates=True)
+
+    if settings.SUBSCRIPTION_MINI_APP_URL:
+        menu_text = i18n_instance.gettext(settings.DEFAULT_LANGUAGE, "menu_my_subscription_inline")
+        try:
+            await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text=menu_text, web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL)))
+            logging.info("STARTUP: Menu button for subscription mini app set via API.")
+        except Exception as e:
+            logging.error(f"STARTUP: Failed to set menu button web app: {e}", exc_info=True)
 
     logging.info("STARTUP: Bot on_startup_configured completed.")
 

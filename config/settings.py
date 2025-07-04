@@ -101,6 +101,8 @@ class Settings(BaseSettings):
     WEB_SERVER_PORT: int = Field(default=8080)
     LOGS_PAGE_SIZE: int = Field(default=10)
 
+    SUBSCRIPTION_MINI_APP_URL: Optional[str] = Field(default=None)
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
