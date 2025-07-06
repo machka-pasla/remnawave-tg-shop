@@ -72,6 +72,9 @@ class Subscription(Base):
     last_notification_sent = Column(DateTime(timezone=True), nullable=True)
     provider = Column(String, nullable=True)
     skip_notifications = Column(Boolean, default=False)
+    auto_renew = Column(Boolean, default=False)
+    auto_renew_notified = Column(Boolean, default=False)
+    yk_payment_method_id = Column(String, nullable=True)
 
     user = relationship("User", back_populates="subscriptions")
 
@@ -93,6 +96,7 @@ class Payment(Base):
                                  nullable=True)
     provider_payment_id = Column(String, unique=True, nullable=True)
     provider = Column(String, nullable=False, default="yookassa", index=True)
+    payment_method_id = Column(String, nullable=True)
     idempotence_key = Column(String, unique=True, nullable=True)
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=False)
