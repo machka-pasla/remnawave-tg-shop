@@ -77,13 +77,16 @@ async def update_payment_status_by_db_id(
         session: AsyncSession,
         payment_db_id: int,
         new_status: str,
-        yk_payment_id: Optional[str] = None) -> Optional[Payment]:
+        yk_payment_id: Optional[str] = None,
+        payment_method_id: Optional[str] = None) -> Optional[Payment]:
     payment = await get_payment_by_db_id(session, payment_db_id)
     if payment:
         payment.status = new_status
         payment.updated_at = func.now()
         if yk_payment_id and payment.yookassa_payment_id is None:
             payment.yookassa_payment_id = yk_payment_id
+        if payment_method_id:
+            payment.payment_method_id = payment_method_id
         await session.flush()
         await session.refresh(payment)
         logging.info(
@@ -111,11 +114,14 @@ async def user_has_successful_payment_for_provider(
 
 async def update_payment_status_by_yk_id(session: AsyncSession,
                                          yookassa_payment_id: str,
-                                         new_status: str) -> Optional[Payment]:
+                                         new_status: str,
+                                         payment_method_id: Optional[str] = None) -> Optional[Payment]:
     payment = await get_payment_by_yookassa_id(session, yookassa_payment_id)
     if payment:
         payment.status = new_status
         payment.updated_at = func.now()
+        if payment_method_id:
+            payment.payment_method_id = payment_method_id
         await session.flush()
         await session.refresh(payment)
         logging.info(

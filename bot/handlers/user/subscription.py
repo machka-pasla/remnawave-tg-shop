@@ -3,14 +3,15 @@ from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from typing import Optional, Dict, Any, Union
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
 from db.dal import payment_dal
 from bot.keyboards.inline.user_keyboards import (
     get_subscription_options_keyboard, get_payment_method_keyboard,
-    get_payment_url_keyboard, get_back_to_main_menu_markup)
+    get_payment_url_keyboard, get_back_to_main_menu_markup,
+    get_autorenew_menu_keyboard)
 from bot.services.yookassa_service import YooKassaService
 from bot.services.stars_service import StarsService
 from bot.services.subscription_service import SubscriptionService
@@ -299,6 +300,60 @@ async def reshow_subscription_options_callback(callback: types.CallbackQuery,
                                                settings: Settings,
                                                session: AsyncSession):
     await display_subscription_options(callback, i18n_data, settings, session)
+
+
+@router.callback_query(F.data == "main_action:autorenew")
+async def autorenew_menu_callback(callback: types.CallbackQuery, i18n_data: dict,
+                                  settings: Settings,
+                                  subscription_service: SubscriptionService,
+                                  session: AsyncSession):
+    lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n = i18n_data.get("i18n_instance")
+    _ = lambda k, **kw: i18n.gettext(lang, k, **kw)
+    sub = await subscription_service.get_active_subscription_model(
+        session, callback.from_user.id)
+    if not sub:
+        await callback.answer(_("subscription_not_active"), show_alert=True)
+        return
+    if sub.provider == "tribute":
+        text = _("autorenew_manage_in_tribute")
+        markup = get_back_to_main_menu_markup(lang, i18n)
+    else:
+        charge_date = (sub.end_date - timedelta(days=1)).strftime("%Y-%m-%d") if sub.end_date else "?"
+        price = settings.subscription_options.get(sub.duration_months)
+        if sub.auto_renew:
+            text = _(
+                "autorenew_menu_enabled",
+                charge_date=charge_date,
+                amount=price if price is not None else "?",
+                months=sub.duration_months or "?",
+            )
+        else:
+            text = _("autorenew_menu_disabled")
+        markup = get_autorenew_menu_keyboard(lang, i18n, sub.auto_renew)
+    await callback.message.edit_text(text, reply_markup=markup)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("auto_renew:"))
+async def toggle_autorenew_callback(callback: types.CallbackQuery, i18n_data: dict,
+                                    settings: Settings,
+                                    subscription_service: SubscriptionService,
+                                    session: AsyncSession):
+    action = callback.data.split(":", 1)[1]
+    lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n = i18n_data.get("i18n_instance")
+    _ = lambda k, **kw: i18n.gettext(lang, k, **kw)
+    enable = action == "enable"
+    success = await subscription_service.set_auto_renew(
+        session, callback.from_user.id, enable)
+    if success:
+        msg = _("autorenew_enabled" if enable else "autorenew_disabled")
+    else:
+        msg = _("subscription_not_active")
+    await callback.answer(msg, show_alert=True)
+    await autorenew_menu_callback(callback, i18n_data, settings,
+                                  subscription_service, session)
 
 
 async def my_subscription_command_handler(

@@ -88,11 +88,15 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
 
     try:
         yk_payment_id_from_hook = payment_info_from_webhook.get("id")
+        payment_method_id_from_hook = None
+        if payment_info_from_webhook.get("payment_method"):
+            payment_method_id_from_hook = payment_info_from_webhook["payment_method"].get("id")
         updated_payment_record = await payment_dal.update_payment_status_by_db_id(
             session,
             payment_db_id=payment_db_id,
             new_status=payment_info_from_webhook.get("status", "succeeded"),
-            yk_payment_id=yk_payment_id_from_hook)
+            yk_payment_id=yk_payment_id_from_hook,
+            payment_method_id=payment_method_id_from_hook)
         if not updated_payment_record:
             logging.error(
                 f"Failed to update payment record {payment_db_id} for yk_id {yk_payment_id_from_hook}"
@@ -107,7 +111,8 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
             payment_value,
             payment_db_id,
             promo_code_id_from_payment=promo_code_id,
-            provider="yookassa")
+            provider="yookassa",
+            yk_payment_method_id=payment_method_id_from_hook)
 
         if not activation_details or not activation_details.get('end_date'):
             logging.error(

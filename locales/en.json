@@ -5,6 +5,7 @@
   "menu_activate_trial_button": "🆓 Free Trial",
   "menu_subscribe_inline": "🚀 Purchase",
   "menu_my_subscription_inline": "🔐 My Subscription",
+  "menu_autorenew_inline": "🔁 Auto-Renew",
   "menu_referral_inline": "🎁 Referrals",
   "menu_apply_promo_button": "🎟 Promo Code",
   "menu_language_settings_inline": "🌐 Language",
@@ -213,6 +214,14 @@
 
   "subscription_ending_soon_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends on {end_date} (in {days_left} days).\n\nTo avoid interruption, please renew it in the main menu.",
   "subscription_cancelled_notification": "Your recurring subscription was cancelled. You will keep access until the paid period ends.",
+  "autorenew_charge_tomorrow": "\ud83d\udd04 Your subscription will renew automatically tomorrow.",
+  "autorenew_menu_enabled": "Auto-renewal is enabled. Next charge on {charge_date} for {amount} RUB ({months} mo)",
+  "autorenew_menu_disabled": "Auto-renewal is disabled",
+  "autorenew_manage_in_tribute": "You paid via Tribute. Manage renewals in the @tribute bot",
+  "enable_autorenew_button": "\u2705 Enable auto-renew",
+  "disable_autorenew_button": "\u274c Disable auto-renew",
+  "autorenew_enabled": "Auto-renew enabled",
+  "autorenew_disabled": "Auto-renew disabled",
 
   "admin_new_trial_notification": "\ud83c\udf21 User {user_id} activated a free trial until {end_date}.",
   "admin_new_payment_notification": "\ud83d\udcb3 Payment received from user {user_id}: {months} mo. for {amount} {currency}.",
