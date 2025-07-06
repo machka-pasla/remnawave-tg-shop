@@ -321,6 +321,14 @@ async def main_action_callback_handler(
     elif action == "language":
 
         await language_command_handler(callback, i18n_data, settings)
+    elif action == "autorenew":
+        await user_subscription_handlers.autorenew_menu_callback(
+            callback,
+            i18n_data,
+            settings,
+            subscription_service,
+            session,
+        )
     elif action == "back_to_main":
         await send_main_menu(callback,
                              settings,
