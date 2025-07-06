@@ -218,10 +218,12 @@
   "autorenew_menu_enabled": "Автопродление включено. Следующее списание {charge_date} на {amount}₽ ({months} мес.)",
   "autorenew_menu_disabled": "Автопродление выключено",
   "autorenew_manage_in_tribute": "Оплата была через Tribute. Управление продлением в боте @tribute",
+  "autorenew_menu_info": "Автопродление {status}. Если вы платили через Tribute, управление в @tribute",
   "enable_autorenew_button": "\u2705 Включить автопродление",
   "disable_autorenew_button": "\u274c Выключить автопродление",
   "autorenew_enabled": "Автопродление включено",
   "autorenew_disabled": "Автопродление отключено",
+  "autorenew_manage_in_tribute": "Вы платили через Tribute. Управление продлением в @tribute",
 
   "admin_new_trial_notification": "\ud83c\udf21 Пользователь {user_id} активировал пробный период до {end_date}.",
   "admin_new_payment_notification": "\ud83d\udcb3 Получен платеж от пользователя {user_id}: {months} мес. за {amount} {currency}.",

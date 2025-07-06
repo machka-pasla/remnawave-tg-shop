@@ -330,7 +330,9 @@ async def autorenew_menu_callback(callback: types.CallbackQuery, i18n_data: dict
             )
         else:
             text = _("autorenew_menu_disabled")
-        markup = get_autorenew_menu_keyboard(lang, i18n, sub.auto_renew)
+
+        text = _("autorenew_menu_info",
+                 status="ON" if sub.auto_renew else "OFF")
     await callback.message.edit_text(text, reply_markup=markup)
     await callback.answer()
 
