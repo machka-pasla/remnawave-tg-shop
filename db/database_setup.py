@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from config.settings import Settings
 from .models import Base
+from sqlalchemy import text
 
 async_engine = None
 
@@ -62,6 +63,36 @@ async def init_db(settings: Settings, session_factory: sessionmaker):
 
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Ensure new columns exist for updated models
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE subscriptions "
+                    "ADD COLUMN IF NOT EXISTS auto_renew BOOLEAN DEFAULT FALSE"
+                )
+            )
+            await conn.execute(
+                text(
+                    "ALTER TABLE subscriptions "
+                    "ADD COLUMN IF NOT EXISTS auto_renew_notified BOOLEAN DEFAULT FALSE"
+                )
+            )
+            await conn.execute(
+                text(
+                    "ALTER TABLE subscriptions "
+                    "ADD COLUMN IF NOT EXISTS yk_payment_method_id VARCHAR"
+                )
+            )
+            await conn.execute(
+                text(
+                    "ALTER TABLE payments "
+                    "ADD COLUMN IF NOT EXISTS payment_method_id VARCHAR"
+                )
+            )
+        except Exception as e_alter:
+            logging.error(
+                f"Failed to apply schema updates: {e_alter}", exc_info=True
+            )
     logging.info(
         "PostgreSQL database initialized/checked successfully using SQLAlchemy."
     )
