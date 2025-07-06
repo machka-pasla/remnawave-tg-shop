@@ -36,6 +36,13 @@ def get_main_menu_inline_keyboard(
             )
         )
 
+    builder.row(
+        InlineKeyboardButton(
+            text=_(key="menu_autorenew_inline"),
+            callback_data="main_action:autorenew",
+        )
+    )
+
     referral_button = InlineKeyboardButton(
         text=_(key="menu_referral_inline"),
         callback_data="main_action:referral")
@@ -166,6 +173,22 @@ def get_back_to_main_menu_markup(lang: str,
     builder = InlineKeyboardBuilder()
     builder.button(text=_(key="back_to_main_menu_button"),
                    callback_data="main_action:back_to_main")
+    return builder.as_markup()
+
+
+def get_autorenew_menu_keyboard(lang: str, i18n_instance,
+                                enabled: bool) -> InlineKeyboardMarkup:
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+    if enabled:
+        builder.button(text=_("disable_autorenew_button"),
+                       callback_data="auto_renew:disable")
+    else:
+        builder.button(text=_("enable_autorenew_button"),
+                       callback_data="auto_renew:enable")
+    builder.button(text=_("back_to_main_menu_button"),
+                   callback_data="main_action:back_to_main")
+    builder.adjust(1)
     return builder.as_markup()
 
 

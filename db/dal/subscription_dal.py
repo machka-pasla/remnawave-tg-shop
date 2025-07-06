@@ -246,6 +246,7 @@ async def get_active_subscriptions_for_autorenew(
         Subscription.provider == provider,
         Subscription.is_active == True,
         Subscription.end_date <= threshold_date,
+        Subscription.auto_renew == True,
     ]
     if require_skip_flag:
         conditions.append(Subscription.skip_notifications == True)

@@ -10,6 +10,8 @@ from sqlalchemy.orm import sessionmaker
 from bot.middlewares.i18n import JsonI18n
 from bot.services.panel_api_service import PanelApiService
 from bot.services.subscription_service import SubscriptionService
+from bot.services.yookassa_service import YooKassaService
+from db.dal import subscription_dal, payment_dal
 
 
 async def send_expiration_warnings(bot: Bot, settings: Settings,
@@ -97,9 +99,86 @@ async def send_expiration_warnings(bot: Bot, settings: Settings,
             )
 
 
+async def process_yk_recurring(bot: Bot, settings: Settings, i18n: JsonI18n,
+                               panel_service: PanelApiService,
+                               yk_service: YooKassaService,
+                               async_session_factory: sessionmaker):
+    logging.info(
+        f"Scheduler job 'process_yk_recurring' started at {datetime.now(timezone.utc)} UTC."
+    )
+    async with async_session_factory() as session:
+        try:
+            sub_service = SubscriptionService(settings, panel_service)
+            subs = await subscription_dal.get_active_subscriptions_for_autorenew(
+                session, "yookassa", days_threshold=2, require_skip_flag=False)
+            now_utc = datetime.now(timezone.utc)
+            for sub in subs:
+                if not sub.user:
+                    continue
+                days_left = (sub.end_date - now_utc).days
+                _ = lambda k, **kw: i18n.gettext(
+                    sub.user.language_code or settings.DEFAULT_LANGUAGE, k, **kw)
+                if days_left == 2 and not sub.auto_renew_notified:
+                    try:
+                        await bot.send_message(sub.user_id,
+                                               _("autorenew_charge_tomorrow"))
+                    except Exception as e:
+                        logging.error(
+                            f"Failed to send autorenew warn to {sub.user_id}: {e}")
+                    await subscription_dal.update_subscription(
+                        session, sub.subscription_id,
+                        {"auto_renew_notified": True})
+                elif days_left == 1:
+                    price = settings.subscription_options.get(sub.duration_months)
+                    if price is None or not sub.yk_payment_method_id:
+                        continue
+                    payment_record = await payment_dal.create_payment_record(
+                        session,
+                        {
+                            "user_id": sub.user_id,
+                            "amount": price,
+                            "currency": "RUB",
+                            "status": "pending_yookassa",
+                            "description": "Auto renewal",
+                            "subscription_duration_months": sub.duration_months,
+                            "provider": "yookassa",
+                        },
+                    )
+                    metadata = {
+                        "user_id": str(sub.user_id),
+                        "subscription_months": str(sub.duration_months),
+                        "payment_db_id": str(payment_record.payment_id),
+                    }
+                    yk_resp = await yk_service.create_payment(
+                        amount=price,
+                        currency="RUB",
+                        description="Auto renewal",
+                        metadata=metadata,
+                        payment_method_id=sub.yk_payment_method_id)
+                    if yk_resp:
+                        await payment_dal.update_payment_status_by_db_id(
+                            session,
+                            payment_record.payment_id,
+                            yk_resp.get("status", "pending"),
+                            yk_payment_id=yk_resp.get("id"),
+                        )
+                    else:
+                        await payment_dal.update_payment_status_by_db_id(
+                            session, payment_record.payment_id, "failed_creation")
+                    await subscription_dal.update_subscription(
+                        session, sub.subscription_id,
+                        {"auto_renew_notified": False})
+            await session.commit()
+        except Exception as e:
+            logging.error(
+                f"Error during process_yk_recurring: {e}", exc_info=True)
+            await session.rollback()
+
+
 async def schedule_subscription_notifications(
         bot: Bot, settings: Settings, i18n: JsonI18n,
         scheduler: AsyncIOScheduler, panel_service: PanelApiService,
+        yk_service: YooKassaService,
         async_session_factory: sessionmaker):
 
     async def job_wrapper():
@@ -107,6 +186,8 @@ async def schedule_subscription_notifications(
         try:
             await send_expiration_warnings(bot, settings, i18n, panel_service,
                                            async_session_factory)
+            await process_yk_recurring(bot, settings, i18n, panel_service,
+                                       yk_service, async_session_factory)
         except Exception as e:
             logging.error(
                 f"Unhandled error in scheduled job 'send_expiration_warnings' (job_wrapper): {e}",
