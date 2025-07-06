@@ -61,7 +61,10 @@ class YooKassaService:
             description: str,
             metadata: Dict[str, Any],
             receipt_email: Optional[str] = None,
-            receipt_phone: Optional[str] = None) -> Optional[Dict[str, Any]]:
+            receipt_phone: Optional[str] = None,
+            *,
+            save_payment_method: bool = False,
+            payment_method_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         if not self.configured:
             logging.error("YooKassa is not configured. Cannot create payment.")
             return None
@@ -102,6 +105,12 @@ class YooKassaService:
                 "value": str(round(amount, 2)),
                 "currency": currency.upper()
             })
+            if payment_method_id:
+                builder.set_payment_method_id(payment_method_id)
+            else:
+                builder.set_payment_method_data({"type": "bank_card"})
+                if save_payment_method:
+                    builder.set_save_payment_method(True)
             builder.set_capture(True)
             builder.set_confirmation({
                 "type": ConfirmationType.REDIRECT,

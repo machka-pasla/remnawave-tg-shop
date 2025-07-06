@@ -331,5 +331,5 @@ async def main_action_callback_handler(
     else:
         i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
         _ = lambda key, **kwargs: i18n.gettext(
-            i18n_data.get("current_language"), key, **kw) if i18n else key
+            i18n_data.get("current_language"), key, **kwargs) if i18n else key
         await callback.answer(_("main_menu_unknown_action"), show_alert=True)

@@ -403,6 +403,7 @@ class SubscriptionService:
         payment_db_id: int,
         promo_code_id_from_payment: Optional[int] = None,
         provider: str = "yookassa",
+        yk_payment_method_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
 
         db_user = await user_dal.get_user_by_id(session, user_id)
@@ -485,6 +486,9 @@ class SubscriptionService:
             "traffic_limit_bytes": self.settings.user_traffic_limit_bytes,
             "provider": provider,
             "skip_notifications": provider == "tribute",
+            "auto_renew": provider == "yookassa",
+            "auto_renew_notified": False,
+            "yk_payment_method_id": yk_payment_method_id,
         }
         try:
             new_or_updated_sub = await subscription_dal.upsert_subscription(
@@ -577,6 +581,8 @@ class SubscriptionService:
                 "is_active": True,
                 "status_from_panel": "ACTIVE_BONUS",
                 "traffic_limit_bytes": self.settings.user_traffic_limit_bytes,
+                "auto_renew": False,
+                "auto_renew_notified": False,
             }
             await subscription_dal.deactivate_other_active_subscriptions(
                 session, panel_uuid, panel_sub_uuid
@@ -766,3 +772,25 @@ class SubscriptionService:
             logging.warning(
                 f"Could not find subscription for user {user_id} ending at {subscription_end_date.isoformat()} to update notification time."
             )
+
+    async def get_active_subscription_model(
+        self, session: AsyncSession, user_id: int
+    ) -> Optional[Subscription]:
+        db_user = await user_dal.get_user_by_id(session, user_id)
+        if not db_user or not db_user.panel_user_uuid:
+            return None
+        return await subscription_dal.get_active_subscription_by_user_id(
+            session, user_id, db_user.panel_user_uuid
+        )
+
+    async def set_auto_renew(
+        self, session: AsyncSession, user_id: int, enable: bool
+    ) -> bool:
+        sub = await self.get_active_subscription_model(session, user_id)
+        if not sub:
+            return False
+        await subscription_dal.update_subscription(
+            session, sub.subscription_id,
+            {"auto_renew": enable, "auto_renew_notified": False}
+        )
+        return True

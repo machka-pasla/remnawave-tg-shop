@@ -114,6 +114,7 @@ async def on_startup_configured(dispatcher: Dispatcher):
                 i18n_instance,
                 scheduler,
                 panel_service,
+                yookassa_service,
                 async_session_factory,
             )
             scheduler.start()
