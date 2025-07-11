@@ -211,8 +211,9 @@
   "error_displaying_statistics": "Error displaying statistics.",
   "stub_page_display": "Page",
 
-  "subscription_ending_soon_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends on {end_date} (in {days_left} days).\n\nTo avoid interruption, please renew it in the main menu.",
-  "subscription_cancelled_notification": "Your recurring subscription was cancelled. You will keep access until the paid period ends.",
+  "subscription_72h_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends in 72 hours on {end_date}.\n\nPlease renew it in the main menu.",
+  "subscription_48h_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends in 48 hours on {end_date}.\n\nPlease renew it in the main menu.",
+  "subscription_24h_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends in 24 hours on {end_date}.\n\nPlease renew it in the main menu.",
   "subscription_expired_notification": "Your VPN subscription has expired.",
   "subscription_expired_yesterday_notification": "Your VPN subscription expired 24 hours ago.",
 

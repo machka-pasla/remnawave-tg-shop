@@ -172,18 +172,6 @@ class TributeService:
                     float(price_rub),
                     currency="RUB",
                 )
-            elif event_name == 'cancelled_subscription':
-                db_user = await user_dal.get_user_by_id(session, user_id)
-                lang = db_user.language_code if db_user and db_user.language_code else settings.DEFAULT_LANGUAGE
-                _ = lambda k, **kw: i18n.gettext(lang, k, **kw)
-                try:
-                    await bot.send_message(user_id, _("subscription_cancelled_notification"))
-                except Exception as e:
-                    logging.warning(
-                        f"Failed to notify user {user_id} about cancellation: {e}")
-                await subscription_dal.set_skip_notifications_for_provider(
-                    session, user_id, 'tribute', False)
-                await session.commit()
             else:
                 await session.commit()
         return web.Response(status=200, text="ok")

@@ -10,10 +10,10 @@ from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
 from db.dal import user_dal
 
-EVENT_DAYS_MAP = {
-    "user.expires_in_72_hours": 3,
-    "user.expires_in_48_hours": 2,
-    "user.expires_in_24_hours": 1,
+EVENT_MAP = {
+    "user.expires_in_72_hours": (3, "subscription_72h_notification"),
+    "user.expires_in_48_hours": (2, "subscription_48h_notification"),
+    "user.expires_in_24_hours": (1, "subscription_24h_notification"),
 }
 
 class PanelWebhookService:
@@ -45,16 +45,15 @@ class PanelWebhookService:
             lang = db_user.language_code if db_user and db_user.language_code else self.settings.DEFAULT_LANGUAGE
             first_name = db_user.first_name or f"User {user_id}" if db_user else f"User {user_id}"
 
-        if event_name in EVENT_DAYS_MAP:
-            days_left = EVENT_DAYS_MAP[event_name]
+        if event_name in EVENT_MAP:
+            days_left, msg_key = EVENT_MAP[event_name]
             if days_left == self.settings.SUBSCRIPTION_NOTIFY_DAYS_BEFORE:
                 await self._send_message(
                     user_id,
                     lang,
-                    "subscription_ending_soon_notification",
+                    msg_key,
                     user_name=first_name,
                     end_date=user_payload.get("expireAt", "")[:10],
-                    days_left=days_left,
                 )
         elif event_name == "user.expired" and self.settings.SUBSCRIPTION_NOTIFY_ON_EXPIRE:
             await self._send_message(user_id, lang, "subscription_expired_notification")
