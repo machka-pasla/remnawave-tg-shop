@@ -47,7 +47,7 @@ class PanelWebhookService:
 
         if event_name in EVENT_MAP:
             days_left, msg_key = EVENT_MAP[event_name]
-            if days_left == self.settings.SUBSCRIPTION_NOTIFY_DAYS_BEFORE:
+            if days_left <= self.settings.SUBSCRIPTION_NOTIFY_DAYS_BEFORE:
                 await self._send_message(
                     user_id,
                     lang,
@@ -78,12 +78,9 @@ class PanelWebhookService:
             return web.Response(status=400, text="bad_request")
 
         event_name = payload.get("name") or payload.get("event")
-        user_data = (
-            payload.get("payload", {}).get("user")
-            or payload.get("payload", {})
-            or payload.get("data", {}).get("user")
-            or payload.get("data", {})
-        )
+        user_data = payload.get("payload") or payload.get("data", {})
+        if isinstance(user_data, dict) and "user" in user_data:
+            user_data = user_data.get("user") or user_data
         if not event_name:
             return web.Response(status=200, text="ok_no_event")
 
