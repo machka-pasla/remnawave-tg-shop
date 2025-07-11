@@ -213,6 +213,8 @@
 
   "subscription_ending_soon_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription ends on {end_date} (in {days_left} days).\n\nTo avoid interruption, please renew it in the main menu.",
   "subscription_cancelled_notification": "Your recurring subscription was cancelled. You will keep access until the paid period ends.",
+  "subscription_expired_notification": "Your VPN subscription has expired.",
+  "subscription_expired_yesterday_notification": "Your VPN subscription expired 24 hours ago.",
 
   "admin_new_trial_notification": "\ud83c\udf21 User {user_id} activated a free trial until {end_date}.",
   "admin_new_payment_notification": "\ud83d\udcb3 Payment received from user {user_id}: {months} mo. for {amount} {currency}.",

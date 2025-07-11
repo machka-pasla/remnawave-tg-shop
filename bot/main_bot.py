@@ -16,7 +16,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiohttp import web
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from bot.services.panel_webhook_service import PanelWebhookService, panel_webhook_route
 from sqlalchemy.orm import sessionmaker
 
 from config.settings import Settings
@@ -31,7 +31,6 @@ from bot.handlers.user import user_router_aggregate
 from bot.handlers.admin import admin_router_aggregate
 from bot.filters.admin_filter import AdminFilter
 
-from bot.services.notification_service import schedule_subscription_notifications
 from bot.services.yookassa_service import YooKassaService
 from bot.services.panel_api_service import PanelApiService
 from bot.services.subscription_service import SubscriptionService
@@ -101,26 +100,6 @@ async def on_startup_configured(dispatcher: Dispatcher):
 
     logging.info("STARTUP: on_startup_configured executing...")
 
-    existing_scheduler: Optional[AsyncIOScheduler] = dispatcher.get("scheduler")
-
-    if existing_scheduler and existing_scheduler.running:
-        logging.warning("STARTUP: Scheduler already running, skipping initialization.")
-    else:
-        scheduler = AsyncIOScheduler(timezone="UTC")
-        try:
-            await schedule_subscription_notifications(
-                bot,
-                settings,
-                i18n_instance,
-                scheduler,
-                panel_service,
-                async_session_factory,
-            )
-            scheduler.start()
-            dispatcher["scheduler"] = scheduler
-            logging.info("STARTUP: APScheduler started.")
-        except Exception as e:
-            logging.error(f"STARTUP: Failed to start APScheduler: {e}", exc_info=True)
 
     telegram_webhook_url_to_set = getattr(settings, "TELEGRAM_WEBHOOK_BASE_URL", None)
     if telegram_webhook_url_to_set:
@@ -213,15 +192,6 @@ async def on_startup_configured(dispatcher: Dispatcher):
 async def on_shutdown_configured(dispatcher: Dispatcher):
     logging.warning("SHUTDOWN: on_shutdown_configured executing...")
 
-    scheduler: Optional[AsyncIOScheduler] = dispatcher.get("scheduler")
-    if scheduler and scheduler.running:
-        try:
-            scheduler.shutdown(wait=False)
-            logging.info("SHUTDOWN: APScheduler shut down.")
-        except Exception as e:
-            logging.error(
-                f"SHUTDOWN: Error shutting down APScheduler: {e}", exc_info=True
-            )
 
     panel_service: Optional[PanelApiService] = dispatcher.get("panel_service")
     if panel_service and hasattr(panel_service, "close_session"):
@@ -304,6 +274,12 @@ async def run_bot(settings_param: Settings):
         subscription_service,
         referral_service,
     )
+    panel_webhook_service = PanelWebhookService(
+        bot,
+        settings_param,
+        i18n_instance,
+        local_async_session_factory,
+    )
 
     dp["i18n_instance"] = i18n_instance
     dp["yookassa_service"] = yookassa_service
@@ -313,6 +289,7 @@ async def run_bot(settings_param: Settings):
     dp["promo_code_service"] = promo_code_service
     dp["stars_service"] = stars_service
     dp["tribute_service"] = tribute_service
+    dp["panel_webhook_service"] = panel_webhook_service
     dp["async_session_factory"] = local_async_session_factory
 
     dp.update.outer_middleware(DBSessionMiddleware(local_async_session_factory))
@@ -367,6 +344,7 @@ async def run_bot(settings_param: Settings):
         app["panel_service"] = panel_service
         app["stars_service"] = stars_service
         app["tribute_service"] = tribute_service
+        app["panel_webhook_service"] = panel_webhook_service
 
         setup_application(app, dp, bot=bot)
 
@@ -401,6 +379,11 @@ async def run_bot(settings_param: Settings):
         if tribute_path.startswith("/"):
             app.router.add_post(tribute_path, tribute_webhook_route)
             logging.info(f"Tribute webhook route configured at: [POST] {tribute_path}")
+
+        panel_path = settings_param.panel_webhook_path
+        if panel_path.startswith("/"):
+            app.router.add_post(panel_path, panel_webhook_route)
+            logging.info(f"Panel webhook route configured at: [POST] {panel_path}")
 
         web_app_runner = web.AppRunner(app)
         await web_app_runner.setup()

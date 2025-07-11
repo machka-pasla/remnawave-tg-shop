@@ -76,7 +76,11 @@ class TributeService:
         event_name = payload.get('name')
         data = payload.get('payload', {})
         user_id = data.get('telegram_user_id')
-        price_val = data.get('price')
+        price_val = (
+            data.get('amount')
+            or data.get('amount_paid')
+            or data.get('price')
+        )
 
         if not user_id or price_val is None:
             return web.Response(status=200, text="ok_missing_fields")

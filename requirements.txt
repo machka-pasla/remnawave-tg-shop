@@ -4,7 +4,6 @@ aiohttp==3.10.11
 pydantic==2.7.1
 yookassa==3.5.0
 pycountry==23.12.11
-apscheduler==3.10.4
 pydantic_settings
 sqlalchemy[asyncio]==2.0.29
 asyncpg==0.29.0

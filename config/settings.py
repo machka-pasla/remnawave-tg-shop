@@ -62,9 +62,10 @@ class Settings(BaseSettings):
     TRIBUTE_LINK_12_MONTHS: Optional[str] = Field(default=None)
     TRIBUTE_API_KEY: Optional[str] = Field(default=None)
 
-    SUBSCRIPTION_EXPIRATION_NOTIFICATION_DAYS: int = Field(default=7)
-    SUBSCRIPTION_NOTIFICATION_HOUR_UTC: int = Field(default=9)
-    SUBSCRIPTION_NOTIFICATION_MINUTE_UTC: int = Field(default=0)
+    SUBSCRIPTION_NOTIFICATIONS_ENABLED: bool = Field(default=True)
+    SUBSCRIPTION_NOTIFY_ON_EXPIRE: bool = Field(default=True)
+    SUBSCRIPTION_NOTIFY_AFTER_EXPIRE: bool = Field(default=True)
+    SUBSCRIPTION_NOTIFY_DAYS_BEFORE: int = Field(default=3)
 
     REFERRAL_BONUS_DAYS_INVITER_1_MONTH: Optional[int] = Field(
         default=3, alias="REFERRAL_BONUS_DAYS_1_MONTH")
@@ -182,6 +183,18 @@ class Settings(BaseSettings):
     def tribute_full_webhook_url(self) -> Optional[str]:
         if self.YOOKASSA_WEBHOOK_BASE_URL:
             return f"{self.YOOKASSA_WEBHOOK_BASE_URL.rstrip('/')}{self.tribute_webhook_path}"
+        return None
+
+    @computed_field
+    @property
+    def panel_webhook_path(self) -> str:
+        return "/webhook/panel"
+
+    @computed_field
+    @property
+    def panel_full_webhook_url(self) -> Optional[str]:
+        if self.YOOKASSA_WEBHOOK_BASE_URL:
+            return f"{self.YOOKASSA_WEBHOOK_BASE_URL.rstrip('/')}{self.panel_webhook_path}"
         return None
 
     @computed_field
