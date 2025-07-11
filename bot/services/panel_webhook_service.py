@@ -1,8 +1,11 @@
 import json
 import logging
+import hmac
+import hashlib
 from aiohttp import web
 from aiogram import Bot
 from sqlalchemy.orm import sessionmaker
+from typing import Optional
 from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
 from db.dal import user_dal
@@ -58,7 +61,18 @@ class PanelWebhookService:
         elif event_name == "user.expired_24_hours_ago" and self.settings.SUBSCRIPTION_NOTIFY_AFTER_EXPIRE:
             await self._send_message(user_id, lang, "subscription_expired_yesterday_notification")
 
-    async def handle_webhook(self, raw_body: bytes) -> web.Response:
+    async def handle_webhook(self, raw_body: bytes, signature_header: Optional[str]) -> web.Response:
+        if self.settings.PANEL_WEBHOOK_SECRET:
+            if not signature_header:
+                return web.Response(status=403, text="no_signature")
+            expected_sig = hmac.new(
+                self.settings.PANEL_WEBHOOK_SECRET.encode(),
+                raw_body,
+                hashlib.sha256,
+            ).hexdigest()
+            if not hmac.compare_digest(expected_sig, signature_header):
+                return web.Response(status=403, text="invalid_signature")
+
         try:
             payload = json.loads(raw_body.decode())
         except Exception:
@@ -75,4 +89,5 @@ class PanelWebhookService:
 async def panel_webhook_route(request: web.Request):
     service: PanelWebhookService = request.app["panel_webhook_service"]
     raw = await request.read()
-    return await service.handle_webhook(raw)
+    signature_header = request.headers.get("X-Remnawave-Signature")
+    return await service.handle_webhook(raw, signature_header)

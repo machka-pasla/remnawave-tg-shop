@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     TRIBUTE_LINK_6_MONTHS: Optional[str] = Field(default=None)
     TRIBUTE_LINK_12_MONTHS: Optional[str] = Field(default=None)
     TRIBUTE_API_KEY: Optional[str] = Field(default=None)
+    PANEL_WEBHOOK_SECRET: Optional[str] = Field(default=None)
 
     SUBSCRIPTION_NOTIFICATIONS_ENABLED: bool = Field(default=True)
     SUBSCRIPTION_NOTIFY_ON_EXPIRE: bool = Field(default=True)
