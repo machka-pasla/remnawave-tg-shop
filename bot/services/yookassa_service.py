@@ -142,7 +142,7 @@ class YooKassaService:
                 f"Amount: {amount} {currency}. Metadata: {metadata}. Receipt: {receipt_data_dict}"
             )
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(
                 None, lambda: YooKassaPayment.create(payment_request,
                                                      idempotence_key))
@@ -196,7 +196,7 @@ class YooKassaService:
                 f"Fetching payment info from YooKassa for ID: {payment_id_in_yookassa}"
             )
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             payment_info_yk = await loop.run_in_executor(
                 None, lambda: YooKassaPayment.find_one(payment_id_in_yookassa))
 

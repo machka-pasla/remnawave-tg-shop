@@ -46,6 +46,15 @@ class CryptoPayService:
             self.client = None
             self.configured = False
 
+    async def close(self):
+        """Close underlying AioCryptoPay session if initialized."""
+        if self.client:
+            try:
+                await self.client.close()
+                logging.info("CryptoPay client session closed.")
+            except Exception as e:
+                logging.warning(f"Failed to close CryptoPay client: {e}")
+
     async def create_invoice(
         self,
         session: AsyncSession,

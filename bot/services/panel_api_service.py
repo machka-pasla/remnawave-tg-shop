@@ -34,6 +34,10 @@ class PanelApiService:
             self._session = None
             logging.info("Panel API service HTTP session closed.")
 
+    async def close(self):
+        """Alias for close_session for API consistency."""
+        await self.close_session()
+
     async def _prepare_headers(self) -> Dict[str, str]:
         headers = {
             "Content-Type": "application/json",

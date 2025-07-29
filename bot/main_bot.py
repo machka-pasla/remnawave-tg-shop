@@ -195,9 +195,18 @@ async def on_shutdown_configured(dispatcher: Dispatcher):
 
 
     panel_service: Optional[PanelApiService] = dispatcher.get("panel_service")
-    if panel_service and hasattr(panel_service, "close_session"):
-        await panel_service.close_session()
+    if panel_service:
+        close_coro = getattr(panel_service, "close", None)
+        if callable(close_coro):
+            await close_coro()
+        elif hasattr(panel_service, "close_session"):
+            await panel_service.close_session()
         logging.info("Panel API service session closed on shutdown.")
+
+    cryptopay_service: Optional[CryptoPayService] = dispatcher.get("cryptopay_service")
+    if cryptopay_service and hasattr(cryptopay_service, "close"):
+        await cryptopay_service.close()
+        logging.info("CryptoPay service session closed on shutdown.")
 
     bot: Bot = dispatcher["bot_instance"]
     if bot and bot.session:
@@ -314,7 +323,8 @@ async def run_bot(settings_param: Settings):
     dp.update.outer_middleware(ActionLoggerMiddleware(settings=settings_param))
 
     dp.startup.register(on_startup_configured)
-    dp.shutdown.register(lambda: on_shutdown_configured(dp))
+    # Register shutdown callback directly so Dispatcher instance is provided
+    dp.shutdown.register(on_shutdown_configured)
 
     await register_all_routers(dp, settings_param)
 
