@@ -193,20 +193,38 @@ async def on_startup_configured(dispatcher: Dispatcher):
 async def on_shutdown_configured(dispatcher: Dispatcher):
     logging.warning("SHUTDOWN: on_shutdown_configured executing...")
 
-
-    panel_service: Optional[PanelApiService] = dispatcher.get("panel_service")
-    if panel_service:
-        close_coro = getattr(panel_service, "close", None)
+    async def close_service(key: str) -> None:
+        service = dispatcher.get(key)
+        if not service:
+            return
+        close_coro = getattr(service, "close", None)
         if callable(close_coro):
-            await close_coro()
-        elif hasattr(panel_service, "close_session"):
-            await panel_service.close_session()
-        logging.info("Panel API service session closed on shutdown.")
+            try:
+                await close_coro()
+                logging.info(f"{key} closed on shutdown.")
+            except Exception as e:
+                logging.warning(f"Failed to close {key}: {e}")
+        else:
+            close_session = getattr(service, "close_session", None)
+            if callable(close_session):
+                try:
+                    await close_session()
+                    logging.info(f"{key} session closed on shutdown.")
+                except Exception as e:
+                    logging.warning(f"Failed to close session for {key}: {e}")
 
-    cryptopay_service: Optional[CryptoPayService] = dispatcher.get("cryptopay_service")
-    if cryptopay_service and hasattr(cryptopay_service, "close"):
-        await cryptopay_service.close()
-        logging.info("CryptoPay service session closed on shutdown.")
+    for service_key in (
+        "panel_service",
+        "cryptopay_service",
+        "tribute_service",
+        "panel_webhook_service",
+        "yookassa_service",
+        "promo_code_service",
+        "stars_service",
+        "subscription_service",
+        "referral_service",
+    ):
+        await close_service(service_key)
 
     bot: Bot = dispatcher["bot_instance"]
     if bot and bot.session:
