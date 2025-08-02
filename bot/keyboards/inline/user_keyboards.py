@@ -158,8 +158,11 @@ def get_referral_link_keyboard(lang: str,
                                i18n_instance) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+    builder.button(text=_(key="referral_share_button"),
+                   callback_data="referral_action:share")
     builder.button(text=_(key="back_to_main_menu_button"),
                    callback_data="main_action:back_to_main")
+    builder.adjust(1)
     return builder.as_markup()
 
 

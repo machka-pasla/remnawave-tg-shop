@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config.settings import Settings
 from bot.services.referral_service import ReferralService
 
-from bot.keyboards.inline.user_keyboards import get_back_to_main_menu_markup
+from bot.keyboards.inline.user_keyboards import get_referral_link_keyboard
 from bot.middlewares.i18n import JsonI18n
 
 router = Router(name="user_referral_router")
@@ -87,7 +87,7 @@ async def referral_command_handler(event: Union[types.Message,
              referral_link=referral_link,
              bonus_details=bonus_details_str)
 
-    reply_markup_val = get_back_to_main_menu_markup(current_lang, i18n)
+    reply_markup_val = get_referral_link_keyboard(current_lang, i18n)
 
     if isinstance(event, types.Message):
         await event.answer(text,
@@ -106,3 +106,39 @@ async def referral_command_handler(event: Union[types.Message,
                                        reply_markup=reply_markup_val,
                                        disable_web_page_preview=True)
         await event.answer()
+
+
+@router.callback_query(F.data == "referral_action:share")
+async def referral_share_callback(callback: types.CallbackQuery,
+                                  settings: Settings,
+                                  i18n_data: dict,
+                                  referral_service: ReferralService,
+                                  bot: Bot):
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+
+    if not i18n or not referral_service:
+        logging.error("Dependencies missing in referral_share_callback")
+        await callback.answer("Service error", show_alert=True)
+        return
+
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+
+    try:
+        bot_username = (await bot.get_me()).username
+    except Exception as e_bot_info:
+        logging.error(f"Failed to get bot info for referral share: {e_bot_info}")
+        await callback.answer(_("error_generating_referral_link"), show_alert=True)
+        return
+
+    if not bot_username:
+        logging.error("Bot username is None, cannot generate referral link.")
+        await callback.answer(_("error_generating_referral_link"), show_alert=True)
+        return
+
+    referral_link = referral_service.generate_referral_link(bot_username,
+                                                             callback.from_user.id)
+    text = _("referral_share_message", referral_link=referral_link)
+
+    await callback.message.answer(text, disable_web_page_preview=True)
+    await callback.answer()
