@@ -54,6 +54,21 @@ class SubscriptionService:
                     f"Failed to notify admin {admin_id} about panel user creation failure: {e}"
                 )
 
+    async def ensure_panel_user(
+        self, session: AsyncSession, user_id: int, db_user: Optional[User] = None
+    ) -> bool:
+        """Ensure that a panel user exists for the given Telegram user.
+
+        Creates a user on the panel using default traffic settings from
+        configuration if it doesn't exist yet.
+
+        Returns True if the panel user exists or was created successfully.
+        """
+        panel_uuid, *_ = await self._get_or_create_panel_user_link_details(
+            session, user_id, db_user
+        )
+        return panel_uuid is not None
+
     async def _get_or_create_panel_user_link_details(
         self, session: AsyncSession, user_id: int, db_user: Optional[User] = None
     ) -> Tuple[Optional[str], Optional[str], Optional[str], bool]:

@@ -193,6 +193,8 @@ async def start_command_handler(message: types.Message,
                     f"Failed to update existing user {user_id} in session: {e_update}",
                     exc_info=True)
 
+    await subscription_service.ensure_panel_user(session, user_id, db_user)
+
     await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
     await send_main_menu(message,
                          settings,
