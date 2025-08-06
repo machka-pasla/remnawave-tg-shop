@@ -42,6 +42,7 @@ from bot.services.tribute_service import TributeService, tribute_webhook_route
 from bot.services.crypto_pay_service import CryptoPayService, cryptopay_webhook_route
 
 from bot.handlers.user import payment as user_payment_webhook_module
+from bot.handlers.admin.sync_admin import sync_command_handler
 
 
 class DBSessionMiddleware(BaseMiddleware):
@@ -190,6 +191,13 @@ async def on_startup_configured(dispatcher: Dispatcher):
             logging.info("STARTUP: /start command description set.")
         except Exception as e:
             logging.error(f"STARTUP: Failed to set bot commands: {e}", exc_info=True)
+
+    try:
+        async with async_session_factory() as session:
+            i18n_data = {"current_language": settings.DEFAULT_LANGUAGE, "i18n_instance": i18n_instance}
+            await sync_command_handler(None, bot, settings, i18n_data, panel_service, session)
+    except Exception as e:
+        logging.error(f"STARTUP: auto sync failed: {e}", exc_info=True)
 
     logging.info("STARTUP: Bot on_startup_configured completed.")
 

@@ -55,13 +55,20 @@ async def get_all_active_promo_codes(session: AsyncSession,
     return result.scalars().all()
 
 
-async def get_all_promo_codes_with_details(session: AsyncSession, limit: int = 50,
+async def get_all_promo_codes_with_details(session: AsyncSession, limit: Optional[int] = None,
                                          offset: int = 0) -> List[PromoCode]:
-    """Get all promo codes (active and inactive) with pagination for management"""
-    stmt = (select(PromoCode).order_by(
-        PromoCode.created_at.desc()).limit(limit).offset(offset))
+    """Get all promo codes (active and inactive) with optional pagination"""
+    stmt = select(PromoCode).order_by(PromoCode.created_at.desc()).offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
     result = await session.execute(stmt)
     return result.scalars().all()
+
+
+async def count_all_promo_codes(session: AsyncSession) -> int:
+    stmt = select(func.count()).select_from(PromoCode)
+    result = await session.execute(stmt)
+    return result.scalar_one()
 
 
 async def get_promo_activations_by_code_id(session: AsyncSession, promo_code_id: int, limit: Optional[int] = None, offset: int = 0) -> List[PromoCodeActivation]:

@@ -65,27 +65,37 @@ async def view_promo_codes_handler(callback: types.CallbackQuery, i18n_data: dic
         return
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
-    promo_models = await promo_code_dal.get_all_active_promo_codes(session, limit=20, offset=0)
-    text = f"{_('admin_active_promos_list_header')}\n\n{_('admin_no_active_promos')}" if not promo_models else "\n".join(
-        [_("admin_active_promos_list_header"), ""] + [
-            f"🎟 <code>{p.code}</code> | 🎁 {p.bonus_days}д | 📊 {p.current_activations}/{p.max_activations} | ⏰ {p.valid_until.strftime('%d.%m.%Y') if p.valid_until else _('admin_promo_valid_indefinitely')}"
-            for p in promo_models
-        ]
-    )
+    promo_models = await promo_code_dal.get_all_promo_codes_with_details(session, limit=20, offset=0)
+    if not promo_models:
+        text = f"{_('admin_active_promos_list_header')}\n\n{_('admin_no_active_promos')}"
+    else:
+        lines = [_("admin_active_promos_list_header"), ""]
+        for p in promo_models:
+            status = _("admin_promo_status_active") if p.is_active else _("admin_promo_status_inactive")
+            if p.valid_until and p.valid_until < datetime.now(timezone.utc):
+                status = _("admin_promo_status_expired")
+            elif p.current_activations >= p.max_activations:
+                status = _("admin_promo_status_used_up")
+            validity = p.valid_until.strftime('%d.%m.%Y') if p.valid_until else _("admin_promo_valid_indefinitely")
+            lines.append(f"🎟 <code>{p.code}</code> | 🎁 {p.bonus_days}д | 📊 {p.current_activations}/{p.max_activations} | {status} | ⏰ {validity}")
+        text = "\n".join(lines)
     
     await callback.message.edit_text(text, reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n), parse_mode="HTML")
     await callback.answer()
 
 
-async def promo_management_handler(callback: types.CallbackQuery, i18n_data: dict, settings: Settings, session: AsyncSession):
-    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+async def promo_management_handler(callback: types.CallbackQuery, i18n_data: dict, settings: Optional[Settings], session: AsyncSession, page: int = 0):
+    default_lang = settings.DEFAULT_LANGUAGE if settings else "en"
+    page_size = settings.LOGS_PAGE_SIZE if settings else 10
+    current_lang = i18n_data.get("current_language", default_lang)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
     if not i18n or not callback.message:
         await callback.answer("Error processing request.", show_alert=True)
         return
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
-    promo_models = await promo_code_dal.get_all_promo_codes_with_details(session, limit=50, offset=0)
+    total_promos = await promo_code_dal.count_all_promo_codes(session)
+    promo_models = await promo_code_dal.get_all_promo_codes_with_details(session, limit=page_size, offset=page * page_size)
     if not promo_models:
         await callback.message.edit_text(_("admin_promo_management_empty"), reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n), parse_mode="HTML")
         await callback.answer()
@@ -93,9 +103,24 @@ async def promo_management_handler(callback: types.CallbackQuery, i18n_data: dic
 
     builder = InlineKeyboardBuilder()
     for promo in promo_models:
-        builder.row(InlineKeyboardButton(text=f"📝 {promo.code}", callback_data=f"promo_detail:{promo.promo_code_id}"))
+        status = _("admin_promo_status_active") if promo.is_active else _("admin_promo_status_inactive")
+        if promo.valid_until and promo.valid_until < datetime.now(timezone.utc):
+            status = _("admin_promo_status_expired")
+        elif promo.current_activations >= promo.max_activations:
+            status = _("admin_promo_status_used_up")
+        builder.row(InlineKeyboardButton(text=f"📝 {promo.code} | {status}", callback_data=f"promo_detail:{promo.promo_code_id}"))
+
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(InlineKeyboardButton(text="⬅️", callback_data=f"promo_page:{page-1}"))
+    if (page + 1) * page_size < total_promos:
+        nav_buttons.append(InlineKeyboardButton(text="➡️", callback_data=f"promo_page:{page+1}"))
+    if nav_buttons:
+        builder.row(*nav_buttons)
+
+    builder.row(InlineKeyboardButton(text=_("admin_promo_export_all_button"), callback_data="promo_export_all"))
     builder.row(InlineKeyboardButton(text=_("back_to_admin_panel_button"), callback_data="admin_action:main"))
-    
+
     await callback.message.edit_text(_("admin_promo_management_title"), reply_markup=builder.as_markup(), parse_mode="HTML")
     await callback.answer()
 
@@ -227,6 +252,45 @@ async def promo_export_activations_handler(callback: types.CallbackQuery, i18n_d
     await callback.answer()
 
 
+@router.callback_query(F.data.startswith("promo_page:"))
+async def promo_page_handler(callback: types.CallbackQuery, i18n_data: dict, settings: Settings, session: AsyncSession):
+    try:
+        page = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        page = 0
+    await promo_management_handler(callback, i18n_data, settings, session, page=page)
+
+
+@router.callback_query(F.data == "promo_export_all")
+async def promo_export_all_handler(callback: types.CallbackQuery, i18n_data: dict, session: AsyncSession):
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    current_lang = i18n_data.get("current_language")
+    if not i18n or not callback.message or not current_lang:
+        return await callback.answer("Error processing request.", show_alert=True)
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+
+    promos = await promo_code_dal.get_all_promo_codes_with_details(session)
+    if not promos:
+        return await callback.answer(_("admin_promo_management_empty"), show_alert=True)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Code", "Bonus Days", "Current", "Max", "Valid Until", "Status"])
+    for p in promos:
+        status = _("admin_promo_status_active") if p.is_active else _("admin_promo_status_inactive")
+        if p.valid_until and p.valid_until < datetime.now(timezone.utc):
+            status = _("admin_promo_status_expired")
+        elif p.current_activations >= p.max_activations:
+            status = _("admin_promo_status_used_up")
+        validity = p.valid_until.strftime("%Y-%m-%d %H:%M:%S") if p.valid_until else _("admin_promo_valid_indefinitely")
+        writer.writerow([p.code, p.bonus_days, p.current_activations, p.max_activations, validity, status])
+
+    output.seek(0)
+    file = types.BufferedInputFile(output.getvalue().encode('utf-8'), filename="promo_codes.csv")
+    await callback.message.answer_document(file, caption=_("admin_promo_export_all_caption"))
+    await callback.answer()
+
+
 @router.callback_query(F.data.startswith("promo_delete:"))
 async def promo_delete_handler(callback: types.CallbackQuery, i18n_data: dict, session: AsyncSession):
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
@@ -241,7 +305,7 @@ async def promo_delete_handler(callback: types.CallbackQuery, i18n_data: dict, s
         if promo:
             await session.commit()
             await callback.answer(_("admin_promo_deleted_success", code=promo.code), show_alert=True)
-            await promo_management_handler(callback, i18n_data, {}, session) # Settings not needed here
+            await promo_management_handler(callback, i18n_data, None, session, page=0)
         else:
             await callback.answer(_("admin_promo_not_found"), show_alert=True)
     except (ValueError, IndexError):
@@ -332,4 +396,4 @@ async def process_promo_edit_details(message: types.Message, state: FSMContext, 
 
 
 async def manage_promo_codes_handler(callback: types.CallbackQuery, i18n_data: dict, settings: Settings, session: AsyncSession):
-    await promo_management_handler(callback, i18n_data, settings, session)
+    await promo_management_handler(callback, i18n_data, settings, session, page=0)

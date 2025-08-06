@@ -17,7 +17,7 @@ router = Router(name="admin_sync_router")
 
 @router.message(Command("sync"))
 async def sync_command_handler(
-    message_event: Union[types.Message, types.CallbackQuery],
+    message_event: Optional[Union[types.Message, types.CallbackQuery]],
     bot: Bot,
     settings: Settings,
     i18n_data: dict,
@@ -28,19 +28,23 @@ async def sync_command_handler(
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
     if not i18n:
         logging.error("i18n missing in sync_command_handler")
-
         if isinstance(message_event, types.Message):
             await message_event.answer("Language error.")
         elif isinstance(message_event, types.CallbackQuery):
             await message_event.answer("Language error.", show_alert=True)
+        elif message_event is None and settings.PRIMARY_ADMIN_ID:
+            await bot.send_message(settings.PRIMARY_ADMIN_ID, "Language error.")
         return
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
-    target_chat_id = (
-        message_event.chat.id
-        if isinstance(message_event, types.Message)
-        else (message_event.message.chat.id if message_event.message else None)
-    )
+    target_chat_id = None
+    if isinstance(message_event, types.Message):
+        target_chat_id = message_event.chat.id
+    elif isinstance(message_event, types.CallbackQuery) and message_event.message:
+        target_chat_id = message_event.message.chat.id
+    elif settings.PRIMARY_ADMIN_ID:
+        target_chat_id = settings.PRIMARY_ADMIN_ID
+
     if not target_chat_id:
         logging.error("Sync handler: could not determine target_chat_id.")
         if isinstance(message_event, types.CallbackQuery):
@@ -49,8 +53,11 @@ async def sync_command_handler(
 
     if isinstance(message_event, types.Message):
         await message_event.answer(_("sync_started"))
+    elif message_event is None:
+        await bot.send_message(target_chat_id, _("sync_started"))
 
-    logging.info(f"Admin ({message_event.from_user.id}) triggered panel sync.")
+    admin_id_for_log = message_event.from_user.id if message_event else settings.PRIMARY_ADMIN_ID
+    logging.info(f"Admin ({admin_id_for_log}) triggered panel sync.")
 
     users_processed_count = 0
     users_synced_successfully = 0

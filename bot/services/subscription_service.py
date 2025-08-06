@@ -593,19 +593,27 @@ class SubscriptionService:
             )
 
         if updated_sub_model:
+            panel_update_payload = {
+                "expireAt": new_end_date_obj.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+                "trafficLimitBytes": self.settings.user_traffic_limit_bytes,
+                "trafficLimitStrategy": self.settings.USER_TRAFFIC_STRATEGY,
+            }
             panel_update_success = (
                 await self.panel_service.update_user_details_on_panel(
                     panel_uuid,
-                    {
-                        "expireAt": new_end_date_obj.isoformat(
-                            timespec="milliseconds"
-                        ).replace("+00:00", "Z")
-                    },
+                    panel_update_payload,
                 )
             )
             if not panel_update_success:
                 logging.warning(
                     f"Panel expiry update failed for {panel_uuid} after {reason} bonus. Local DB was updated to {new_end_date_obj}."
+                )
+
+            if updated_sub_model.traffic_limit_bytes != self.settings.user_traffic_limit_bytes:
+                await subscription_dal.update_subscription(
+                    session,
+                    updated_sub_model.subscription_id,
+                    {"traffic_limit_bytes": self.settings.user_traffic_limit_bytes},
                 )
 
             logging.info(

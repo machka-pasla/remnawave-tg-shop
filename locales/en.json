@@ -1,490 +1,565 @@
 {
   "welcome": "Welcome, {user_name}!",
-  "main_menu_greeting": "Hi, {user_name}! 👋\nWhat would you like to do?",
 
-  "menu_activate_trial_button": "🆓 Free Trial",
-  "menu_subscribe_inline": "🚀 Purchase",
-  "menu_my_subscription_inline": "🔐 My Subscription",
-  "menu_referral_inline": "🎁 Referrals",
-  "menu_apply_promo_button": "🎟 Promo Code",
-  "menu_language_settings_inline": "🌐 Language",
-  "menu_server_status_button": "📊 Status",
-  "menu_support_button": "💬 Support",
-  "menu_terms_button": "📄 Terms of Service",
-  "back_to_main_menu_button": "⬅️ Back",
+  "main_menu_greeting": "Hi, {user_name}! \ud83d\udc4b\nWhat would you like to do?",
 
-  "choose_language": "Choose language / Выберите язык:",
+  "menu_activate_trial_button": "\ud83c\udd93 Free Trial",
+
+  "menu_subscribe_inline": "\ud83d\ude80 Purchase",
+
+  "menu_my_subscription_inline": "\ud83d\udd10 My Subscription",
+
+  "menu_referral_inline": "\ud83c\udf81 Referrals",
+
+  "menu_apply_promo_button": "\ud83c\udf9f Promo Code",
+
+  "menu_language_settings_inline": "\ud83c\udf10 Language",
+
+  "menu_server_status_button": "\ud83d\udcca Status",
+
+  "menu_support_button": "\ud83d\udcac Support",
+
+  "menu_terms_button": "\ud83d\udcc4 Terms of Service",
+
+  "back_to_main_menu_button": "\u2b05\ufe0f Back",
+
+  "choose_language": "Choose language / \u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u044f\u0437\u044b\u043a:",
+
   "language_set_alert": "Language changed!",
+
   "error_occurred_try_again": "An error occurred, please try again.",
+
   "error_displaying_menu": "Error displaying menu.",
+
   "main_menu_unknown_action": "Unknown action.",
 
   "select_subscription_period": "Select subscription period:",
-  "no_subscription_options_available": "No subscription options available at the moment.",
-  "subscribe_for_months_button": "{months} mo. - {price} {currency_symbol}",
-  "choose_payment_method": "Choose payment method:",
-  "pay_button": "💳 Pay",
-  "pay_with_yookassa_button": "💳 YooKassa",
-  "pay_with_cryptopay_button": "💎 CryptoBot",
-  "pay_with_tribute_button": "❤️ Tribute",
-  "pay_with_stars_button": "🌟 Telegram Stars",
-  "connect_button": "🔗 Connect",
-  "cancel_button": "❌ Cancel",
-  "payment_description_subscription": "Subscription payment for {months} mo.",
-  "payment_service_unavailable": "Payment service temporarily unavailable. Please try again later.",
-  "payment_service_unavailable_alert": "Payment service unavailable",
-  "error_creating_payment_record": "Error creating payment record. Please try again later.",
-  "error_payment_gateway_link_failed": "Failed to get payment link. Please contact support.",
-  "payment_link_message": "To pay for {months} mo. subscription, click the button below:",
-  "error_payment_gateway": "Payment gateway error. Please try again later or contact support.",
-  "payment_successful_error_details": "✅ Payment succeeded, but an error occurred displaying details. Your subscription is active. Contact support if anything is wrong.",
-  "payment_successful_full": "✅ Payment successful!\nYour {months}-month subscription is active until {end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions 👇",
-  "payment_successful_with_promo_full": "✅ Payment successful!\nYour {months}-month subscription (with promo bonus +{bonus_days} days) is active until {end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions 👇",
-  "payment_successful_with_referral_bonus_full": "✅ Payment successful!\nYour {months}-month subscription (base end date: {base_end_date}) has been extended by {bonus_days} bonus days for referral from {inviter_name} and is now active until {final_end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions 👇",
-  "payment_failed": "❌ Payment failed or was cancelled. Please try again or contact support.",
-  "error_processing_your_payment": "An error occurred processing your payment after success. Please contact support with the details.",
 
-  "my_subscription_details": "<b>🔐 My Subscription:</b>\n\nStatus: <b>{status}</b>\nActive until: <b>{end_date}</b> (days left: {days_left})\n\nTraffic: <b>{traffic_used}</b> of <b>{traffic_limit}</b>\n\nConfiguration link:\n<code>{config_link}</code>",
+  "no_subscription_options_available": "No subscription options available at the moment.",
+
+  "subscribe_for_months_button": "{months} mo. - {price} {currency_symbol}",
+
+  "choose_payment_method": "Choose payment method:",
+
+  "pay_button": "\ud83d\udcb3 Pay",
+
+  "pay_with_yookassa_button": "\ud83d\udcb3 YooKassa",
+
+  "pay_with_cryptopay_button": "\ud83d\udc8e CryptoBot",
+
+  "pay_with_tribute_button": "\u2764\ufe0f Tribute",
+
+  "pay_with_stars_button": "\ud83c\udf1f Telegram Stars",
+
+  "connect_button": "\ud83d\udd17 Connect",
+
+  "cancel_button": "\u274c Cancel",
+
+  "payment_description_subscription": "Subscription payment for {months} mo.",
+
+  "payment_service_unavailable": "Payment service temporarily unavailable. Please try again later.",
+
+  "payment_service_unavailable_alert": "Payment service unavailable",
+
+  "error_creating_payment_record": "Error creating payment record. Please try again later.",
+
+  "error_payment_gateway_link_failed": "Failed to get payment link. Please contact support.",
+
+  "payment_link_message": "To pay for {months} mo. subscription, click the button below:",
+
+  "error_payment_gateway": "Payment gateway error. Please try again later or contact support.",
+
+  "payment_successful_error_details": "\u2705 Payment succeeded, but an error occurred displaying details. Your subscription is active. Contact support if anything is wrong.",
+
+  "payment_successful_full": "\u2705 Payment successful!\nYour {months}-month subscription is active until {end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions \ud83d\udc47",
+
+  "payment_successful_with_promo_full": "\u2705 Payment successful!\nYour {months}-month subscription (with promo bonus +{bonus_days} days) is active until {end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions \ud83d\udc47",
+
+  "payment_successful_with_referral_bonus_full": "\u2705 Payment successful!\nYour {months}-month subscription (base end date: {base_end_date}) has been extended by {bonus_days} bonus days for referral from {inviter_name} and is now active until {final_end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions \ud83d\udc47",
+
+  "payment_failed": "\u274c Payment failed or was cancelled. Please try again or contact support.",
+
+  "my_subscription_details": "<b>\ud83d\udd10 My Subscription:</b>\n\nStatus: <b>{status}</b>\nActive until: <b>{end_date}</b> (days left: {days_left})\n\nTraffic: <b>{traffic_used}</b> of <b>{traffic_limit}</b>\n\nConfiguration link:\n<code>{config_link}</code>",
+
   "config_link_not_available": "not available, contact support",
+
   "subscription_not_active": "You have no active subscription.\nWould you like to purchase one?",
+
   "status_active": "Active",
-  "status_expired": "Expired",
-  "status_disabled": "Disabled",
+
   "traffic_unlimited": "Unlimited",
+
   "traffic_na": "n/a",
+
   "error_service_unavailable": "Service temporarily unavailable. Please try again later.",
 
   "promo_code_prompt": "Please enter your promo code:",
+
   "promo_code_not_found": "Promo code <code>{code}</code> not found, expired, or already used the maximum number of times.",
+
   "promo_code_already_used_by_user": "You have already used promo code <code>{code}</code>.",
-  "promo_code_no_active_subscription": "You must have an active subscription to apply this promo code.",
-  "promo_code_applied_success_full": "✅ Promo code applied successfully!\nSubscription active until {end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions 👇",
+
+  "promo_code_applied_success_full": "\u2705 Promo code applied successfully!\nSubscription active until {end_date}.\n\nConnection key:\n<code>{config_link}</code>\n\nTo connect, open the link and follow the instructions \ud83d\udc47",
+
   "error_applying_promo_bonus": "Failed to apply promo bonus. Please try again later or contact support.",
+
   "promo_input_cancelled_short": "Promo code entry cancelled.",
 
   "trial_feature_disabled": "Free trial is currently unavailable.",
+
   "trial_already_had_subscription_or_trial": "You have already used a free trial or had a paid subscription. Free trial is available only once for new users.",
-  "trial_confirm_prompt": "Would you like to activate a free trial for {days} days with {traffic_gb} GB traffic limit?",
-  "trial_confirm_activate_button": "✅ Activate!",
+
+  "trial_confirm_activate_button": "\u2705 Activate!",
+
   "trial_activated_alert": "Trial activated!",
-  "trial_activated_details_message": "🚀 Your {days}-day free trial is activated!\n\nValid until: <b>{end_date}</b>\nTraffic: <b>{traffic_gb} GB</b>\n\nYour configuration link:\n<code>{config_link}</code>",
+
+  "trial_activated_details_message": "\ud83d\ude80 Your {days}-day free trial is activated!\n\nValid until: <b>{end_date}</b>\nTraffic: <b>{traffic_gb} GB</b>\n\nYour configuration link:\n<code>{config_link}</code>",
+
   "trial_activation_failed": "Failed to activate free trial. Please try again later.",
+
   "trial_activation_failed_panel_link": "Failed to link your account to the server for trial activation. Please try again later.",
+
   "trial_activation_failed_db": "Database error during trial activation. Please try again later.",
+
   "trial_activation_failed_panel_update": "Failed to update trial details on the server. Please try again later.",
+
   "user_not_found_for_trial": "Your account was not found in the system. Please run /start first.",
+
   "yes_button": "Yes",
+
   "no_button": "No",
-  "trial_cancelled_short": "Activation cancelled.",
 
-  "referral_program_info_new": "🎁 <b>Referral Program</b>\n\n📊 <b>Your stats:</b>\n👥 Friends invited: <b>{invited_count}</b>\n💳 Purchased subscription: <b>{purchased_count}</b>\n\n🔗 Your link:\n<code>{referral_link}</code>\n\n💰 <b>Invitation bonuses:</b>\n{bonus_details}\n\n📢 Share the link with friends and get bonuses!",
-  "referral_bonus_per_period": "\n\n🎁 For a friend's {months}-month subscription:\n  ➢ You: <b>{inviter_bonus_days} days</b>\n  ➢ Friend: <b>{referee_bonus_days} days</b>",
-  "no_bonus_days": "0",
+  "referral_program_info_new": "\ud83c\udf81 <b>Referral Program</b>\n\n\ud83d\udcca <b>Your stats:</b>\n\ud83d\udc65 Friends invited: <b>{invited_count}</b>\n\ud83d\udcb3 Purchased subscription: <b>{purchased_count}</b>\n\n\ud83d\udd17 Your link:\n<code>{referral_link}</code>\n\n\ud83d\udcb0 <b>Invitation bonuses:</b>\n{bonus_details}\n\n\ud83d\udce2 Share the link with friends and get bonuses!",
+
+  "referral_bonus_per_period": "\n\n\ud83c\udf81 For a friend's {months}-month subscription:\n  \u27a2 You: <b>{inviter_bonus_days} days</b>\n  \u27a2 Friend: <b>{referee_bonus_days} days</b>",
+
   "referral_no_bonuses_configured": "\nNo referral bonuses configured.",
-  "referral_link_for_copying_reminder": "The link is above. Press and hold to copy.",
-  "referral_share_message_button": "📩 Message for friend",
-  "referral_friend_message": "🚀 Hey! Try this VPN - it's fast, reliable and affordable!\n\n🎁 Use my link to get bonus days with your subscription!\n\n{referral_link}",
-  "friend_placeholder": "friend",
-  "referral_bonus_inviter_notification_extended": "🎉 Congrats! Your friend {referee_name} paid for a subscription. You received {days} bonus days! Your subscription is now active until {new_end_date}.",
-  "referral_bonus_inviter_notification_new_sub": "🎉 Congrats! Your friend {referee_name} paid for a subscription. You received a {days}-day bonus subscription! It is active until {new_end_date}.",
 
-  "user_is_banned": "🚫 Your account is banned. Please contact support.",
+  "referral_share_message_button": "\ud83d\udce9 Message for friend",
+
+  "referral_friend_message": "\ud83d\ude80 Hey! Try this VPN - it's fast, reliable and affordable!\n\n\ud83c\udf81 Use my link to get bonus days with your subscription!\n\n{referral_link}",
+
+  "friend_placeholder": "friend",
+
+  "referral_bonus_inviter_notification_extended": "\ud83c\udf89 Congrats! Your friend {referee_name} paid for a subscription. You received {days} bonus days! Your subscription is now active until {new_end_date}.",
+
+  "referral_bonus_inviter_notification_new_sub": "\ud83c\udf89 Congrats! Your friend {referee_name} paid for a subscription. You received a {days}-day bonus subscription! It is active until {new_end_date}.",
+
+  "user_is_banned": "\ud83d\udeab Your account is banned. Please contact support.",
 
   "admin_panel_title": "Admin Panel",
-  "admin_stats_button": "📊 Statistics",
-  "admin_broadcast_button": "📢 Broadcast",
-  "admin_create_promo_button": "🎁 Create Promo",
-  "admin_create_bulk_promo_button": "📦 Bulk Create",
-  "admin_manage_promos_button": "🛠 Manage",
-  "admin_view_promos_button": "👀 List",
-  "admin_ban_user_button": "🚫 Ban",
-  "admin_unban_user_button": "✅ Unban",
-  "admin_view_banned_users_button": "📜 Ban List",
-  "admin_view_logs_menu_button": "📄 Logs",
-  "admin_sync_panel_button": "🔄 Sync",
-  "admin_unknown_action": "Unknown admin action.",
-  
-  "admin_stats_and_monitoring_section": "📊 Statistics",
-  "admin_user_management_section": "👥 Users",
-  "admin_promo_marketing_section": "🎁 Promos",
-  "admin_system_functions_section": "⚙️ System",
-  "admin_ban_management_section": "🚫 Bans",
-  "admin_users_management_button": "👤 Management",
-  "back_to_user_management_button": "⬅️ To Users",
-  "admin_action_cancelled_default": "Action cancelled. Returning to menu.",
-  "admin_action_cancelled_default_alert": "Action cancelled",
-  "back_to_admin_panel_button": "⬅️ To Admin",
 
-  "admin_stats_header": "📊 Bot Statistics",
-  "admin_enhanced_users_stats_header": "Users",
-  "admin_financial_stats_header": "Financial Statistics",
-  "admin_stats_users": "👥 Users: Total - {total_users}, Banned - {banned_users}, Active Subs - {active_subs}",
-  "admin_stats_recent_payments_header": "Recent Payments:",
+  "admin_stats_button": "\ud83d\udcca Statistics",
+
+  "admin_broadcast_button": "\ud83d\udce2 Broadcast",
+
+  "admin_create_promo_button": "\ud83c\udf81 Create Promo",
+
+  "admin_create_bulk_promo_button": "\ud83d\udce6 Bulk Create",
+
+  "admin_ban_user_button": "\ud83d\udeab Ban",
+
+  "admin_unban_user_button": "\u2705 Unban",
+
+  "admin_view_banned_users_button": "\ud83d\udcdc Ban List",
+
+  "admin_view_logs_menu_button": "\ud83d\udcc4 Logs",
+
+  "admin_sync_panel_button": "\ud83d\udd04 Sync",
+
+  "admin_unknown_action": "Unknown admin action.",
+
+  "admin_stats_and_monitoring_section": "\ud83d\udcca Statistics",
+
+  "admin_user_management_section": "\ud83d\udc65 Users",
+
+  "admin_promo_marketing_section": "\ud83c\udf81 Promos",
+
+  "admin_system_functions_section": "\u2699\ufe0f System",
+
+  "admin_ban_management_section": "\ud83d\udeab Bans",
+
+  "admin_users_management_button": "\ud83d\udc64 Management",
+
+  "back_to_user_management_button": "\u2b05\ufe0f To Users",
+
+  "back_to_admin_panel_button": "\u2b05\ufe0f To Admin",
+
   "admin_stats_payment_item": "{status_emoji} {amount} {currency} from {user_info} ({p_status}) [{p_date}]",
-  "admin_stats_no_payments_found": "No payments found yet.",
-  "admin_stats_last_sync_header": "Last Panel Sync:",
-  "admin_stats_sync_time": "Time",
-  "admin_stats_sync_status": "Status",
-  "admin_stats_sync_users_processed": "Users Processed",
-  "admin_stats_sync_subs_synced": "Subscriptions Synced",
-  "admin_stats_sync_details_label": "Details",
+
   "admin_sync_status_never_run": "Panel sync never run.",
 
   "admin_broadcast_enter_message": "Enter the broadcast message (HTML supported):",
+
   "admin_broadcast_confirm_prompt": "You are about to send the following message (first 200 characters):\n\n{message_preview}\n\nConfirm sending?",
-  "confirm_broadcast_send_button": "✅ Send",
-  "cancel_broadcast_button": "❌ Cancel",
+
+  "confirm_broadcast_send_button": "\u2705 Send",
+
+  "cancel_broadcast_button": "\u274c Cancel",
+
   "admin_broadcast_sending_started": "Starting broadcast...",
+
   "admin_broadcast_error_no_message": "Error: no message to broadcast.",
+
   "admin_broadcast_error_no_message_alert": "Broadcast message is empty!",
-  "admin_broadcast_finished_stats": "🏁 Broadcast finished!\nSent: {sent_count}\nFailed: {failed_count}",
+
+  "admin_broadcast_finished_stats": "\ud83c\udfc1 Broadcast finished!\nSent: {sent_count}\nFailed: {failed_count}",
+
   "admin_broadcast_cancelled": "Broadcast cancelled.",
+
   "admin_broadcast_cancelled_alert": "Broadcast cancelled!",
+
   "admin_broadcast_cancelled_nav_back": "Broadcast cancelled. You are returned to the admin panel.",
 
-  "admin_promo_create_prompt": "Enter promo details in the format: CODE BONUS_DAYS MAX_USES [VALIDITY_DAYS]\nExample: <code>{example_format}</code>\n(Validity is optional; default is indefinite)",
-  "admin_promo_invalid_format": "Invalid format. Please use: CODE BONUS_DAYS MAX_USES [VALIDITY_DAYS]",
-  "admin_promo_invalid_code_format": "Code must be 3–30 alphanumeric characters.",
-  "admin_promo_invalid_bonus_or_activations": "Bonus days and max uses must be positive numbers.",
+  "admin_promo_invalid_code_format": "Code must be 3\u201330 alphanumeric characters.",
+
   "admin_promo_invalid_validity_days": "Validity period (in days) must be a positive number.",
-  "admin_promo_invalid_values": "Invalid values. {error}",
-  "admin_promo_invalid_format_general": "Promo parsing error. Check the format.",
-  "admin_promo_created_success": "✅ Promo code <code>{code}</code> created successfully!\nBonus: {bonus_days} days\nMax uses: {max_activations}\nValid until: {valid_until_str}.",
-  "admin_promo_creation_failed_duplicate": "❌ Error: Promo code <code>{code}</code> already exists.",
-  "admin_promo_creation_failed": "❌ Failed to create promo code. Please try again later.",
+
+  "admin_promo_created_success": "\u2705 Promo code <code>{code}</code> created successfully!\nBonus: {bonus_days} days\nMax uses: {max_activations}\nValid until: {valid_until_str}.",
+
   "admin_active_promos_list_header": "Active Promo Codes:",
-  "admin_no_active_promos": "No active promo codes.",
-  "admin_promo_list_item": "<code>{code}</code>: +{bonus}d, {current}/{max} used, valid until {valid_until}",
+
   "admin_promo_valid_indefinitely": "indefinite",
-  "admin_promo_valid_until_display": "until {date}",
-  "admin_manage_promos_title": "Manage Promo Codes",
-  "admin_promo_edit_button": "✏️ Edit",
-  "admin_promo_delete_button": "🗑 Delete",
-  "admin_promo_edit_prompt": "Send new details for <code>{code}</code> in format: CODE BONUS_DAYS MAX_USES [VALIDITY_DAYS]",
-  "admin_promo_updated_success": "Promo {code} updated.",
+
+  "admin_promo_edit_button": "\u270f\ufe0f Edit",
+
+  "admin_promo_delete_button": "\ud83d\uddd1 Delete",
+
   "admin_promo_deleted_success": "Promo {code} deleted.",
+
   "admin_promo_not_found": "Promo not found.",
-  "admin_promo_export_csv_button": "📄 Export to CSV",
-  "admin_promo_export_caption": "📄 Activations for promo code {code}",
+
+  "admin_promo_export_csv_button": "\ud83d\udcc4 Export to CSV",
+
+  "admin_promo_export_caption": "\ud83d\udcc4 Activations for promo code {code}",
+
   "admin_promo_edit_select_field": "Select a field to edit:",
+
   "admin_promo_prompt_bonus_days": "Enter the new number of bonus days:",
+
   "admin_promo_prompt_max_activations": "Enter the new maximum number of activations:",
+
   "admin_promo_prompt_validity_days": "Enter the new validity period in days (0 for indefinite):",
+
   "admin_promo_edit_success": "Promo code updated successfully.",
+
   "admin_promo_invalid_input": "Invalid input, please try again.",
-  "admin_promo_edit_bonus_days": "🎁 Bonus Days",
-  "admin_promo_edit_max_activations": "🔢 Max Activations",
-  "admin_promo_edit_validity": "⏰ Validity",
+
+  "admin_promo_edit_bonus_days": "\ud83c\udf81 Bonus Days",
+
+  "admin_promo_edit_max_activations": "\ud83d\udd22 Max Activations",
+
+  "admin_promo_edit_validity": "\u23f0 Validity",
 
   "admin_ban_user_prompt": "Enter user ID or @username to ban:",
-  "admin_user_not_found_in_bot_db": "User <code>{user_id}</code> not found in bot database.",
-  "admin_cannot_ban_self_or_admin": "You cannot ban yourself or another admin.",
+
   "admin_user_already_banned": "User {user_id_or_username} is already banned.",
-  "admin_user_banned_success_combined": "✅ User {user_id_or_username} banned in bot {panel_status_part}.",
-  "admin_panel_ban_success_part": "and on panel",
-  "admin_panel_ban_fail_part": ", but failed to ban on panel",
-  "admin_user_ban_failed_local_db_error": "❌ Failed to ban user in local database.",
+
   "admin_unban_user_prompt": "Enter user ID or @username to unban:",
-  "admin_user_not_banned": "User {user_id_or_username} is not banned.",
-  "admin_user_unbanned_success_combined": "✅ User {user_id_or_username} unbanned in bot {panel_status_part}.",
-  "admin_panel_unban_success_part": "and on panel",
-  "admin_panel_unban_fail_part": ", but failed to unban on panel",
-  "admin_user_unban_failed_local_db_error": "❌ Failed to unban user in local database.",
-  "admin_no_banned_users": "There are no banned users at the moment.",
-  "admin_banned_list_title": "Banned Users (page {current_page}/{total_pages}):",
+
+  "admin_user_not_banned": "\u26a0\ufe0f User is not banned",
+
   "admin_banned_user_button_text": "{user_display} (ID: {user_id})",
-  "prev_page_button": "⬅️ Prev.",
-  "next_page_button": "Next ➡️",
-  "admin_user_card_title": "User Profile: {user_display}",
-  "user_card_info": "ID: <code>{user_id}</code>\nUsername: @{username}\nName: {first_name} {last_name}\nLanguage: {language_code}\nPanel UUID: <code>{panel_user_uuid}</code>\nStatus: <b>{ban_status}</b>\nRegistered: {reg_date}\nSubscription until: <b>{sub_end_date}</b>",
-  "user_card_banned": "BANNED",
-  "user_card_active": "Active",
-  "user_card_sub_na": "n/a",
-  "user_card_ban_button": "🚫 Ban",
-  "user_card_unban_button": "✅ Unban",
-  "user_card_back_to_banned_list_button": "⬅️ Back to Ban List",
-  "admin_confirm_action_title": "Confirm: {action_text}",
-  "ban_verb_l": "ban",
-  "unban_verb_l": "unban",
-  "admin_confirm_ban_prompt": "Are you sure you want to ban {user_display} (ID: {user_id})?",
-  "admin_confirm_unban_prompt": "Are you sure you want to unban {user_display} (ID: {user_id})?",
-  "admin_user_banned_from_card_alert": "User {user_display} (ID: {user_id}) has been banned.",
-  "admin_user_unbanned_from_card_alert": "User {user_display} (ID: {user_id}) has been unbanned.",
-  "admin_user_ban_failed_db_error": "Error banning user in database.",
-  "admin_user_unban_failed_db_error": "Error unbanning user in database.",
-  "admin_panel_status_update_fail_part": ", but panel status not updated",
+
+  "prev_page_button": "\u2b05\ufe0f Prev.",
+
+  "next_page_button": "Next \u27a1\ufe0f",
+
+  "user_card_ban_button": "\ud83d\udeab Ban",
+
+  "user_card_unban_button": "\u2705 Unban",
+
+  "user_card_back_to_banned_list_button": "\u2b05\ufe0f Back to Ban List",
 
   "admin_logs_menu_title": "Logs Menu:",
-  "admin_view_all_logs_button": "📜 All Message Logs",
-  "admin_view_user_logs_prompt_button": "👤 User Logs",
-  "admin_export_logs_csv_button": "📄 Export to CSV",
+
+  "admin_view_all_logs_button": "\ud83d\udcdc All Message Logs",
+
+  "admin_view_user_logs_prompt_button": "\ud83d\udc64 User Logs",
+
+  "admin_export_logs_csv_button": "\ud83d\udcc4 Export to CSV",
+
   "admin_all_logs_title": "All Logs (page {current_page}/{total_pages}):",
+
   "admin_no_logs_found": "No logs found.",
+
   "admin_log_entry_format": "<code>{timestamp_str}</code> - <b>{user_display}</b> (ID: {user_id})\n  <i>{event_type}</i>: {content_preview}",
+
   "system_or_unknown_user": "System/Unknown",
+
   "admin_prompt_for_user_id_or_username_logs": "Enter user ID or @username to view logs:",
+
   "admin_log_user_not_found": "User \"{input}\" not found in bot database.",
+
   "admin_user_logs_title": "Logs for {user_display} (page {current_page}/{total_pages}):",
 
-  "sync_started": "🔄 Starting data sync with panel...",
-  "sync_failed": "❌ Sync with panel failed. Details: {details}",
-  "sync_completed": "✅ Sync with panel completed. Status: {status}. Details: {details}",
+  "sync_started": "\ud83d\udd04 Starting data sync with panel...",
+
+  "sync_failed": "\u274c Sync with panel failed. Details: {details}",
+
+  "sync_completed": "\u2705 Sync with panel completed. Status: {status}. Details: {details}",
+
   "sync_completed_details": "Checked: {total_checked} entries.\nUsers synced/updated: {users_synced}.\nSubscriptions synced/updated: {subs_synced}.",
+
   "sync_completed_with_errors_details": "Checked: {total_checked} entries.\nUsers synced/updated: {users_synced}.\nSubscriptions synced/updated: {subs_synced}.\nErrors: {errors_count}.\n\nFirst errors:\n{error_details_preview}",
+
   "no_errors_placeholder": "none",
+
   "admin_sync_initiated_from_panel": "Sync initiated...",
-  "admin_panel_user_creation_failed": "❌ Failed to create panel user for TG ID {user_id}. Panel unreachable?",
+
+  "admin_panel_user_creation_failed": "\u274c Failed to create panel user for TG ID {user_id}. Panel unreachable?",
+
   "error_displaying_logs_too_long": "Error: logs too long to display in one message. Try viewing logs for a specific user.",
+
   "error_displaying_statistics": "Error displaying statistics.",
+
   "stub_page_display": "Page",
 
-  "subscription_72h_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription expires in 3 days — {end_date}.\n\nPlease renew it using the button below.",
-  "subscription_48h_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription expires in 2 days — {end_date}.\n\nPlease renew it using the button below.",
-  "subscription_24h_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription expires in 1 day — {end_date}.\n\nPlease renew it using the button below.",
-  "subscription_expired_notification": "👋 Hi, {user_name}!\n\n⛔ Your VPN subscription expired on {end_date}.\n\nPlease renew it using the button below.",
-  "subscription_expired_yesterday_notification": "👋 Hi, {user_name}!\n\n⏳ Your VPN subscription expired yesterday ({end_date}).\n\nPlease renew it using the button below.",
-  "tribute_subscription_cancelled": "🚨 <b>Subscription Cancelled</b>\n\nYour Tribute subscription has been cancelled. You have 24 hours to restore access, after which the subscription will be blocked.\n\nTo renew your subscription, press the button below.",
-  "tribute_auto_renewal": "🔄 <b>Subscription Auto-Renewed</b>\n\nYour Tribute subscription has been automatically renewed for {months} months.\nNew expiration date: {end_date}",
+  "subscription_72h_notification": "\ud83d\udc4b Hi, {user_name}!\n\n\u23f3 Your VPN subscription expires in 3 days \u2014 {end_date}.\n\nPlease renew it using the button below.",
 
-  "admin_new_trial_notification": "\ud83c\udf21 User {user_id} activated a free trial until {end_date}.",
+  "subscription_48h_notification": "\ud83d\udc4b Hi, {user_name}!\n\n\u23f3 Your VPN subscription expires in 2 days \u2014 {end_date}.\n\nPlease renew it using the button below.",
+
+  "subscription_24h_notification": "\ud83d\udc4b Hi, {user_name}!\n\n\u23f3 Your VPN subscription expires in 1 day \u2014 {end_date}.\n\nPlease renew it using the button below.",
+
+  "subscription_expired_notification": "\ud83d\udc4b Hi, {user_name}!\n\n\u26d4 Your VPN subscription expired on {end_date}.\n\nPlease renew it using the button below.",
+
+  "subscription_expired_yesterday_notification": "\ud83d\udc4b Hi, {user_name}!\n\n\u23f3 Your VPN subscription expired yesterday ({end_date}).\n\nPlease renew it using the button below.",
+
+  "tribute_subscription_cancelled": "\ud83d\udea8 <b>Subscription Cancelled</b>\n\nYour Tribute subscription has been cancelled. You have 24 hours to restore access, after which the subscription will be blocked.\n\nTo renew your subscription, press the button below.",
+
+  "tribute_auto_renewal": "\ud83d\udd04 <b>Subscription Auto-Renewed</b>\n\nYour Tribute subscription has been automatically renewed for {months} months.\nNew expiration date: {end_date}",
 
   "admin_promo_activation_notification": "\ud83c\udf81 Promo code {code} activated by user {user_id} (+{bonus_days}d).",
 
-  "error_unknown": "An unknown error occurred.",
-  
-  "admin_user_management_prompt": "👤 User Management\n\nEnter user ID or @username to search:",
-  "admin_user_card_title": "User Card",
-  "admin_user_subscription_info": "Subscription Information:",
-  "admin_user_reset_trial_button": "🔄 Reset Trial",
-  "admin_user_add_subscription_button": "➕ Add Days",
-  "admin_user_toggle_ban_button": "🚫 Block/Unblock",
-  "admin_user_send_message_button": "✉️ Send Message",
-  "admin_user_view_logs_button": "📜 User Actions",
-  "admin_user_refresh_button": "🔄 Refresh",
-  "admin_user_search_new_button": "🔍 Find Another",
-  "admin_user_view_all_logs_button": "📋 All Actions",
-  "admin_user_back_to_card_button": "🔙 Back to Card",
-  
-  "admin_user_not_found": "❌ User not found: {input}",
-  "admin_user_not_found_action": "User not found",
-  "admin_user_card_error": "❌ Error displaying user card",
-  "admin_user_trial_reset_success": "✅ Trial reset! User can activate trial again.",
-  "admin_user_trial_reset_error": "❌ Error resetting trial",
-  "admin_user_add_subscription_prompt": "➕ Adding subscription days for user {user_id}\n\nEnter number of days to add:",
-  "admin_user_invalid_days": "❌ Invalid number of days. Enter number from 1 to 3650.",
-  "admin_user_subscription_added_success": "✅ Successfully added {days} days to user {user_id}",
-  "admin_user_subscription_added_error": "❌ Error adding subscription days",
-  "admin_user_ban_toggle_success": "✅ User {status}",
-  "admin_user_ban_toggle_error": "❌ Error changing ban status",
-  "admin_user_ban_success": "✅ User {input} has been banned",
-  "admin_user_unban_success": "✅ User {input} has been unbanned",
-  "admin_user_ban_error": "❌ Error banning user",
-  "admin_user_unban_error": "❌ Error unbanning user",
-  "admin_user_not_banned": "⚠️ User is not banned",
-  "admin_user_send_message_prompt": "✉️ Sending message to user {user_id}\n\nEnter message text:",
-  "admin_user_message_too_long": "❌ Message too long (maximum 4000 characters)",
-  "admin_user_message_sent_success": "✅ Message sent to user {user_id}",
-  "admin_user_message_sent_error": "❌ Error sending message",
-  "admin_user_no_logs": "📜 User has no actions",
-  "admin_user_logs_error": "❌ Error loading user actions",
-  "admin_direct_message_signature": "\n\n---\n💬 Message from administrator",
-  
-  "inline_user_stats_message": "👥 <b>User Statistics</b>\n\n📊 Total: <b>{total}</b>\n📈 Active today: <b>{active_today}</b>\n💳 With paid subscription: <b>{paid}</b>\n🆓 On trial period: <b>{trial}</b>\n😴 Inactive: <b>{inactive}</b>\n🚫 Banned: <b>{banned}</b>\n🎁 Via referral program: <b>{referral}</b>",
-  "inline_admin_user_stats_title": "👥 User Statistics",
-  "inline_admin_user_stats_desc": "Total: {total}, Active: {paid}",
-  
-  "inline_financial_stats_message": "💰 <b>Financial Statistics</b>\n\n📅 Today: <b>{today:.2f} RUB</b>\n   ({today_count} payments)\n📅 Week: <b>{week:.2f} RUB</b>\n📅 Month: <b>{month:.2f} RUB</b>\n🏆 All time: <b>{all_time:.2f} RUB</b>",
-  "inline_admin_financial_stats_title": "💰 Financial Statistics",
-  "inline_admin_financial_stats_desc": "Today: {today:.2f} RUB",
-  
-  "inline_system_stats_message": "🖥 <b>Panel Statistics</b>\n\n🟢 Online: <b>{online}</b>\n📊 Active: <b>{active}</b>\n🔴 Disabled: <b>{disabled}</b>\n⏰ Expired: <b>{expired}</b>\n⚠️ Limited: <b>{limited}</b>\n👥 Total users: <b>{total}</b>\n💾 RAM Usage: <b>{memory:.1f}%</b>\n📊 Week traffic: <b>{week_traffic}</b>\n📊 Month traffic: <b>{month_traffic}</b>\n🔗 Active nodes: <b>{active_nodes}/{total_nodes}</b>",
-  "inline_admin_system_stats_title": "🖥 System Statistics",
-  "inline_admin_system_stats_desc": "Online: {online}, Offline: {offline}",
-  
-  "inline_admin_help_message": "🤖 <b>Bot Inline Mode</b>\n\n📱 <b>Available commands:</b>\n\n🎁 <b>ref</b> - share referral link\n👥 <b>stat</b> - user statistics\n💰 <b>financial</b> - financial statistics\n🖥 <b>system</b> - system statistics\n\n💡 Just type @{bot_username} and start typing a command in any chat!",
-  "inline_admin_help_title": "🤖 Inline Help (Admin)",
-  "inline_admin_help_desc": "Available commands: ref, stat, financial, system",
-  
-  "inline_user_help_message": "🤖 <b>Bot Inline Mode</b>\n\n📱 <b>Available commands:</b>\n\n🎁 <b>ref</b> - share referral link\n\n💡 Just type @{bot_username} and start typing 'ref' in any chat!",
-  "inline_user_help_title": "🤖 Inline Help",
-  "inline_user_help_desc": "Available command: ref (referral link)",
-  
-  "log_referral_suffix": " (referral from {referrer_id})",
-  "log_new_user_registration": "👤 <b>New User</b>\n\n🆔 ID: <code>{user_id}</code>\n👤 Name: {user_display}{referral_text}\n📅 Time: {timestamp}",
-  "log_payment_received": "{provider_emoji} <b>Payment Received</b>\n\n👤 User: {user_display}\n💰 Amount: <b>{amount} {currency}</b>\n📅 Period: <b>{months} mo.</b>\n🏦 Provider: {payment_provider}\n🕐 Time: {timestamp}",
-  "log_promo_activation": "🎁 <b>Promo Code Activated</b>\n\n👤 User: {user_display}\n🏷 Code: <code>{promo_code}</code>\n🎯 Bonus: <b>+{bonus_days}d</b>\n🕐 Time: {timestamp}",
-  "log_trial_activation": "🆓 <b>Trial Activated</b>\n\n👤 User: {user_display}\n⏰ Valid until: <b>{end_date}</b>\n🕐 Time: {timestamp}",
-  "log_suspicious_promo": "⚠️ <b>Suspicious Promo Code Attempt</b>\n\n👤 User: {user_display}\n🆔 ID: <code>{user_id}</code>\n📝 Input: <pre>{suspicious_input}</pre>\n🕐 Time: {timestamp}",
+  "admin_user_management_prompt": "\ud83d\udc64 User Management\n\nEnter user ID or @username to search:",
 
-  "admin_general_cancel_operation": "Operation cancelled ❌",
-  "admin_promo_codes_menu_bulk_create": "📦 Bulk Creation",
-  "admin_bulk_promo_create_prompt": "📦 Bulk Promo Code Creation\n\nEnter data in format:\n<code>quantity|days|description</code>\n\nExample:\n<code>10|7|Weekly promo</code>",
-  "admin_bulk_promo_invalid_format": "❌ Invalid format. Use: quantity|days|description",
-  "admin_bulk_promo_created_success": "✅ Created {count} promo codes for {days} days!",
-  "admin_bulk_promo_codes_file": "📄 All created promo codes in file ({count} pcs.)",
-  
-  "admin_promo_edit_step1_code": "✏️ <b>Editing Promo Code</b>\n\n<b>Step 1 of 4:</b> Promo Code\n\nCurrent code: <b>{current_code}</b>\n\nEnter new promo code (3-30 characters, letters and numbers only) or send current one to keep:",
-  "admin_promo_edit_step2_bonus_days": "✏️ <b>Editing Promo Code</b>\n\n<b>Step 2 of 4:</b> Bonus Days\n\nCode: <b>{code}</b>\nCurrent days: <b>{current_days}</b>\n\nEnter number of bonus days (1-365):",
-  "admin_promo_edit_step3_max_activations": "✏️ <b>Editing Promo Code</b>\n\n<b>Step 3 of 4:</b> Max Activations\n\nCode: <b>{code}</b>\nDays: <b>{days}</b>\nCurrent activations: <b>{current_max}</b>\n\nEnter maximum number of activations (1-10000):",
-  "admin_promo_edit_step4_validity": "✏️ <b>Editing Promo Code</b>\n\n<b>Step 4 of 4:</b> Validity Period\n\nCode: <b>{code}</b>\nDays: <b>{days}</b>\nActivations: <b>{max_act}</b>\nCurrent validity: <b>{current_validity}</b>\n\nChoose the validity period for the promo code:",
-  "admin_promo_edit_unlimited_validity": "♾️ Unlimited",
-  "admin_promo_edit_set_validity": "⏰ Set Period",
-  "admin_promo_edit_enter_validity_days": "⏰ Enter the number of validity days for the promo code (1-365):",
-  "admin_promo_updated_success": "✅ Promo code updated!\n\n🎟 Code: <b>{code}</b>\n🎁 Bonus days: <b>{days}</b>\n🔢 Max activations: <b>{max_act}</b>\n⏰ Valid until: <b>{validity}</b>",
-  "admin_promo_update_failed": "❌ Error updating promo code",
-  
-  "admin_logs_export_csv": "📄 Export to CSV",
-  "admin_logs_csv_export_started": "📄 Starting log export to CSV...",
-  "admin_logs_csv_export_success": "✅ Logs exported! File attached above.",
-  
+  "admin_user_reset_trial_button": "\ud83d\udd04 Reset Trial",
+
+  "admin_user_add_subscription_button": "\u2795 Add Days",
+
+  "admin_user_toggle_ban_button": "\ud83d\udeab Block/Unblock",
+
+  "admin_user_send_message_button": "\u2709\ufe0f Send Message",
+
+  "admin_user_view_logs_button": "\ud83d\udcdc User Actions",
+
+  "admin_user_refresh_button": "\ud83d\udd04 Refresh",
+
+  "admin_user_search_new_button": "\ud83d\udd0d Find Another",
+
+  "admin_user_view_all_logs_button": "\ud83d\udccb All Actions",
+
+  "admin_user_back_to_card_button": "\ud83d\udd19 Back to Card",
+
+  "admin_user_not_found": "\u274c User not found: {input}",
+
+  "admin_user_not_found_action": "User not found",
+
+  "admin_user_card_error": "\u274c Error displaying user card",
+
+  "admin_user_trial_reset_success": "\u2705 Trial reset! User can activate trial again.",
+
+  "admin_user_trial_reset_error": "\u274c Error resetting trial",
+
+  "admin_user_add_subscription_prompt": "\u2795 Adding subscription days for user {user_id}\n\nEnter number of days to add:",
+
+  "admin_user_invalid_days": "\u274c Invalid number of days. Enter number from 1 to 3650.",
+
+  "admin_user_subscription_added_success": "\u2705 Successfully added {days} days to user {user_id}",
+
+  "admin_user_subscription_added_error": "\u274c Error adding subscription days",
+
+  "admin_user_ban_toggle_success": "\u2705 User {status}",
+
+  "admin_user_ban_toggle_error": "\u274c Error changing ban status",
+
+  "admin_user_ban_success": "\u2705 User {input} has been banned",
+
+  "admin_user_unban_success": "\u2705 User {input} has been unbanned",
+
+  "admin_user_ban_error": "\u274c Error banning user",
+
+  "admin_user_unban_error": "\u274c Error unbanning user",
+
+  "admin_user_send_message_prompt": "\u2709\ufe0f Sending message to user {user_id}\n\nEnter message text:",
+
+  "admin_user_message_too_long": "\u274c Message too long (maximum 4000 characters)",
+
+  "admin_user_message_sent_success": "\u2705 Message sent to user {user_id}",
+
+  "admin_user_message_sent_error": "\u274c Error sending message",
+
+  "admin_user_no_logs": "\ud83d\udcdc User has no actions",
+
+  "admin_user_logs_error": "\u274c Error loading user actions",
+
+  "admin_direct_message_signature": "\n\n---\n\ud83d\udcac Message from administrator",
+
+  "inline_user_stats_message": "\ud83d\udc65 <b>User Statistics</b>\n\n\ud83d\udcca Total: <b>{total}</b>\n\ud83d\udcc8 Active today: <b>{active_today}</b>\n\ud83d\udcb3 With paid subscription: <b>{paid}</b>\n\ud83c\udd93 On trial period: <b>{trial}</b>\n\ud83d\ude34 Inactive: <b>{inactive}</b>\n\ud83d\udeab Banned: <b>{banned}</b>\n\ud83c\udf81 Via referral program: <b>{referral}</b>",
+
+  "inline_user_stats_description": "Total: {total}, Paid: {active}",
+
+  "inline_admin_user_stats_title": "\ud83d\udc65 User Statistics",
+
+  "inline_financial_stats_message": "\ud83d\udcb0 <b>Financial Statistics</b>\n\n\ud83d\udcc5 Today: <b>{today:.2f} RUB</b>\n   ({today_count} payments)\n\ud83d\udcc5 Week: <b>{week:.2f} RUB</b>\n\ud83d\udcc5 Month: <b>{month:.2f} RUB</b>\n\ud83c\udfc6 All time: <b>{all_time:.2f} RUB</b>",
+
+  "inline_admin_financial_stats_title": "\ud83d\udcb0 Financial Statistics",
+
+  "inline_system_stats_message": "\ud83d\udda5 <b>Panel Statistics</b>\n\n\ud83d\udfe2 Online: <b>{online}</b>\n\ud83d\udcca Active: <b>{active}</b>\n\ud83d\udd34 Disabled: <b>{disabled}</b>\n\u23f0 Expired: <b>{expired}</b>\n\u26a0\ufe0f Limited: <b>{limited}</b>\n\ud83d\udc65 Total users: <b>{total}</b>\n\ud83d\udcbe RAM Usage: <b>{memory:.1f}%</b>\n\ud83d\udcca Week traffic: <b>{week_traffic}</b>\n\ud83d\udcca Month traffic: <b>{month_traffic}</b>\n\ud83d\udd17 Active nodes: <b>{active_nodes}/{total_nodes}</b>",
+
+  "inline_admin_system_stats_title": "\ud83d\udda5 System Statistics",
+
+  "log_referral_suffix": " (referral from {referrer_id})",
+
+  "log_new_user_registration": "\ud83d\udc64 <b>New User</b>\n\n\ud83c\udd94 ID: <code>{user_id}</code>\n\ud83d\udc64 Name: {user_display}{referral_text}\n\ud83d\udcc5 Time: {timestamp}",
+
+  "log_payment_received": "{provider_emoji} <b>Payment Received</b>\n\n\ud83d\udc64 User: {user_display}\n\ud83d\udcb0 Amount: <b>{amount} {currency}</b>\n\ud83d\udcc5 Period: <b>{months} mo.</b>\n\ud83c\udfe6 Provider: {payment_provider}\n\ud83d\udd50 Time: {timestamp}",
+
+  "log_promo_activation": "\ud83c\udf81 <b>Promo Code Activated</b>\n\n\ud83d\udc64 User: {user_display}\n\ud83c\udff7 Code: <code>{promo_code}</code>\n\ud83c\udfaf Bonus: <b>+{bonus_days}d</b>\n\ud83d\udd50 Time: {timestamp}",
+
+  "log_trial_activation": "\ud83c\udd93 <b>Trial Activated</b>\n\n\ud83d\udc64 User: {user_display}\n\u23f0 Valid until: <b>{end_date}</b>\n\ud83d\udd50 Time: {timestamp}",
+
+  "log_suspicious_promo": "\u26a0\ufe0f <b>Suspicious Promo Code Attempt</b>\n\n\ud83d\udc64 User: {user_display}\n\ud83c\udd94 ID: <code>{user_id}</code>\n\ud83d\udcdd Input: <pre>{suspicious_input}</pre>\n\ud83d\udd50 Time: {timestamp}",
+
+  "admin_logs_csv_export_started": "\ud83d\udcc4 Starting log export to CSV...",
+
+  "admin_logs_csv_export_success": "\u2705 Logs exported! File attached above.",
+
   "admin_csv_header_log_id": "Log ID",
+
   "admin_csv_header_timestamp": "Timestamp",
+
   "admin_csv_header_user_id": "User ID",
+
   "admin_csv_header_telegram_username": "Username",
+
   "admin_csv_header_telegram_first_name": "First Name",
+
   "admin_csv_header_event_type": "Event Type",
+
   "admin_csv_header_content": "Content",
+
   "admin_csv_header_is_admin_event": "Admin Event",
+
   "admin_csv_header_target_user_id": "Target User ID",
+
   "admin_csv_header_raw_update_preview": "Update Preview",
-  
-  "admin_banned_users_empty": "📋 Banned Users\n\nList is empty",
-  "admin_banned_users_list": "📋 Banned Users ({count}):\n\n{users}",
-  
-  "admin_panel_stats_header": "Panel Statistics",
-  
-  "admin_bulk_promo_step1_quantity": "📦 <b>Bulk Promo Code Creation</b>\n\n<b>Step 1 of 4:</b> Quantity\n\nEnter the number of promo codes to create (1-1000):",
-  "admin_bulk_promo_step2_bonus_days": "📦 <b>Bulk Promo Code Creation</b>\n\n<b>Step 2 of 4:</b> Bonus Days\n\nQuantity: <b>{quantity}</b>\n\nEnter the number of bonus days (1-365):",
-  "admin_bulk_promo_step3_max_activations": "📦 <b>Bulk Promo Code Creation</b>\n\n<b>Step 3 of 4:</b> Max Activations\n\nQuantity: <b>{quantity}</b>\nBonus days: <b>{bonus_days}</b>\n\nEnter the maximum number of activations for each promo code (1-10000):",
-  "admin_bulk_promo_step4_validity": "📦 <b>Bulk Promo Code Creation</b>\n\n<b>Step 4 of 4:</b> Validity Period\n\nQuantity: <b>{quantity}</b>\nBonus days: <b>{bonus_days}</b>\nMax activations: <b>{max_activations}</b>\n\nChoose the validity period for promo codes:",
-  
-  "admin_bulk_promo_invalid_quantity": "❌ Quantity must be between 1 and 1000",
-  "admin_bulk_promo_invalid_bonus_days": "❌ Bonus days must be between 1 and 365",
-  "admin_bulk_promo_invalid_max_activations": "❌ Max activations must be between 1 and 10000",
-  
-  "admin_bulk_promo_unlimited_validity": "♾️ Unlimited",
-  "admin_bulk_promo_set_validity": "⏰ Set Period",
-  "admin_bulk_promo_enter_validity_days": "⏰ Enter the number of validity days for promo codes (1-365):",
-  
-  "admin_bulk_promo_creating": "⏳ Creating {quantity} promo codes...",
-  
-  "admin_promo_step1_code": "🎟 <b>Create Promo Code</b>\n\n<b>Step 1 of 4:</b> Promo Code\n\nEnter promo code (3-30 characters, letters and numbers only):",
-  "admin_promo_step2_bonus_days": "🎟 <b>Create Promo Code</b>\n\n<b>Step 2 of 4:</b> Bonus Days\n\nCode: <b>{code}</b>\n\nEnter the number of bonus days (1-365):",
-  "admin_promo_step3_max_activations": "🎟 <b>Create Promo Code</b>\n\n<b>Step 3 of 4:</b> Max Activations\n\nCode: <b>{code}</b>\nBonus days: <b>{bonus_days}</b>\n\nEnter the maximum number of activations (1-10000):",
-  "admin_promo_step4_validity": "🎟 <b>Create Promo Code</b>\n\n<b>Step 4 of 4:</b> Validity Period\n\nCode: <b>{code}</b>\nBonus days: <b>{bonus_days}</b>\nMax activations: <b>{max_activations}</b>\n\nChoose the validity period for the promo code:",
-  
-  "admin_promo_code_already_exists": "❌ A promo code with this code already exists",
-  "admin_promo_processing_error": "❌ Error processing promo code",
-  "admin_promo_unlimited_validity": "♾️ Unlimited",
-  "admin_promo_set_validity": "⏰ Set Period",
-  "admin_promo_enter_validity_days": "⏰ Enter the number of validity days for the promo code (1-365):",
-  "admin_promo_skip_description": "⏭️ Skip",
-  "admin_promo_description_too_long": "❌ Description must not exceed 200 characters",
-  "admin_promo_creating": "⏳ Creating promo code...",
-  
-  "admin_panel_back_button": "⬅️ Back",
-  "admin_bulk_promo_creation_failed": "❌ Error creating promo codes: {error}",
-  
-  "admin_user_id_label": "🆔 <b>ID:</b>",
-  "admin_user_name_label": "👤 <b>Name:</b>",
-  "admin_user_username_label": "📱 <b>Username:</b>",
-  "admin_user_language_label": "🌍 <b>Language:</b>",
-  "admin_user_registration_label": "📅 <b>Registration:</b>",
-  "admin_user_status_label": "🛡 <b>Status:</b>",
-  "admin_user_referral_label": "🎁 <b>Referred by:</b>",
-  "admin_user_panel_uuid_label": "🔗 <b>Panel UUID:</b>",
-  "admin_user_panel_status_label": "📊 <b>Panel Status:</b>",
-  "admin_user_traffic_label": "📊 <b>Traffic:</b>",
-  "admin_user_subscription_label": "💼 <b>Subscription:</b>",
-  "admin_user_trial_label": "🏡 <b>Trial:</b>",
-  
-  "admin_user_status_banned": "🚫 Banned",
-  "admin_user_status_active": "✅ Active",
+
+  "admin_banned_users_empty": "\ud83d\udccb Banned Users\n\nList is empty",
+
+  "admin_banned_users_list": "\ud83d\udccb Banned Users ({count}):\n\n{users}",
+
+  "admin_bulk_promo_step1_quantity": "\ud83d\udce6 <b>Bulk Promo Code Creation</b>\n\n<b>Step 1 of 4:</b> Quantity\n\nEnter the number of promo codes to create (1-1000):",
+
+  "admin_bulk_promo_step2_bonus_days": "\ud83d\udce6 <b>Bulk Promo Code Creation</b>\n\n<b>Step 2 of 4:</b> Bonus Days\n\nQuantity: <b>{quantity}</b>\n\nEnter the number of bonus days (1-365):",
+
+  "admin_bulk_promo_step3_max_activations": "\ud83d\udce6 <b>Bulk Promo Code Creation</b>\n\n<b>Step 3 of 4:</b> Max Activations\n\nQuantity: <b>{quantity}</b>\nBonus days: <b>{bonus_days}</b>\n\nEnter the maximum number of activations for each promo code (1-10000):",
+
+  "admin_bulk_promo_step4_validity": "\ud83d\udce6 <b>Bulk Promo Code Creation</b>\n\n<b>Step 4 of 4:</b> Validity Period\n\nQuantity: <b>{quantity}</b>\nBonus days: <b>{bonus_days}</b>\nMax activations: <b>{max_activations}</b>\n\nChoose the validity period for promo codes:",
+
+  "admin_bulk_promo_invalid_quantity": "\u274c Quantity must be between 1 and 1000",
+
+  "admin_bulk_promo_enter_validity_days": "\u23f0 Enter the number of validity days for promo codes (1-365):",
+
+  "admin_bulk_promo_creating": "\u23f3 Creating {quantity} promo codes...",
+
+  "admin_promo_step1_code": "\ud83c\udf9f <b>Create Promo Code</b>\n\n<b>Step 1 of 4:</b> Promo Code\n\nEnter promo code (3-30 characters, letters and numbers only):",
+
+  "admin_promo_step2_bonus_days": "\ud83c\udf9f <b>Create Promo Code</b>\n\n<b>Step 2 of 4:</b> Bonus Days\n\nCode: <b>{code}</b>\n\nEnter the number of bonus days (1-365):",
+
+  "admin_promo_step3_max_activations": "\ud83c\udf9f <b>Create Promo Code</b>\n\n<b>Step 3 of 4:</b> Max Activations\n\nCode: <b>{code}</b>\nBonus days: <b>{bonus_days}</b>\n\nEnter the maximum number of activations (1-10000):",
+
+  "admin_promo_step4_validity": "\ud83c\udf9f <b>Create Promo Code</b>\n\n<b>Step 4 of 4:</b> Validity Period\n\nCode: <b>{code}</b>\nBonus days: <b>{bonus_days}</b>\nMax activations: <b>{max_activations}</b>\n\nChoose the validity period for the promo code:",
+
+  "admin_promo_code_already_exists": "\u274c A promo code with this code already exists",
+
+  "admin_promo_unlimited_validity": "\u267e\ufe0f Unlimited",
+
+  "admin_promo_enter_validity_days": "\u23f0 Enter the number of validity days for the promo code (1-365):",
+
+  "admin_user_status_banned": "\ud83d\udeab Banned",
+
+  "admin_user_status_active": "\u2705 Active",
+
   "admin_user_trial_used": "Used",
+
   "admin_user_trial_not_used": "Not used",
+
   "admin_user_ban_action_banned": "banned",
+
   "admin_user_ban_action_unbanned": "unbanned",
+
   "admin_user_na_value": "N/A",
-  
-  "admin_user_subscription_active": "Active until {end_date}",
-  "admin_user_subscription_expired": "Expired {end_date}",
-  "admin_user_subscription_none": "No active subscription",
-  
-  "admin_user_logs_count": "Total entries: {count}",
-  "admin_user_logs_entry": "📅 {timestamp}\n📝 {event_type}: {content}",
-  
-  "admin_user_actions_count_label": "📜 <b>Total actions:</b>",
-  "admin_user_subscription_active_until": "⏰ <b>Active until:</b>",
-  "admin_user_subscription_error": "Loading error",
-  
-  "admin_bulk_promo_unique_generation_failed": "Failed to create unique promo code",
-  
-  "admin_promo_management_button": "🎟 Promo Management",
-  "admin_promo_management_title": "🎟 <b>Promo Code Management</b>\n\nSelect a promo code for detailed view:",
-  "admin_promo_management_empty": "📭 No promo codes available",
-  "admin_promo_card_title": "🎟 <b>Promo Code: {code}</b>",
-  "admin_promo_card_bonus_days": "🎁 Bonus days: <b>{days}</b>",
-  "admin_promo_card_activations": "🔢 Activations: <b>{current}/{max}</b>",
-  "admin_promo_card_validity": "⏰ Valid until: <b>{validity}</b>",
-  "admin_promo_card_status": "📊 Status: <b>{status}</b>",
-  "admin_promo_card_created": "📅 Created: <b>{created}</b>",
-  "admin_promo_card_created_by": "👤 Created by: <b>{creator}</b>",
-  "admin_promo_status_active": "✅ Active",
-  "admin_promo_status_inactive": "🚫 Inactive",
+
+  "admin_promo_management_button": "\ud83c\udf9f Promo Management",
+
+  "admin_promo_management_title": "\ud83c\udf9f <b>Promo Code Management</b>\n\nSelect a promo code for detailed view:",
+
+  "admin_promo_management_empty": "\ud83d\udced No promo codes available",
+
+  "admin_promo_card_title": "\ud83c\udf9f <b>Promo Code: {code}</b>",
+
+  "admin_promo_card_bonus_days": "\ud83c\udf81 Bonus days: <b>{days}</b>",
+
+  "admin_promo_card_activations": "\ud83d\udd22 Activations: <b>{current}/{max}</b>",
+
+  "admin_promo_card_validity": "\u23f0 Valid until: <b>{validity}</b>",
+
+  "admin_promo_card_status": "\ud83d\udcca Status: <b>{status}</b>",
+
+  "admin_promo_card_created": "\ud83d\udcc5 Created: <b>{created}</b>",
+
+  "admin_promo_card_created_by": "\ud83d\udc64 Created by: <b>{creator}</b>",
+
+  "admin_promo_status_active": "\u2705 Active",
+
+  "admin_promo_status_inactive": "\ud83d\udeab Inactive",
+
   "admin_promo_status_activated": "activated",
+
   "admin_promo_status_deactivated": "deactivated",
-  "admin_promo_status_expired": "⏰ Expired",
-  "admin_promo_status_used_up": "🔄 Used up",
-  "admin_promo_toggle_status_button": "🔄 On/Off",
-  "admin_promo_view_activations_button": "📋 Activations",
-  "admin_promo_back_to_list_button": "⬅️ Back to list",
-  "admin_promo_toggle_success": "✅ Promo code {code} {status}",
-  "admin_promo_toggle_failed": "❌ Error changing promo code status",
-  "admin_promo_no_activations": "📋 <b>Activations of promo code: {code}</b>\n\n❌ No activations found",
-  "admin_promo_activations_header": "📋 <b>Activations of promo code: {code}</b>\n\n",
-  "admin_promo_activation_item": "👤 User ID: <b>{user_id}</b>\n📅 Date: <b>{date}</b>\n",
-  "admin_promo_back_to_detail_button": "⬅️ Back to promo",
-  
-  "admin_panel_online_label": "Online",
-  "admin_panel_active_label": "Active",
-  "admin_panel_disabled_label": "Disabled",
-  "admin_panel_offline_label": "Offline",
-  "admin_panel_expired_label": "Expired", 
-  "admin_panel_limited_label": "Limited",
-  "admin_panel_total_users_label": "Total users",
-  "admin_panel_cpu_usage_label": "CPU Usage",
-  "admin_panel_memory_usage_label": "RAM Usage",
-  "admin_panel_traffic_today_label": "Traffic today",
-  "admin_panel_traffic_week_label": "Traffic this week",
-  "admin_panel_traffic_month_label": "Traffic this month",
-  "admin_panel_nodes_label": "Active nodes",
-  "admin_panel_system_stats_error": "Error getting system statistics",
-  "admin_panel_bandwidth_stats_error": "Error getting bandwidth statistics",
-  "admin_panel_nodes_stats_error": "Error getting nodes statistics",
-  "admin_panel_stats_fetch_error": "Error fetching panel data",
-  "admin_panel_stats_error_details": "Details",
-  
-  "inline_referral_message": "🚀 Hey! Try this VPN - it's fast, reliable and affordable!\n\n🎁 Use my link to get bonus days with your subscription!\n\n{referral_link}",
+
+  "admin_promo_status_expired": "\u23f0 Expired",
+
+  "admin_promo_status_used_up": "\ud83d\udd04 Used up",
+
+  "admin_promo_toggle_status_button": "\ud83d\udd04 On/Off",
+
+  "admin_promo_view_activations_button": "\ud83d\udccb Activations",
+
+  "admin_promo_back_to_list_button": "\u2b05\ufe0f Back to list",
+
+  "admin_promo_toggle_success": "\u2705 Promo code {code} {status}",
+
+  "admin_promo_no_activations": "\ud83d\udccb <b>Activations of promo code: {code}</b>\n\n\u274c No activations found",
+
+  "admin_promo_activations_header": "\ud83d\udccb <b>Activations of promo code: {code}</b>\n\n",
+
+  "admin_promo_activation_item": "\ud83d\udc64 User ID: <b>{user_id}</b>\n\ud83d\udcc5 Date: <b>{date}</b>\n",
+
+  "admin_promo_back_to_detail_button": "\u2b05\ufe0f Back to promo",
+
   "inline_referral_title": "Referral link",
-  "inline_referral_description": "Share referral link to get bonuses", 
-  "inline_stats_title": "Bot statistics",
-  "inline_stats_description": "Total: {total}, Active: {active}",
-  "inline_financial_title": "Financial statistics",
+
+  "inline_referral_description": "Share referral link to get bonuses",
+
   "inline_financial_description": "Today: {today} RUB",
-  "inline_system_title": "System statistics", 
-  "inline_system_description": "🟢 Online: {online}, 📊 Active: {active}",
-  "inline_admin_help_title": "Commands help",
-  "inline_admin_help_description": "Available commands: ref, stat, financial, system",
-  
-  "admin_user_stats_total_label": "Total",
-  "admin_user_stats_paid_subs_label": "With paid subscription",
-  "admin_user_stats_trial_label": "On trial period",
-  "admin_user_stats_inactive_label": "Inactive",
-  "admin_user_stats_banned_label": "Banned",
-  "admin_user_stats_referral_label": "Attracted via referral program",
-  "admin_financial_today_label": "Today",
-  "admin_financial_week_label": "This week",
-  "admin_financial_month_label": "This month",
-  "admin_financial_all_time_label": "All time",
-  "admin_financial_payments_label": "payments"
+
+  "inline_system_description": "\ud83d\udfe2 Online: {online}, \ud83d\udcca Active: {active}",
+
+  "admin_promo_set_validity_days": "\ud83d\udcc5 Set days",
+
+  "admin_back_to_panel": "\ud83d\udd19 Back to panel",
+
+  "admin_promo_unlimited": "Unlimited",
+
+  "admin_bulk_promo_created_title": "\u2705 Bulk creation completed!",
+
+  "admin_bulk_promo_created_stats": "\ud83d\udcca Created: <b>{created}</b> of <b>{total}</b>",
+
+  "admin_bulk_promo_settings": "\ud83c\udf81 Bonus days: <b>{bonus_days}</b>\n\ud83d\udcca Max activations: <b>{max_activations}</b>\n\u23f0 Validity: <b>{validity}</b>",
+
+  "admin_promo_export_all_button": "\ud83d\udcc4 Export all",
+
+  "admin_promo_export_all_caption": "\ud83d\udcc4 Promo code list"
 }

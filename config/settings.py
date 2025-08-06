@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     DEFAULT_LANGUAGE: str = Field(default="ru")
     DEFAULT_CURRENCY_SYMBOL: str = Field(default="RUB")
+    WELCOME_MESSAGE_ENABLED: bool = Field(default=True)
 
     SUPPORT_LINK: Optional[str] = Field(default=None)
     SERVER_STATUS_URL: Optional[str] = Field(default=None)

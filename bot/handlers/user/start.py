@@ -216,7 +216,8 @@ async def start_command_handler(message: types.Message,
                     f"Failed to update existing user {user_id} in session: {e_update}",
                     exc_info=True)
 
-    await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
+    if settings.WELCOME_MESSAGE_ENABLED:
+        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
     
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:

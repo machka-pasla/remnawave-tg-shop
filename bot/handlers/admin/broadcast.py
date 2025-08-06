@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from aiogram import Router, F, types, Bot
+from aiogram.exceptions import TelegramRetryAfter
 
 from aiogram.fsm.context import FSMContext
 from typing import Optional
@@ -192,6 +193,24 @@ async def confirm_broadcast_callback_handler(
                         "target_user_id": uid,
                     },
                 )
+            except TelegramRetryAfter as e:
+                await asyncio.sleep(e.retry_after)
+                failed_count += 1
+                logging.warning(
+                    f"RetryAfter sending to {uid}: {e.retry_after}s"
+                )
+                await message_log_dal.create_message_log(
+                    session,
+                    {
+                        "user_id": admin_user.id,
+                        "telegram_username": admin_user.username,
+                        "telegram_first_name": admin_user.first_name,
+                        "event_type": "admin_broadcast_failed",
+                        "content": f"For user {uid}: RetryAfter {e.retry_after}s",
+                        "is_admin_event": True,
+                        "target_user_id": uid,
+                    },
+                )
             except Exception as e:
                 failed_count += 1
                 logging.warning(
@@ -209,7 +228,7 @@ async def confirm_broadcast_callback_handler(
                         "target_user_id": uid,
                     },
                 )
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(2.1 if uid < 0 else 0.05)
 
         try:
             await session.commit()
