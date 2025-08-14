@@ -278,3 +278,49 @@ def get_back_to_admin_panel_keyboard(lang: str,
     builder.button(text=_(key="back_to_admin_panel_button"),
                    callback_data="admin_action:main")
     return builder.as_markup()
+
+
+def get_phone_transfer_approval_keyboard(payment_id: int) -> InlineKeyboardMarkup:
+    """Keyboard for approving/rejecting phone transfer payments"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.button(
+        text="✅ Подтвердить",
+        callback_data=f"approve_phone_transfer:{payment_id}"
+    )
+    builder.button(
+        text="❌ Отклонить",
+        callback_data=f"reject_phone_transfer:{payment_id}"
+    )
+    builder.button(
+        text="👁 Подробнее",
+        callback_data=f"view_phone_transfer:{payment_id}"
+    )
+    builder.adjust(2, 1)
+    return builder.as_markup()
+
+
+def get_phone_transfer_rejection_reason_keyboard(payment_id: int) -> InlineKeyboardMarkup:
+    """Keyboard for selecting rejection reason"""
+    builder = InlineKeyboardBuilder()
+    
+    reasons = [
+        ("Неверная сумма", "wrong_amount"),
+        ("Неверный номер получателя", "wrong_recipient"),
+        ("Чек нечитаем", "unreadable_receipt"),
+        ("Неверная дата", "wrong_date"),
+        ("Другая причина", "other_reason")
+    ]
+    
+    for reason_text, reason_code in reasons:
+        builder.button(
+            text=reason_text,
+            callback_data=f"reject_reason:{payment_id}:{reason_code}"
+        )
+    
+    builder.button(
+        text="❌ Отмена",
+        callback_data=f"cancel_rejection:{payment_id}"
+    )
+    builder.adjust(1)
+    return builder.as_markup()

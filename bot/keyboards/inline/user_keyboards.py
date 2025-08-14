@@ -1,6 +1,7 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from typing import Dict, Optional, List
+import logging
 
 from config.settings import Settings
 
@@ -126,6 +127,9 @@ def get_payment_method_keyboard(months: int, price: float,
                                 i18n_instance, settings: Settings) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+    
+    logging.info(f"Building payment method keyboard: PHONE_TRANSFER_ENABLED={settings.PHONE_TRANSFER_ENABLED}")
+    
     if settings.STARS_ENABLED and stars_price is not None:
         builder.button(text=_("pay_with_stars_button"),
                        callback_data=f"pay_stars:{months}:{stars_price}")
@@ -137,6 +141,13 @@ def get_payment_method_keyboard(months: int, price: float,
     if settings.CRYPTOPAY_ENABLED:
         builder.button(text=_("pay_with_cryptopay_button"),
                        callback_data=f"pay_crypto:{months}:{price}")
+    if settings.PHONE_TRANSFER_ENABLED:
+        logging.info("Adding phone transfer button to keyboard")
+        builder.button(text=_("pay_with_phone_transfer_button"),
+                       callback_data=f"pay_phone_transfer:{months}:{price}")
+    else:
+        logging.warning("Phone transfer is disabled in settings")
+    
     builder.button(text=_(key="cancel_button"),
                    callback_data="main_action:subscribe")
     builder.adjust(1)
@@ -228,4 +239,38 @@ def get_connect_and_main_keyboard(
         )
     )
 
+    return builder.as_markup()
+
+
+def get_phone_transfer_receipt_keyboard(payment_id: int, lang: str, i18n_instance) -> InlineKeyboardMarkup:
+    """Keyboard for phone transfer payment receipt upload"""
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+    
+    builder.button(
+        text=_("upload_receipt_button", default="📸 Загрузить чек"),
+        callback_data=f"upload_receipt:{payment_id}"
+    )
+    builder.button(
+        text=_("cancel_button"),
+        callback_data="main_action:subscribe"
+    )
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def get_phone_transfer_pending_keyboard(lang: str, i18n_instance) -> InlineKeyboardMarkup:
+    """Keyboard for pending phone transfer payment"""
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+    
+    builder.button(
+        text=_("payment_pending_button", default="⏳ Ожидает подтверждения"),
+        callback_data="phone_transfer_pending"
+    )
+    builder.button(
+        text=_("back_to_main_menu_button"),
+        callback_data="main_action:back_to_main"
+    )
+    builder.adjust(1)
     return builder.as_markup()

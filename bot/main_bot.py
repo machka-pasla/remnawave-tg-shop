@@ -31,6 +31,7 @@ from bot.services.promo_code_service import PromoCodeService
 from bot.services.stars_service import StarsService
 from bot.services.tribute_service import TributeService, tribute_webhook_route
 from bot.services.crypto_pay_service import CryptoPayService, cryptopay_webhook_route
+from bot.services.phone_transfer_service import PhoneTransferService
 
 from bot.handlers.user import payment as user_payment_webhook_module
 from bot.handlers.admin.sync_admin import perform_sync
@@ -297,6 +298,8 @@ async def run_bot(settings_param: Settings):
         i18n_instance,
         local_async_session_factory,
     )
+    phone_transfer_service = PhoneTransferService(settings_param)
+    logging.info(f"PhoneTransferService created: {phone_transfer_service.is_configured()}")
 
     dp["i18n_instance"] = i18n_instance
     dp["yookassa_service"] = yookassa_service
@@ -308,6 +311,7 @@ async def run_bot(settings_param: Settings):
     dp["cryptopay_service"] = cryptopay_service
     dp["tribute_service"] = tribute_service
     dp["panel_webhook_service"] = panel_webhook_service
+    dp["phone_transfer_service"] = phone_transfer_service
     dp["async_session_factory"] = local_async_session_factory
 
     dp.update.outer_middleware(DBSessionMiddleware(local_async_session_factory))
@@ -365,6 +369,7 @@ async def run_bot(settings_param: Settings):
         app["cryptopay_service"] = cryptopay_service
         app["tribute_service"] = tribute_service
         app["panel_webhook_service"] = panel_webhook_service
+        app["phone_transfer_service"] = phone_transfer_service
 
         setup_application(app, dp, bot=bot)
 

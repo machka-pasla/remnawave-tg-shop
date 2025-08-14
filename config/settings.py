@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     YOOKASSA_ENABLED: bool = Field(default=True)
     STARS_ENABLED: bool = Field(default=True)
     TRIBUTE_ENABLED: bool = Field(default=True)
+    PHONE_TRANSFER_ENABLED: bool = Field(default=True)
+
+    # Phone transfer payment settings
+    PHONE_TRANSFER_NUMBER: Optional[str] = Field(default=None, description="Phone number for manual transfers")
+    PHONE_TRANSFER_BANK_NAME: Optional[str] = Field(default=None, description="Bank name for transfers")
+    PHONE_TRANSFER_INSTRUCTIONS: Optional[str] = Field(default=None, description="Additional transfer instructions")
 
     MONTH_1_ENABLED: bool = Field(default=True, alias="1_MONTH_ENABLED")
     MONTH_3_ENABLED: bool = Field(default=True, alias="3_MONTHS_ENABLED")

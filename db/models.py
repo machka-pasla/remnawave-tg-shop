@@ -32,6 +32,9 @@ class User(Base):
     payments = relationship("Payment",
                             back_populates="user",
                             cascade="all, delete-orphan")
+    phone_transfer_payments = relationship("PhoneTransferPayment",
+                                          back_populates="user",
+                                          cascade="all, delete-orphan")
     promo_code_activations = relationship("PromoCodeActivation",
                                           back_populates="user",
                                           cascade="all, delete-orphan")
@@ -112,6 +115,40 @@ class Payment(Base):
                                    back_populates="payments_where_used")
 
 
+class PhoneTransferPayment(Base):
+    __tablename__ = "phone_transfer_payments"
+
+    payment_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger,
+                     ForeignKey("users.user_id"),
+                     nullable=False,
+                     index=True)
+    amount = Column(Float, nullable=False)
+    currency = Column(String, nullable=False, default="RUB")
+    subscription_duration_months = Column(Integer, nullable=False)
+    status = Column(String, nullable=False, default="pending", index=True)
+    description = Column(String, nullable=True)
+    promo_code_id = Column(Integer,
+                           ForeignKey("promo_codes.promo_code_id"),
+                           nullable=True)
+    receipt_photo_id = Column(String, nullable=True)
+    receipt_file_id = Column(String, nullable=True)
+    admin_notes = Column(Text, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True),
+                        onupdate=func.now(),
+                        nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    approved_by_admin_id = Column(BigInteger, nullable=True)
+    rejected_at = Column(DateTime(timezone=True), nullable=True)
+    rejected_by_admin_id = Column(BigInteger, nullable=True)
+
+    user = relationship("User", back_populates="phone_transfer_payments")
+    promo_code_used = relationship("PromoCode",
+                                   back_populates="phone_transfer_payments_where_used")
+
+
 class PromoCode(Base):
     __tablename__ = "promo_codes"
 
@@ -130,6 +167,8 @@ class PromoCode(Base):
                                cascade="all, delete-orphan")
     payments_where_used = relationship("Payment",
                                        back_populates="promo_code_used")
+    phone_transfer_payments_where_used = relationship("PhoneTransferPayment",
+                                                     back_populates="promo_code_used")
 
 
 class PromoCodeActivation(Base):

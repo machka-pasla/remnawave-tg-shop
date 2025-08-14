@@ -10,16 +10,36 @@ from config.settings import Settings
 from db.dal import payment_dal
 from bot.keyboards.inline.user_keyboards import (
     get_subscription_options_keyboard, get_payment_method_keyboard,
-    get_payment_url_keyboard, get_back_to_main_menu_markup)
+    get_payment_url_keyboard, get_back_to_main_menu_markup,
+    get_phone_transfer_pending_keyboard)
 from bot.services.yookassa_service import YooKassaService
 from bot.services.stars_service import StarsService
 from bot.services.crypto_pay_service import CryptoPayService
+from bot.services.phone_transfer_service import PhoneTransferService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
 from bot.services.referral_service import ReferralService
 from bot.middlewares.i18n import JsonI18n
 
 router = Router(name="user_subscription_router")
+
+# Temporary storage for receipt uploads (in production, use Redis or database)
+_receipt_upload_sessions = {}
+
+def cleanup_expired_sessions():
+    """Clean up expired receipt upload sessions"""
+    current_time = datetime.now()
+    expired_users = []
+    
+    for user_id, session_data in _receipt_upload_sessions.items():
+        if (current_time - session_data['timestamp']).total_seconds() > 300:  # 5 minutes
+            expired_users.append(user_id)
+    
+    for user_id in expired_users:
+        del _receipt_upload_sessions[user_id]
+    
+    if expired_users:
+        logging.info(f"Cleaned up {len(expired_users)} expired receipt upload sessions")
 
 
 async def display_subscription_options(event: Union[types.Message,
@@ -124,7 +144,7 @@ async def select_subscription_period_callback_handler(
             f"Edit message for payment method selection failed: {e_edit}. Sending new one."
         )
         await callback.message.answer(text_content,
-                                      reply_markup=reply_markup)
+                                       reply_markup=reply_markup)
     await callback.answer()
 
 
@@ -170,7 +190,6 @@ async def pay_yk_callback_handler(
         yookassa_service: YooKassaService, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-
     get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs
                                                   ) if i18n else key
 
@@ -335,6 +354,195 @@ async def pay_crypto_callback_handler(
     else:
         await callback.message.edit_text(get_text("error_payment_gateway"))
     await callback.answer()
+
+
+@router.callback_query(F.data.startswith("pay_phone_transfer:"))
+async def pay_phone_transfer_callback_handler(
+        callback: types.CallbackQuery, settings: Settings, i18n_data: dict,
+        session: AsyncSession, phone_transfer_service: PhoneTransferService):
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+
+    if not i18n or not callback.message:
+        await callback.answer(get_text("error_occurred_try_again"), show_alert=True)
+        return
+
+    if not phone_transfer_service.is_configured():
+        await callback.answer(get_text("payment_service_unavailable"), show_alert=True)
+        return
+
+    try:
+        _, data_payload = callback.data.split(":", 1)
+        months_str, price_str = data_payload.split(":")
+        months = int(months_str)
+        price_rub = float(price_str)
+    except (ValueError, IndexError):
+        logging.error(f"Invalid pay_phone_transfer data in callback: {callback.data}")
+        await callback.answer(get_text("error_try_again"), show_alert=True)
+        return
+
+    user_id = callback.from_user.id
+    payment_description = get_text("payment_description_subscription", months=months)
+
+    # Create phone transfer payment request
+    payment = await phone_transfer_service.create_payment_request(
+        session, user_id, months, price_rub, "RUB", payment_description
+    )
+    
+    if not payment:
+        await callback.message.edit_text(get_text("error_payment_gateway"))
+        await callback.answer(get_text("error_try_again"), show_alert=True)
+        return
+
+    # Get transfer instructions
+    instructions = phone_transfer_service.get_transfer_instructions(price_rub, "RUB", months)
+    
+    # Create keyboard for receipt upload
+    from bot.keyboards.inline.user_keyboards import get_phone_transfer_receipt_keyboard
+    reply_markup = get_phone_transfer_receipt_keyboard(payment.payment_id, current_lang, i18n)
+    
+    try:
+        await callback.message.edit_text(instructions, reply_markup=reply_markup, parse_mode="HTML")
+    except Exception as e_edit:
+        logging.warning(f"Edit message for phone transfer failed: {e_edit}. Sending new one.")
+        await callback.message.answer(instructions, reply_markup=reply_markup, parse_mode="HTML")
+    
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("upload_receipt:"))
+async def upload_receipt_callback_handler(
+        callback: types.CallbackQuery, i18n_data: dict):
+    current_lang = i18n_data.get("current_language", "ru")
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+
+    if not i18n or not callback.message:
+        await callback.answer(get_text("error_occurred_try_again"), show_alert=True)
+        return
+
+    try:
+        payment_id = int(callback.data.split(":")[-1])
+    except (ValueError, IndexError):
+        logging.error(f"Invalid upload_receipt data in callback: {callback.data}")
+        await callback.answer(get_text("error_try_again"), show_alert=True)
+        return
+
+    # Store payment_id in temporary session for this user
+    user_id = callback.from_user.id
+    _receipt_upload_sessions[user_id] = {
+        'payment_id': payment_id,
+        'timestamp': datetime.now()
+    }
+    
+    # Send instruction message
+    await callback.message.edit_text(
+        get_text("upload_receipt_instruction", default="📸 Пожалуйста, отправьте фото или скриншот чека о переводе."),
+        reply_markup=get_back_to_main_menu_markup(current_lang, i18n)
+    )
+    
+    await callback.answer()
+
+
+@router.message(F.photo)
+async def handle_receipt_photo(
+        message: types.Message, i18n_data: dict, session: AsyncSession,
+        phone_transfer_service: PhoneTransferService):
+    """Handle receipt photo upload for phone transfer payments"""
+    current_lang = i18n_data.get("current_language", "ru")
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+
+    # Check if this is a receipt upload by looking for active session
+    user_id = message.from_user.id
+    session_data = _receipt_upload_sessions.get(user_id)
+    
+    if not session_data:
+        return  # No active receipt upload session
+    
+    # Check if session is not expired (5 minutes)
+    if (datetime.now() - session_data['timestamp']).total_seconds() > 300:
+        del _receipt_upload_sessions[user_id]
+        return  # Session expired
+    
+    payment_id = session_data['payment_id']
+    
+    # Get the largest photo size
+    photo = message.photo[-1]
+    
+    # Upload receipt
+    success = await phone_transfer_service.upload_receipt(
+        session, payment_id, str(photo.file_id), photo.file_id
+    )
+    
+    if success:
+        # Clear the session
+        del _receipt_upload_sessions[user_id]
+        
+        # Send confirmation to user
+        await message.answer(
+            get_text("receipt_uploaded_success", default="✅ Чек успешно загружен! Ваш платеж отправлен на проверку администратору. Вы получите уведомление после подтверждения."),
+            reply_markup=get_phone_transfer_pending_keyboard(current_lang, i18n)
+        )
+        
+        # Notify admins about new receipt
+        await notify_admins_about_receipt(message.bot, payment_id, message.from_user, photo.file_id)
+    else:
+        await message.answer(
+            get_text("receipt_upload_failed", default="❌ Не удалось загрузить чек. Пожалуйста, попробуйте еще раз или обратитесь в поддержку."),
+            reply_markup=get_back_to_main_menu_markup(current_lang, i18n)
+        )
+
+
+async def notify_admins_about_receipt(bot: Bot, payment_id: int, user: types.User, photo_file_id: str):
+    """Notify admins about a new receipt upload"""
+    try:
+        from config.settings import get_settings
+        settings = get_settings()
+        
+        # Get user info
+        user_info = f"User {user.id}"
+        if user.username:
+            user_info += f" (@{user.username})"
+        elif user.first_name:
+            user_info += f" ({user.first_name})"
+        
+        # Create admin notification message
+        admin_message = (
+            f"📸 <b>Новый чек для проверки</b>\n\n"
+            f"👤 {user_info}\n"
+            f"🆔 Payment ID: {payment_id}\n"
+            f"📅 Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            f"Проверьте чек и подтвердите или отклоните платеж."
+        )
+        
+        # Send to all admins
+        for admin_id in settings.ADMIN_IDS:
+            try:
+                # Send photo with caption
+                await bot.send_photo(
+                    chat_id=admin_id,
+                    photo=photo_file_id,
+                    caption=admin_message,
+                    parse_mode="HTML"
+                )
+                
+                # Send approval/rejection keyboard
+                from bot.keyboards.inline.admin_keyboards import get_phone_transfer_approval_keyboard
+                await bot.send_message(
+                    chat_id=admin_id,
+                    text="Выберите действие:",
+                    reply_markup=get_phone_transfer_approval_keyboard(payment_id)
+                )
+            except Exception as e:
+                logging.error(f"Failed to notify admin {admin_id} about receipt: {e}")
+                
+    except Exception as e:
+        logging.error(f"Error notifying admins about receipt: {e}")
 
 
 @router.callback_query(F.data == "main_action:subscribe")
