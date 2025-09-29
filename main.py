@@ -1,25 +1,39 @@
-#!/usr/bin/python
-
-# This is a simple echo bot using the decorator mechanism.
-# It echoes any incoming text messages.
 import asyncio
+import logging
+import sys
 
-from telebot.async_telebot import AsyncTeleBot
+from dotenv import load_dotenv
 
-bot = AsyncTeleBot('TOKEN')
-
-
-# Handle '/start' and '/help'
-@bot.message_handler(commands=['help', 'start'])
-async def send_welcome(message):
-    text = 'Hi, I am EchoBot.\nJust write me something and I will repeat it!'
-    await bot.reply_to(message, text)
+from bot.main_bot import run_bot
+from config.settings import get_settings, Settings
+from db.database_setup import init_db, init_db_connection
 
 
-# Handle all other messages with content_type 'text' (content_types defaults to ['text'])
-@bot.message_handler(func=lambda message: True)
-async def echo_message(message):
-    await bot.reply_to(message, message.text)
+async def main():
+    load_dotenv()
+    settings = get_settings()
+
+    session_factory = init_db_connection(settings)
+    if not session_factory:
+        logging.critical(
+            "Failed to initialize DB connection and session factory. Exiting.")
+        return
+
+    await init_db(settings, session_factory)
+
+    await run_bot(settings)
 
 
-asyncio.run(bot.polling())
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        stream=sys.stdout,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Bot stopped manually")
+    except Exception as e_global:
+        logging.critical(f"Global unhandled exception in main: {e_global}",
+                         exc_info=True)
+        sys.exit(1)

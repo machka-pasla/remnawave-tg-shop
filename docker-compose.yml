@@ -1,0 +1,41 @@
+services:
+  remnawave-tg-shop:
+    image: ghcr.io/machka-pasla/remnawave-tg-shop:latest
+#    build: .
+    container_name: remnawave-tg-shop
+    hostname: remnawave-tg-shop
+    env_file:
+      - .env
+    networks:
+      - remnawave-network
+    volumes:
+      - ./locales:/app/locales
+    restart: unless-stopped
+    depends_on:
+      remnawave-tg-shop-db:
+        condition: service_healthy
+
+  remnawave-tg-shop-db:
+    image: postgres:17
+    container_name: remnawave-tg-shop-db
+    hostname: remnawave-tg-shop-db
+    env_file:
+      - .env
+    volumes:
+      - remnawave-tg-shop-db-data:/var/lib/postgresql/data
+    networks:
+      - remnawave-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+networks:
+  remnawave-network:
+    external: true
+
+volumes:
+  remnawave-tg-shop-db-data:
+    name: remnawave-tg-shop-db-data
