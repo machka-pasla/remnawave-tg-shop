@@ -34,7 +34,7 @@ def get_main_menu_inline_keyboard(
     # promo_button = InlineKeyboardButton(
     #     text=_(key="menu_apply_promo_button"),
     #     callback_data="main_action:apply_promo")
-    # builder.row(referral_button, promo_button)
+    builder.row(referral_button)
 
     language_button = InlineKeyboardButton(
         text=_(key="menu_language_settings_inline"),
