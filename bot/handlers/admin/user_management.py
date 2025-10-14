@@ -19,6 +19,11 @@ from bot.services.referral_service import ReferralService
 from bot.middlewares.i18n import JsonI18n
 from bot.utils import get_message_content, send_direct_message
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
+from bot.utils.text_sanitizer import (
+    sanitize_display_name,
+    sanitize_username,
+    username_for_display,
+)
 
 router = Router(name="admin_user_management_router")
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_]{5,32}$")
@@ -118,8 +123,16 @@ async def format_user_card(user: User, session: AsyncSession,
     
     # User details
     na_value = _("admin_user_na_value", default="N/A")
-    user_name = user.first_name or na_value
-    username_display = f"@{user.username}" if user.username else na_value
+    safe_first_name = sanitize_display_name(user.first_name) if user.first_name else None
+    user_name = safe_first_name or na_value
+    if user.username:
+        sanitized_username = sanitize_username(user.username)
+        if sanitized_username:
+            username_display = f"@{sanitized_username}"
+        else:
+            username_display = username_for_display(user.username, with_at=False)
+    else:
+        username_display = na_value
     registration_date = user.registration_date.strftime('%Y-%m-%d %H:%M') if user.registration_date else na_value
     
     card_parts.append(f"{_('admin_user_id_label', default='🆔 <b>ID:</b>')} {hcode(str(user.user_id))}")

@@ -10,6 +10,10 @@ from config.settings import Settings
 from sqlalchemy.orm import sessionmaker
 from bot.middlewares.i18n import JsonI18n
 from bot.utils.message_queue import get_queue_manager
+from bot.utils.text_sanitizer import (
+    display_name_or_fallback,
+    username_for_display,
+)
 
 
 class NotificationService:
@@ -19,6 +23,17 @@ class NotificationService:
         self.bot = bot
         self.settings = settings
         self.i18n = i18n
+
+    @staticmethod
+    def _format_user_display(
+        user_id: int,
+        username: Optional[str] = None,
+        first_name: Optional[str] = None,
+    ) -> str:
+        base_display = display_name_or_fallback(first_name, f"ID {user_id}")
+        if username:
+            base_display = f"{base_display} ({username_for_display(username)})"
+        return base_display
     
     async def _send_to_log_channel(self, message: str, thread_id: Optional[int] = None):
         """Send message to configured log channel/group using message queue"""
@@ -101,9 +116,11 @@ class NotificationService:
         admin_lang = self.settings.DEFAULT_LANGUAGE
         _ = lambda k, **kw: self.i18n.gettext(admin_lang, k, **kw) if self.i18n else k
         
-        user_display = first_name or f"ID {user_id}"
-        if username:
-            user_display += f" (@{username})"
+        user_display = self._format_user_display(
+            user_id=user_id,
+            username=username,
+            first_name=first_name,
+        )
         
         referral_text = ""
         if referred_by_id:
@@ -134,9 +151,10 @@ class NotificationService:
         admin_lang = self.settings.DEFAULT_LANGUAGE
         _ = lambda k, **kw: self.i18n.gettext(admin_lang, k, **kw) if self.i18n else k
         
-        user_display = f"ID {user_id}"
-        if username:
-            user_display += f" (@{username})"
+        user_display = self._format_user_display(
+            user_id=user_id,
+            username=username,
+        )
         
         provider_emoji = {
             "yookassa": "💳",
@@ -174,9 +192,10 @@ class NotificationService:
         admin_lang = self.settings.DEFAULT_LANGUAGE
         _ = lambda k, **kw: self.i18n.gettext(admin_lang, k, **kw) if self.i18n else k
         
-        user_display = f"ID {user_id}"
-        if username:
-            user_display += f" (@{username})"
+        user_display = self._format_user_display(
+            user_id=user_id,
+            username=username,
+        )
         
         message = _(
             "log_promo_activation",
@@ -203,9 +222,10 @@ class NotificationService:
         admin_lang = self.settings.DEFAULT_LANGUAGE
         _ = lambda k, **kw: self.i18n.gettext(admin_lang, k, **kw) if self.i18n else k
         
-        user_display = f"ID {user_id}"
-        if username:
-            user_display += f" (@{username})"
+        user_display = self._format_user_display(
+            user_id=user_id,
+            username=username,
+        )
         
         message = _(
             "log_trial_activation",
@@ -268,9 +288,11 @@ class NotificationService:
         _ = lambda k, **kw: self.i18n.gettext(
             admin_lang, k, **kw) if self.i18n else k
 
-        user_display = first_name or f"ID {user_id}"
-        if username:
-            user_display += f" (@{username})"
+        user_display = self._format_user_display(
+            user_id=user_id,
+            username=username,
+            first_name=first_name,
+        )
 
         message = _(
             "log_suspicious_promo",

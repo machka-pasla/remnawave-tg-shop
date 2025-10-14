@@ -355,6 +355,7 @@ class SubscriptionService:
             "is_active": True,
             "status_from_panel": "TRIAL",
             "traffic_limit_bytes": self.settings.trial_traffic_limit_bytes,
+            "auto_renew_enabled": False,
         }
         try:
             await subscription_dal.upsert_subscription(session, trial_sub_data)

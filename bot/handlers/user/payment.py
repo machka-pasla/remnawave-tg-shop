@@ -22,6 +22,7 @@ from bot.middlewares.i18n import JsonI18n
 from config.settings import Settings
 from bot.services.notification_service import NotificationService
 from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
+from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
 
 payment_processing_lock = asyncio.Lock()
 
@@ -241,10 +242,12 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                 if db_user and db_user.referred_by_id:
                     inviter = await user_dal.get_user_by_id(
                         session, db_user.referred_by_id)
-                    if inviter and inviter.first_name:
-                        inviter_name_display = inviter.first_name
-                    elif inviter and inviter.username:
-                        inviter_name_display = f"@{inviter.username}"
+                    if inviter:
+                        safe_name = sanitize_display_name(inviter.first_name) if inviter.first_name else None
+                        if safe_name:
+                            inviter_name_display = safe_name
+                        elif inviter.username:
+                            inviter_name_display = username_for_display(inviter.username, with_at=False)
 
                 details_message = _(
                     "payment_successful_with_referral_bonus_full",
