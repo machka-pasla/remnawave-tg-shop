@@ -1,122 +1,106 @@
-D:.
-|   .dockerignore
-|   .env.example
-|   .gitignore
-|   docker-compose.yml
-|   Dockerfile
-|   LICENSE
-|   main.py
-|   README.md
-|   requirements.txt
-|   stack.env
-|   structure.txt
-|   
-+---bot
-|   |   main_bot.py
-|   |   routers.py
-|   |   
-|   +---app
-|   |   +---controllers
-|   |   |       dispatcher_controller.py
-|   |   |       __init__.py
-|   |   |       
-|   |   +---factories
-|   |   |       build_services.py
-|   |   |       __init__.py
-|   |   |       
-|   |   \---web
-|   |           web_server.py
-|   |           __init__.py
-|   |           
-|   +---filters
-|   |       admin_filter.py
-|   |       
-|   +---handlers
-|   |   |   inline_mode.py
-|   |   |   
-|   |   +---admin
-|   |   |   |   ads.py
-|   |   |   |   broadcast.py
-|   |   |   |   common.py
-|   |   |   |   logs_admin.py
-|   |   |   |   payments.py
-|   |   |   |   statistics.py
-|   |   |   |   sync_admin.py
-|   |   |   |   user_management.py
-|   |   |   |   __init__.py
-|   |   |   |   
-|   |   |   \---promo
-|   |   |           bulk.py
-|   |   |           create.py
-|   |   |           manage.py
-|   |   |           __init__.py
-|   |   |           
-|   |   \---user
-|   |       |   payment.py
-|   |       |   promo_user.py
-|   |       |   referral.py
-|   |       |   start.py
-|   |       |   trial_handler.py
-|   |       |   __init__.py
-|   |       |   
-|   |       \---subscription
-|   |               core.py
-|   |               payments.py
-|   |               payment_methods.py
-|   |               __init__.py
-|   |               
-|   +---keyboards
-|   |   \---inline
-|   |           admin_keyboards.py
-|   |           user_keyboards.py
-|   |           
-|   +---middlewares
-|   |       action_logger_middleware.py
-|   |       ban_check_middleware.py
-|   |       db_session.py
-|   |       i18n.py
-|   |       profile_sync.py
-|   |       
-|   +---services
-|   |       crypto_pay_service.py
-|   |       notification_service.py
-|   |       panel_api_service.py
-|   |       panel_webhook_service.py
-|   |       promo_code_service.py
-|   |       referral_service.py
-|   |       stars_service.py
-|   |       subscription_service.py
-|   |       tribute_service.py
-|   |       yookassa_service.py
-|   |       
-|   +---states
-|   |       admin_states.py
-|   |       user_states.py
-|   |       
-|   \---utils
-|           date_utils.py
-|           message_queue.py
-|           __init__.py
-|           
-+---config
-|       settings.py
-|       
-+---db
-|   |   database_setup.py
-|   |   migrator.py
-|   |   models.py
-|   |   
-|   \---dal
-|           ad_dal.py
-|           message_log_dal.py
-|           panel_sync_dal.py
-|           payment_dal.py
-|           promo_code_dal.py
-|           subscription_dal.py
-|           user_billing_dal.py
-|           user_dal.py
-|           __init__.py
-|           
-\---locales
-        en.json
-        ru.json
+Altered_Internet_bot
+|– .dockerignore
+|– .env.example
+|– .gitignore
+|– docker-compose.yml
+|– Dockerfile
+|– LICENSE
+|– main.py
+|– README.md
+|– requirements.txt
+|– stack.env
+|– structure.txt
+|– bot
+	|– main_bot.py
+	|– routers.py
+	|– app
+		|– controllers
+			|– dispatcher_controller.py
+			|– __init__.py
+		|– factories
+			|– build_services.py
+			|– __init__.py
+		|– web
+			|– web_server.py
+			|– __init__.py
+	|– filters
+		|– admin_filter.py
+	|– handlers
+		|– inline_mode.py
+		|– admin
+			|– ads.py
+			|– broadcast.py
+			|– common.py
+			|– logs_admin.py
+			|– payments.py
+			|– statistics.py
+			|– sync_admin.py
+			|– user_management.py
+			|– __init__.py
+			|– promo
+				|– bulk.py
+				|– create.py
+				|– manage.py
+				|– __init__.py
+		|– user
+			|– payment.py
+			|– promo_user.py
+			|– referral.py
+			|– start.py
+			|– trial_handler.py
+			|– __init__.py
+			|– subscription
+				|– core.py
+				|– payments.py
+				|– payment_methods.py
+				|– __init__.py
+	|– keyboards
+		|– inline
+			|– admin_keyboards.py
+			|– user_keyboards.py
+	|– middlewares
+		|– action_logger_middleware.py
+		|– ban_check_middleware.py
+		|– db_session.py
+		|– i18n.py
+		|– profile_sync.py
+	|– services
+		|– crypto_pay_service.py
+		|– notification_service.py
+		|– panel_api_service.py
+		|– panel_webhook_service.py
+		|– promo_code_service.py
+		|– referral_service.py
+		|– stars_service.py
+		|– subscription_service.py
+		|– tribute_service.py
+		|– yookassa_service.py
+	|– states
+		|– admin_states.py
+		|– user_states.py
+	|– utils
+		|– date_utils.py
+		|– ecdc_api.py
+		|– ecdc_cli.py
+		|– ecdc_core.py
+		|– message_queue.py
+		|– __init__.py
+|– config
+	|– settings.py
+|– db
+	|– database_setup.py
+	|– migrator.py
+	|– models.py
+	|– dal
+		|– ad_dal.py
+		|– message_log_dal.py
+		|– panel_sync_dal.py
+		|– payment_dal.py
+		|– promo_code_dal.py
+		|– subscription_dal.py
+		|– user_billing_dal.py
+		|– user_dal.py
+		|– __init__.py    
+|– locales
+	|– en.json
+	|– ru.json
