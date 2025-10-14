@@ -1,36 +1,39 @@
 #!/usr/bin/env python3
-# fpe12.py  — Python 3.11.9 port of the Go CLI
-
+# Python 3.11.9 — CLI с поддержкой переменных окружения
 from __future__ import annotations
 
 import argparse
 import hashlib
 import hmac
+import os
 import re
 import sys
 from typing import Literal
 
-RADIX = 1_000_000  # 10^6 (6 digits)
+RADIX = 1_000_000
 ROUNDS = 10
+
+# Имена переменных окружения
+ENV_SECRET = "ECDC_SECRET"
+ENV_TWEAK = "ECDC_TWEAK"
+ENV_KDF = "ECDC_KDF"
+ENV_ITER = "ECDC_ITER"
 
 
 def pbkdf2(password: bytes, salt: bytes, iter: int, dklen: int, kdf: Literal["sha256", "sha1"]) -> bytes:
-    # stdlib fast C-implementation
     return hashlib.pbkdf2_hmac(kdf, password, salt, iter, dklen)
 
 
 def derive_key(secret: str, tweak: str, kdf: str, iter: int) -> bytes:
     salt = ("fpe-uid-12|" + tweak).encode("utf-8")
-    algo = "sha256" if kdf.lower() != "sha1" else "sha1"
-    return pbkdf2(secret.encode("utf-8"), salt, iter, 32, algo)  # 32 bytes like Go code
+    algo = "sha256" if (kdf or "sha256").lower() != "sha1" else "sha1"
+    return pbkdf2(secret.encode("utf-8"), salt, iter, 32, algo)
 
 
 def prf(key: bytes, tweak: bytes, round_byte: int, right: int) -> int:
-    # msg = tweak || round(1b) || ascii(right_6d)
     s = f"{right:06d}".encode("ascii")
     msg = tweak + bytes([round_byte]) + s
     digest = hmac.new(key, msg, hashlib.sha256).digest()
-    # first 8 bytes as little-endian uint64 -> mod 10^6
     val = int.from_bytes(digest[:8], "little", signed=False)
     return int(val % RADIX)
 
@@ -73,83 +76,36 @@ def from_uid(s: str) -> int:
     digits = re.sub(r"\D", "", s)
     if len(digits) != 12:
         raise ValueError("UID must have exactly 12 digits")
-    # avoid int(str) pitfalls with leading zeros? Go code reconstructs manually; emulate that:
     n = 0
     for ch in digits:
         n = n * 10 + (ord(ch) - 48)
     return n
 
 
-def cmd_enc(args: argparse.Namespace) -> int:
-    if args.secret is None or args.secret == "":
-        print("Error: --secret is required", file=sys.stderr)
-        return 1
-    if args.tid is None:
-        print("Error: --tid is required", file=sys.stderr)
-        return 1
-    key = derive_key(args.secret, args.tweak.strip(), args.kdf, args.iter)
-    y = encrypt12(key, args.tweak.strip().encode("utf-8"), int(args.tid))
-    print(to_uid(y))
-    return 0
-
-
-def cmd_dec(args: argparse.Namespace) -> int:
-    if args.secret is None or args.secret == "":
-        print("Error: --secret is required", file=sys.stderr)
-        return 1
-    if args.uid is None or args.uid == "":
-        print("Error: --uid is required", file=sys.stderr)
-        return 1
-    y = from_uid(args.uid)
-    key = derive_key(args.secret, args.tweak.strip(), args.kdf, args.iter)
-    x = decrypt12(key, args.tweak.strip().encode("utf-8"), y)
-    print(x)  # no leading zeros — TID as number
-    return 0
-
-
-def cmd_selftest(_: argparse.Namespace) -> int:
-    # Reference cases (PBKDF2-SHA256, 200k iters) — copied from Go
-    cases = [
-        ("qwerty123", "123", 12_345_678, "5377-6196-7198"),
-        ("qwerty123", "123", 123_456_789, "8678-9607-3662"),
-        ("correct horse battery staple", "prod", 42, "3467-7244-0811"),
-    ]
-    for secret, tweak, tid, want in cases:
-        key = derive_key(secret, tweak, "sha256", 200_000)
-        y = encrypt12(key, tweak.encode("utf-8"), tid)
-        back = decrypt12(key, tweak.encode("utf-8"), y)
-        got = to_uid(y)
-        ok = got == want and back == tid
-        print(
-            f'secret="{secret}" tweak="{tweak}" tid={tid} -> uid={got} -> back={back}  [{"OK" if ok else "FAIL"}]'
-        )
-        if not ok:
-            print("self-test failed", file=sys.stderr)
-            return 1
-    return 0
-
-
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="fpe12",
-        description="Format-preserving encryption for 12-digit IDs (Feistel + HMAC-SHA256), Python port",
+        add_help=True,
+        description="Format-preserving encryption for 12-digit IDs (Feistel + HMAC-SHA256). "
+                    f"Reads config from env: {ENV_SECRET}, {ENV_TWEAK}, {ENV_KDF}, {ENV_ITER}.",
     )
-    sub = p.add_subparsers(dest="cmd", required=True)
+    sub = p.add_subparsers(dest="cmd")
 
     enc = sub.add_parser("enc", help="encrypt TID -> UID")
-    enc.add_argument("--tid", type=int, required=True, help="telegram id (digits, < 10^12)")
-    enc.add_argument("--secret", type=str, required=True, help="secret passphrase (required)")
-    enc.add_argument("--tweak", type=str, default="default", help="tweak/context label")
-    enc.add_argument("--kdf", type=str, default="sha256", choices=["sha256", "sha1"], help="pbkdf2 hash")
-    enc.add_argument("--iter", type=int, default=200_000, help="pbkdf2 iterations")
+    enc.add_argument("--tid", type=int, required=True)
+    # Конфиг-флаги стали необязательными → по умолчанию None, чтобы брать из env
+    enc.add_argument("--secret", type=str, default=None, help=f"or set {ENV_SECRET}")
+    enc.add_argument("--tweak", type=str, default=None, help=f"or set {ENV_TWEAK} (default 'default')")
+    enc.add_argument("--kdf", type=str, default=None, choices=["sha256", "sha1"], help=f"or set {ENV_KDF} (default sha256)")
+    enc.add_argument("--iter", type=int, default=None, help=f"or set {ENV_ITER} (default 200000)")
     enc.set_defaults(func=cmd_enc)
 
     dec = sub.add_parser("dec", help="decrypt UID -> TID")
-    dec.add_argument("--uid", type=str, required=True, help="uid (0000-0000-0000 or 12 digits)")
-    dec.add_argument("--secret", type=str, required=True, help="secret passphrase (required)")
-    dec.add_argument("--tweak", type=str, default="default", help="tweak/context label")
-    dec.add_argument("--kdf", type=str, default="sha256", choices=["sha256", "sha1"], help="pbkdf2 hash")
-    dec.add_argument("--iter", type=int, default=200_000, help="pbkdf2 iterations")
+    dec.add_argument("--uid", type=str, required=True)
+    dec.add_argument("--secret", type=str, default=None, help=f"or set {ENV_SECRET}")
+    dec.add_argument("--tweak", type=str, default=None, help=f"or set {ENV_TWEAK} (default 'default')")
+    dec.add_argument("--kdf", type=str, default=None, choices=["sha256", "sha1"], help=f"or set {ENV_KDF} (default sha256)")
+    dec.add_argument("--iter", type=int, default=None, help=f"or set {ENV_ITER} (default 200000)")
     dec.set_defaults(func=cmd_dec)
 
     st = sub.add_parser("selftest", help="run reference vectors and roundtrip check")
@@ -158,11 +114,76 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _resolve_conf(args: argparse.Namespace):
+    # Приоритет: флаг CLI → ENV → дефолт
+    secret = args.secret if args.secret is not None else os.getenv(ENV_SECRET, None)
+    tweak = args.tweak if args.tweak is not None else os.getenv(ENV_TWEAK, "default")
+    kdf = args.kdf if args.kdf is not None else os.getenv(ENV_KDF, "sha256")
+    iter_str = str(args.iter) if args.iter is not None else os.getenv(ENV_ITER, "200000")
+
+    try:
+        iterations = int(iter_str)
+    except ValueError as e:
+        raise ValueError(f"invalid {ENV_ITER} value: {iter_str!r}") from e
+
+    if not secret:
+        raise ValueError(f"--secret not provided and {ENV_SECRET} is not set")
+
+    return secret, tweak.strip(), kdf.strip().lower(), iterations
+
+
+def cmd_enc(args: argparse.Namespace) -> int:
+    secret, tweak, kdf, iterations = _resolve_conf(args)
+    key = derive_key(secret, tweak, kdf, iterations)
+    y = encrypt12(key, tweak.encode("utf-8"), int(args.tid))
+    sys.stdout.write(to_uid(y) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+def cmd_dec(args: argparse.Namespace) -> int:
+    secret, tweak, kdf, iterations = _resolve_conf(args)
+    y = from_uid(args.uid)
+    key = derive_key(secret, tweak, kdf, iterations)
+    x = decrypt12(key, tweak.encode("utf-8"), y)
+    sys.stdout.write(str(x) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+def cmd_selftest(_: argparse.Namespace) -> int:
+    cases = [
+        ("qwerty123", "123", 12_345_678, "5377-6196-7198"),
+        ("qwerty123", "123", 123_456_789, "8678-9607-3662"),
+        ("correct horse battery staple", "prod", 42, "3467-7244-0811"),
+    ]
+    ok_all = True
+    for secret, tweak, tid, want in cases:
+        key = derive_key(secret, tweak, "sha256", 200_000)
+        y = encrypt12(key, tweak.encode("utf-8"), tid)
+        back = decrypt12(key, tweak.encode("utf-8"), y)
+        got = to_uid(y)
+        ok = got == want and back == tid
+        ok_all &= ok
+        sys.stdout.write(
+            f'secret="{secret}" tweak="{tweak}" tid={tid} -> uid={got} -> back={back}  [{"OK" if ok else "FAIL"}]\n'
+        )
+    sys.stdout.flush()
+    return 0 if ok_all else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if not getattr(args, "cmd", None):
+        parser.print_help(sys.stdout)
+        return 0
+    func = getattr(args, "func", None)
+    if func is None:
+        parser.print_help(sys.stdout)
+        return 0
     try:
-        return args.func(args)
+        return func(args)
     except Exception as e:
         print("Error:", e, file=sys.stderr)
         return 1
