@@ -73,9 +73,9 @@ class FreeKassaService:
         months: int,
         amount: float,
         currency: Optional[str],
-        method_code: int,
         email: Optional[str] = None,
         ip_address: Optional[str] = None,
+        payment_method_id: Optional[int] = None,
         extra_params: Optional[Dict[str, Any]] = None,
     ) -> Tuple[bool, Dict[str, Any]]:
         if not self.configured:
@@ -95,7 +95,7 @@ class FreeKassaService:
             "shopId": int(self.shop_id),
             "nonce": await self._generate_nonce(),
             "paymentId": str(payment_db_id),
-            "i": int(method_code),
+            "i": int(payment_method_id),
             "amount": amount_str,
             "currency": currency_code,
             "email": email,
