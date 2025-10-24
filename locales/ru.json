@@ -257,6 +257,7 @@
   "admin_user_invalid_days": "❌ Неверное количество дней. Введите число от 1 до 3650.",
   "admin_user_subscription_added_success": "✅ Успешно добавлено {days} дней подписки пользователю {user_id}",
   "admin_user_subscription_added_error": "❌ Ошибка добавления дней подписки",
+  "admin_panel_user_creation_failed": "❌ Не удалось создать или привязать пользователя в панели для ID {user_id}. Требуется ручная проверка.",
   "admin_user_ban_toggle_success": "✅ Пользователь {status}",
   "admin_user_ban_toggle_error": "❌ Ошибка изменения статуса блокировки",
   "admin_user_ban_success": "✅ Пользователь {input} заблокирован",

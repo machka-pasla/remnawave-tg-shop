@@ -568,6 +568,11 @@ class SubscriptionService:
         bonus_days: int,
         reason: str = "bonus",
     ) -> Optional[datetime]:
+        reason_lower = (reason or "").lower()
+        apply_main_traffic_limit = any(
+            keyword in reason_lower for keyword in ("admin", "promo code", "referral", "bonus")
+        )
+
         user = await user_dal.get_user_by_id(session, user_id)
         if not user:
             logging.warning(
@@ -594,8 +599,12 @@ class SubscriptionService:
             start_date = datetime.now(timezone.utc)
             new_end_date_obj = start_date + timedelta(days=bonus_days)
 
-            # For promo code activations, use the configured user traffic limit
-            traffic_limit = self.settings.user_traffic_limit_bytes if "promo code" in reason.lower() else self.settings.trial_traffic_limit_bytes
+            # Apply main traffic limit for admin/referral/promo bonuses, fallback to trial limit otherwise
+            traffic_limit = (
+                self.settings.user_traffic_limit_bytes
+                if apply_main_traffic_limit
+                else self.settings.trial_traffic_limit_bytes
+            )
 
             bonus_sub_payload = {
                 "user_id": user_id,
@@ -626,12 +635,23 @@ class SubscriptionService:
                 session, active_sub.subscription_id, new_end_date_obj
             )
 
+            if (
+                apply_main_traffic_limit
+                and updated_sub_model
+                and updated_sub_model.traffic_limit_bytes != self.settings.user_traffic_limit_bytes
+            ):
+                updated_sub_model = await subscription_dal.update_subscription(
+                    session,
+                    updated_sub_model.subscription_id,
+                    {"traffic_limit_bytes": self.settings.user_traffic_limit_bytes},
+                )
+
         if updated_sub_model:
             # Prepare panel update payload
             panel_update_payload = self._build_panel_update_payload(
                 expire_at=new_end_date_obj,
                 traffic_limit_bytes=(
-                    self.settings.user_traffic_limit_bytes if "promo code" in reason.lower() else None
+                    self.settings.user_traffic_limit_bytes if apply_main_traffic_limit else None
                 ),
                 include_uuid=False,
             )
