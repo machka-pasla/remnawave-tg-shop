@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     FREEKASSA_PAYMENT_URL: str = Field(default="https://pay.freekassa.ru/")
     FREEKASSA_API_KEY: Optional[str] = None
     FREEKASSA_PAYMENT_IP: Optional[str] = None
+    FREEKASSA_PAYMENT_METHOD_ID: Optional[int] = None
 
     YOOKASSA_ENABLED: bool = Field(default=True)
     STARS_ENABLED: bool = Field(default=True)

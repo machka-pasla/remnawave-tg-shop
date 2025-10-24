@@ -45,6 +45,7 @@ class FreeKassaService:
         self.second_secret: Optional[str] = settings.FREEKASSA_SECOND_SECRET
         self.default_currency: str = (settings.DEFAULT_CURRENCY_SYMBOL or "RUB").upper()
         self.server_ip: Optional[str] = settings.FREEKASSA_PAYMENT_IP
+        self.payment_method_id: Optional[int] = settings.FREEKASSA_PAYMENT_METHOD_ID
 
         self.api_base_url: str = "https://api.fk.life/v1"
         self._timeout = ClientTimeout(total=15)
