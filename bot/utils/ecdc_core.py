@@ -1,5 +1,5 @@
 # ecdc_core.py
-# Ядро формат-сохраняющего шифрования для 12-значных чисел (Feistel + HMAC-SHA256).
+# Ядро формат-сохраняющего шифрования для 12- и 16-значных чисел (Feistel + HMAC-SHA256).
 # Без CLI, без чтения env. Только чистые функции и тонкие утилиты.
 from __future__ import annotations
 
@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 # Константы схемы
-RADIX = 1_000_000  # 10^6 (6 цифр)
-ROUNDS = 10        # число раундов Фейстеля
+RADIX6 = 1_000_000      # 10^6  (6 цифр, половина от 12)
+RADIX8 = 100_000_000    # 10^8  (8 цифр, половина от 16)
+ROUNDS = 10             # число раундов Фейстеля
 
 
 # ---- Низкоуровневые примитивы ------------------------------------------------
@@ -26,23 +27,27 @@ def derive_key(secret: str, tweak: str, kdf: Literal["sha256", "sha1"] = "sha256
                iterations: int = 200_000) -> bytes:
     """
     Производит 32-байтный ключ из секретной фразы и tweak.
-    Важно: tweak участвует в соли для изоляции доменов.
+    Важно: tweak участвует в соли. Совместимо с исходной реализацией (Go/Python-CLI).
     """
-    salt = ("fpe-uid-12|" + tweak).encode("utf-8")  # строка домейна; можно зафиксировать версию здесь
+    # ВАЖНО: не менять префикс соли, иначе UID перестанут совпадать со старыми:
+    salt = ("fpe-uid-12|" + tweak).encode("utf-8")
     algo = "sha256" if kdf.lower() != "sha1" else "sha1"
     return pbkdf2(secret.encode("utf-8"), salt, iterations, 32, algo)
 
 
-def _prf(key: bytes, tweak: bytes, round_byte: int, right: int) -> int:
+def _prf_generic(key: bytes, tweak: bytes, round_byte: int, right: int, width: int, modulus: int) -> int:
     """
-    Раундовая функция: HMAC-SHA256(key, tweak || round || ascii(right_6d)) mod 10^6.
+    Общая раундовая функция: HMAC-SHA256(key, tweak || round || ascii(right_widthd)) mod 10^width.
+    width = 6 для 12-значного домена (6+6), width = 8 для 16-значного домена (8+8).
     """
-    s = f"{right:06d}".encode("ascii")
+    s = f"{right:0{width}d}".encode("ascii")
     msg = tweak + bytes([round_byte]) + s
     digest = hmac.new(key, msg, hashlib.sha256).digest()
     val = int.from_bytes(digest[:8], "little", signed=False)
-    return int(val % RADIX)
+    return int(val % modulus)
 
+
+# ---- 12-значный домен (пользователи) -----------------------------------------
 
 def encrypt12(key: bytes, tweak: bytes, x: int) -> int:
     """
@@ -51,15 +56,15 @@ def encrypt12(key: bytes, tweak: bytes, x: int) -> int:
     """
     if not (0 <= x < 1_000_000_000_000):
         raise ValueError("tid must be < 10^12 and non-negative")
-    L = x // RADIX
-    R = x % RADIX
+    L = x // RADIX6
+    R = x % RADIX6
     for r in range(ROUNDS):
-        F = _prf(key, tweak, r, R)
+        F = _prf_generic(key, tweak, r, R, width=6, modulus=RADIX6)
         newR = L + F
-        if newR >= RADIX:
-            newR -= RADIX
+        if newR >= RADIX6:
+            newR -= RADIX6
         L, R = R, newR
-    return L * RADIX + R
+    return L * RADIX6 + R
 
 
 def decrypt12(key: bytes, tweak: bytes, y: int) -> int:
@@ -69,19 +74,57 @@ def decrypt12(key: bytes, tweak: bytes, y: int) -> int:
     """
     if not (0 <= y < 1_000_000_000_000):
         raise ValueError("uid must be 12 digits (numeric < 10^12)")
-    L = y // RADIX
-    R = y % RADIX
+    L = y // RADIX6
+    R = y % RADIX6
     for r in range(ROUNDS - 1, -1, -1):
-        F = _prf(key, tweak, r, L)
+        F = _prf_generic(key, tweak, r, L, width=6, modulus=RADIX6)
         if R >= F:
             newL = R - F
         else:
-            newL = R + RADIX - F
+            newL = R + RADIX6 - F
         R, L = L, newL
-    return L * RADIX + R
+    return L * RADIX6 + R
 
 
-# ---- Утилиты форматирования ---------------------------------------------------
+# ---- 16-значный домен (группы/чаты) ------------------------------------------
+
+def encrypt16(key: bytes, tweak: bytes, x: int) -> int:
+    """
+    Шифрует 16-значное неотрицательное число x → 16-значное число.
+    Ожидается 0 <= x < 10^16 (в т.ч. abs(gid) после нормализации).
+    """
+    if not (0 <= x < 10_000_000_000_000_000):
+        raise ValueError("value must be < 10^16 and non-negative")
+    L = x // RADIX8
+    R = x % RADIX8
+    for r in range(ROUNDS):
+        F = _prf_generic(key, tweak, r, R, width=8, modulus=RADIX8)
+        newR = L + F
+        if newR >= RADIX8:
+            newR -= RADIX8
+        L, R = R, newR
+    return L * RADIX8 + R
+
+
+def decrypt16(key: bytes, tweak: bytes, y: int) -> int:
+    """
+    Дешифрует 16-значное число y → исходное 16-значное число (без знака).
+    """
+    if not (0 <= y < 10_000_000_000_000_000):
+        raise ValueError("value must be 16 digits (numeric < 10^16)")
+    L = y // RADIX8
+    R = y % RADIX8
+    for r in range(ROUNDS - 1, -1, -1):
+        F = _prf_generic(key, tweak, r, L, width=8, modulus=RADIX8)
+        if R >= F:
+            newL = R - F
+        else:
+            newL = R + RADIX8 - F
+        R, L = L, newL
+    return L * RADIX8 + R
+
+
+# ---- Утилиты форматирования (12) ---------------------------------------------
 
 def to_uid(n: int) -> str:
     """Печатает 12-значное число как XXXX-XXXX-XXXX."""
@@ -97,6 +140,31 @@ def from_uid(s: str) -> int:
     digits = re.sub(r"\D", "", s)
     if len(digits) != 12:
         raise ValueError("UID must have exactly 12 digits")
+    n = 0
+    for ch in digits:
+        n = n * 10 + (ord(ch) - 48)
+    return n
+
+
+# ---- Утилиты форматирования (16 с минусом для групп) -------------------------
+
+def to_ugid(n16: int) -> str:
+    """
+    Печатает 16-значное число как строку формата '-XXXX-XXXX-XXXX-XXXX'.
+    Минус — часть формата для групп/чатов.
+    """
+    s = f"{n16:016d}"
+    return f"-{s[:4]}-{s[4:8]}-{s[8:12]}-{s[12:]}"
+
+
+def from_ugid(s: str) -> int:
+    """
+    Парсит групповой UID (UGID) вида '-XXXX-XXXX-XXXX-XXXX' или любую строку,
+    где содержатся ровно 16 цифр. Знак игнорируется на парсинге (мы ожидаем минус на выводе).
+    """
+    digits = re.sub(r"\D", "", s)
+    if len(digits) != 16:
+        raise ValueError("UGID must have exactly 16 digits")
     n = 0
     for ch in digits:
         n = n * 10 + (ord(ch) - 48)
@@ -152,3 +220,31 @@ def decrypt_uid_to_tid(uid: str, prepared: Prepared) -> int:
     """
     y = from_uid(uid)
     return decrypt12(prepared.key, prepared.tweak_bytes, y)
+
+
+# ---- Группы: удобные обёртки (tgid ↔ ugid) -----------------------------------
+
+def encg(tgid: int, prepared: Prepared) -> str:
+    """
+    Encrypt GroupID to UGID: принимает отрицательный Telegram group/chat ID (например, -1001234567890),
+    шифрует abs(tgid) как 16-значное число и возвращает строку формата '-XXXX-XXXX-XXXX-XXXX'.
+    """
+    if tgid >= 0:
+        raise ValueError("tgid must be negative (Telegram group/chat IDs are negative)")
+    n = -tgid  # abs
+    if not (0 <= n < 10_000_000_000_000_000):
+        raise ValueError("abs(tgid) must be < 10^16")
+    # паддинг до 16 цифр обеспечивается форматтером внутри to_ugid (encrypt16 работает на int-домене)
+    y16 = encrypt16(prepared.key, prepared.tweak_bytes, n)
+    return to_ugid(y16)
+
+
+def decg(ugid: str, prepared: Prepared) -> int:
+    """
+    Decrypt UGID to GroupID: принимает строку '-XXXX-XXXX-XXXX-XXXX' (или любую с 16 цифрами),
+    дешифрует её и возвращает отрицательный Telegram group/chat ID.
+    """
+    y16 = from_ugid(ugid)
+    n = decrypt16(prepared.key, prepared.tweak_bytes, y16)
+    # исходный group/chat ID — отрицательный
+    return -n

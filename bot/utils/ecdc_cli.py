@@ -3,7 +3,7 @@
 # Ручной CLI для проверки работы ecdc_api/ecdc_core:
 # - читает конфиг из окружения (ECDC_*), флагами можно переопределить
 # - использует ecdc_api (который опирается на ecdc_core)
-# - режимы: enc / dec / selftest
+# - режимы: enc / dec / encg / decg / selftest
 from __future__ import annotations
 
 import argparse
@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="ecdc",
         description=(
-            "Encrypt/Decrypt CLI for 12-digit IDs via ecdc_api/ecdc_core.\n"
+            "Encrypt/Decrypt CLI for user (12-digit) and group (16-digit) IDs via ecdc_api/ecdc_core.\n"
             f"Config via env: {ENV_SECRET} (required), {ENV_TWEAK}='default', {ENV_KDF}='sha256', {ENV_ITER}=200000.\n"
             "CLI flags override env."
         ),
@@ -74,15 +74,25 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--kdf", type=str, choices=["sha256", "sha1"], default=None, help=f"or set {ENV_KDF} (default sha256)")
         sp.add_argument("--iter", dest="iterations", type=int, default=None, help=f"or set {ENV_ITER} (default 200000)")
 
-    enc = sub.add_parser("enc", help="Encrypt TID -> UID")
-    enc.add_argument("--tid", type=int, required=True, help="telegram id (digits, < 10^12)")
+    # Users (12 digits)
+    enc = sub.add_parser("enc", help="Encrypt user TID -> UID (format 'XXXX-XXXX-XXXX')")
+    enc.add_argument("--tid", type=int, required=True, help="telegram user id (digits, < 10^12)")
     add_common(enc)
 
-    dec = sub.add_parser("dec", help="Decrypt UID -> TID")
+    dec = sub.add_parser("dec", help="Decrypt user UID -> TID")
     dec.add_argument("--uid", type=str, required=True, help="uid 'XXXX-XXXX-XXXX' or 12 digits")
     add_common(dec)
 
-    st = sub.add_parser("selftest", help="Run reference vectors and a couple of roundtrips")
+    # Groups (16 digits with leading minus)
+    encg = sub.add_parser("encg", help="Encrypt group TGID -> UGID (format '-XXXX-XXXX-XXXX-XXXX')")
+    encg.add_argument("--tgid", type=int, required=True, help="telegram group/chat id (negative int, abs < 10^16)")
+    add_common(encg)
+
+    decg = sub.add_parser("decg", help="Decrypt group UGID -> TGID")
+    decg.add_argument("--ugid", type=str, required=True, help="ugid '-XXXX-XXXX-XXXX-XXXX' or any string with 16 digits")
+    add_common(decg)
+
+    st = sub.add_parser("selftest", help="Run reference vectors + roundtrips for users and groups")
     add_common(st)
 
     return p
@@ -116,12 +126,40 @@ def cmd_dec(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_encg(args: argparse.Namespace) -> int:
+    secret, tweak, kdf, iterations = _resolve_conf(
+        secret=args.secret, tweak=args.tweak, kdf=args.kdf, iterations=args.iterations
+    )
+    svc = EcdcService(secret=secret, tweak=tweak, kdf=kdf, iterations=iterations)
+    try:
+        ugid = svc.encg(int(args.tgid))
+    except Exception as e:
+        print("Error:", e, file=sys.stderr)
+        return 1
+    print(ugid)
+    return 0
+
+
+def cmd_decg(args: argparse.Namespace) -> int:
+    secret, tweak, kdf, iterations = _resolve_conf(
+        secret=args.secret, tweak=args.tweak, kdf=args.kdf, iterations=args.iterations
+    )
+    svc = EcdcService(secret=secret, tweak=tweak, kdf=kdf, iterations=iterations)
+    try:
+        tgid = svc.decg(args.ugid)
+    except Exception as e:
+        print("Error:", e, file=sys.stderr)
+        return 1
+    print(tgid)
+    return 0
+
+
 def cmd_selftest(args: argparse.Namespace) -> int:
     """
     Самотест связывает ВСЕ слои:
     - собирает конфиг (env/flags) → создаёт EcdcService (ecdc_api) → вызывает методы,
       которые внутри используют ecdc_core.
-    - Прогоняет эталонные кейсы и пару простых roundtrip'ов.
+    - Прогоняет эталонные кейсы для users и roundtrip'ы для users+groups.
     """
     secret, tweak, kdf, iterations = _resolve_conf(
         secret=args.secret, tweak=args.tweak, kdf=args.kdf, iterations=args.iterations
@@ -130,13 +168,13 @@ def cmd_selftest(args: argparse.Namespace) -> int:
 
     ok_all = True
 
-    # Эталонные векторы — совпадают с портом из Go
+    # Эталонные векторы пользователей — совпадают с портом из Go
     vectors = [
         ("qwerty123", "123", 12_345_678, "5377-6196-7198"),
         ("qwerty123", "123", 123_456_789, "8678-9607-3662"),
         ("correct horse battery staple", "prod", 42, "3467-7244-0811"),
     ]
-    print("Reference vectors (use their own secrets/tweaks, independent from env):")
+    print("Reference vectors (users; use their own secrets/tweaks, independent from env):")
     for sec, tw, tid, want in vectors:
         svc_vec = EcdcService(secret=sec, tweak=tw, kdf="sha256", iterations=200_000)
         uid = svc_vec.enc_ttu(tid)
@@ -145,10 +183,10 @@ def cmd_selftest(args: argparse.Namespace) -> int:
         ok_all &= ok
         print(f'  secret="{sec}" tweak="{tw}" tid={tid} -> uid={uid} -> back={back}  [{"OK" if ok else "FAIL"}]')
 
-    # Roundtrip на текущем конфиге
-    print("\nRoundtrips with current config (from env/flags):")
-    samples = [0, 42, 12345678, 999_999_999_999 % 1_000_000_000_000]
-    for tid in samples:
+    # Roundtrip на текущем конфиге — users
+    print("\nRoundtrips with current config (users):")
+    user_samples = [0, 42, 12345678, 999_999_999_999 % 1_000_000_000_000]
+    for tid in user_samples:
         try:
             uid = svc.enc_ttu(tid)
             back = svc.dec_utt(uid)
@@ -158,6 +196,20 @@ def cmd_selftest(args: argparse.Namespace) -> int:
         except Exception as e:
             ok_all = False
             print(f"  tid={tid} -> Error: {e}")
+
+    # Roundtrip на текущем конфиге — groups
+    print("\nRoundtrips with current config (groups):")
+    group_samples = [-1000000000000, -1001234567890, -1002704219831]
+    for gid in group_samples:
+        try:
+            ugid = svc.encg(gid)
+            back = svc.decg(ugid)
+            ok = (back == gid)
+            ok_all &= ok
+            print(f"  tgid={gid} -> {ugid} -> {back}  [{'OK' if ok else 'FAIL'}]")
+        except Exception as e:
+            ok_all = False
+            print(f"  tgid={gid} -> Error: {e}")
 
     return 0 if ok_all else 1
 
@@ -174,6 +226,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_enc(args)
     elif args.cmd == "dec":
         return cmd_dec(args)
+    elif args.cmd == "encg":
+        return cmd_encg(args)
+    elif args.cmd == "decg":
+        return cmd_decg(args)
     elif args.cmd == "selftest":
         return cmd_selftest(args)
 

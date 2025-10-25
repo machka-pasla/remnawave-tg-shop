@@ -1,10 +1,11 @@
 # ecdc_api.py
-# Сервисный слой для бота (aiogram/aiohttp): короткие функции enc_ttu / dec_utt.
+# Сервисный слой для бота (aiogram/aiohttp): короткие функции enc_ttu / dec_utt / encg / decg.
 # Не тянет ввод из CLI; конфиг задаётся один раз при старте.
 # ──────────────────────────────────────────────────────────────────────────────
 from __future__ import annotations
 
 from typing import Any, Literal, Optional
+import os
 
 # === ПУТЬ К ЯДРУ ==============================================================
 # Если перенесёте этот файл в другую директорию — поправьте импорт ниже:
@@ -14,10 +15,9 @@ from ecdc_core import (  # <- при переносе измените путь 
     prepare,
     encrypt_tid_to_uid,
     decrypt_uid_to_tid,
+    encg as core_encg,
+    decg as core_decg,
 )
-
-import os
-
 
 __all__ = [
     "EcdcService",
@@ -26,22 +26,28 @@ __all__ = [
     "get_service",
     "enc_ttu",
     "dec_utt",
+    "encg",
+    "decg",
 ]
 
 
 class EcdcService:
     """
-    Сервис шифрования/дешифрования Telegram ID ⟷ UID для использования в хендлерах бота.
+    Сервис шифрования/дешифрования:
+      - Users:  TID <-> UID  (12 цифр, формат 'XXXX-XXXX-XXXX')
+      - Groups: TGID<-> UGID (16 цифр с минусом, формат '-XXXX-XXXX-XXXX-XXXX')
 
     Особенности:
       - Делает PBKDF2 ОДИН РАЗ при инициализации (кэширует ключ) → быстрые вызовы.
-      - Не делает I/O и не читает переменные окружения сам по себе.
+      - Использует один и тот же Prepared (тот же ключ/salt/tweak) для обоих доменов.
       - Методы синхронные и очень быстрые (HMAC + немного арифметики).
 
     Пример:
         svc = EcdcService(secret=..., tweak=..., kdf="sha256", iterations=200_000)
-        uid = svc.enc_ttu(12345678)       # -> '5377-6196-7198'
-        tid = svc.dec_utt('5377-6196-7198')  # -> 12345678
+        uid  = svc.enc_ttu(12345678)             # -> '5377-6196-7198'
+        tid  = svc.dec_utt('5377-6196-7198')     # -> 12345678
+        ugid = svc.encg(-1001234567890)          # -> '-xxxx-xxxx-xxxx-xxxx'
+        gid  = svc.decg('-xxxx-xxxx-xxxx-xxxx')  # -> -1001234567890
     """
 
     def __init__(
@@ -61,23 +67,39 @@ class EcdcService:
         self._cfg: Config = cfg
         self._prepared: Prepared = prepare(cfg)
 
-    # --- публичные методы, короткие имена как просили ---
+    # --- Users (12 цифр): короткие методы ---
 
     def enc_ttu(self, tid: int) -> str:
         """
-        Encrypt TID To UID: принимает Telegram ID (целое < 10^12), возвращает UID 'XXXX-XXXX-XXXX'.
-        Поднимает ValueError при неверном вводе.
+        Encrypt TID To UID: принимает Telegram user ID (целое < 10^12),
+        возвращает UID 'XXXX-XXXX-XXXX'. Поднимает ValueError при неверном вводе.
         """
         return encrypt_tid_to_uid(tid, self._prepared)
 
     def dec_utt(self, uid: str) -> int:
         """
-        Decrypt UID To TID: принимает строку UID (с дефисами/без), возвращает исходный Telegram ID.
-        Поднимает ValueError при неверном вводе.
+        Decrypt UID To TID: принимает строку UID (с дефисами/без),
+        возвращает исходный Telegram user ID. Поднимает ValueError при неверном вводе.
         """
         return decrypt_uid_to_tid(uid, self._prepared)
 
-    # --- вспомогательные свойства (если нужно логировать/диагностировать) ---
+    # --- Groups (16 цифр с минусом): новые короткие методы ---
+
+    def encg(self, tgid: int) -> str:
+        """
+        Encrypt GroupID to UGID: принимает отрицательный Telegram group/chat ID (например, -1001234567890),
+        возвращает строку '-XXXX-XXXX-XXXX-XXXX'. Поднимает ValueError при неверном вводе.
+        """
+        return core_encg(tgid, self._prepared)
+
+    def decg(self, ugid: str) -> int:
+        """
+        Decrypt UGID to GroupID: принимает '-XXXX-XXXX-XXXX-XXXX' (или любую строку с 16 цифрами),
+        возвращает отрицательный Telegram group/chat ID. Поднимает ValueError при неверном вводе.
+        """
+        return core_decg(ugid, self._prepared)
+
+    # --- вспомогательные свойства (для логов/диагностики) ---
 
     @property
     def tweak(self) -> str:
@@ -94,7 +116,7 @@ class EcdcService:
 
 # ========== ГЛОБАЛЬНЫЙ СЕРВИС (ОПЦИОНАЛЬНО) ==================================
 # Удобно, если хотите инициализировать один раз при старте и пользоваться далее
-# короткими функциями enc_ttu/dec_utt без прокидывания объекта.
+# короткими функциями enc_ttu/dec_utt/encg/decg без прокидывания объекта.
 
 _SERVICE: Optional[EcdcService] = None
 
@@ -163,13 +185,27 @@ def get_service() -> EcdcService:
 def enc_ttu(tid: int) -> str:
     """
     Удобная функция верхнего уровня: шифрует TID -> UID на основе глобального сервиса.
-    Внутри использует кэшированный ключ, поэтому вызов быстрый.
+    Внутри используется кэшированный ключ, поэтому вызов быстрый.
     """
     return get_service().enc_ttu(tid)
 
 
 def dec_utt(uid: str) -> int:
     """
-    Удобная функция верхнего уровня: дешифрует UID -> TID на основе глобального сервиса.
+    Дешифрует UID -> TID на основе глобального сервиса.
     """
     return get_service().dec_utt(uid)
+
+
+def encg(tgid: int) -> str:
+    """
+    Шифрует GroupID -> UGID на основе глобального сервиса.
+    """
+    return get_service().encg(tgid)
+
+
+def decg(ugid: str) -> int:
+    """
+    Дешифрует UGID -> GroupID на основе глобального сервиса.
+    """
+    return get_service().decg(ugid)
