@@ -102,11 +102,11 @@ async def admin_panel_actions_callback_handler(
         from . import user_management as admin_user_management_handlers
         await admin_user_management_handlers.user_search_prompt_handler(
             callback, state, i18n_data, settings, session)
-    elif action.startswith("users_list:"):
-        # Route to users list handler
+    elif action == "users_list" and len(action_parts) > 2:
+        # Route to users list handler with page number
         from . import user_management as admin_user_management_handlers
         try:
-            page = int(action.split(":")[1])
+            page = int(action_parts[2])
             await admin_user_management_handlers.users_list_handler(
                 callback, i18n_data, settings, session, page)
         except (IndexError, ValueError):

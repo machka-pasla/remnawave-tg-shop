@@ -1023,26 +1023,6 @@ async def process_unban_user_handler(message: types.Message, state: FSMContext,
     await state.clear()
 
 
-@router.callback_query(F.data.startswith("admin_action:users_list:"))
-async def users_list_pagination_handler(callback: types.CallbackQuery,
-                                        i18n_data: dict, settings: Settings,
-                                        session: AsyncSession):
-    """Handle pagination for users list"""
-    try:
-        page = int(callback.data.split(":")[2])
-        await users_list_handler(callback, i18n_data, settings, session, page)
-    except (IndexError, ValueError):
-        await callback.answer("Invalid page number", show_alert=True)
-
-
-@router.callback_query(F.data == "admin_action:users_search_prompt")
-async def users_search_prompt_callback_handler(callback: types.CallbackQuery,
-                                               state: FSMContext, i18n_data: dict,
-                                               settings: Settings, session: AsyncSession):
-    """Handle search prompt callback"""
-    await user_search_prompt_handler(callback, state, i18n_data, settings, session)
-
-
 @router.callback_query(F.data.startswith("admin_user_card_from_list:"))
 async def user_card_from_list_handler(callback: types.CallbackQuery,
                                      state: FSMContext, i18n_data: dict,
