@@ -227,3 +227,23 @@ async def get_user_ids_without_active_subscription(session: AsyncSession) -> Lis
     )
     result = await session.execute(stmt)
     return result.scalars().all()
+
+
+async def get_all_users_paginated(session: AsyncSession, page: int = 0, page_size: int = 15) -> List[User]:
+    """Get all users with pagination, ordered by registration date descending."""
+    offset = page * page_size
+    stmt = (
+        select(User)
+        .order_by(User.registration_date.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    result = await session.execute(stmt)
+    return result.scalars().all()
+
+
+async def count_all_users(session: AsyncSession) -> int:
+    """Count total number of users in the database."""
+    stmt = select(func.count(User.user_id))
+    result = await session.execute(stmt)
+    return result.scalar() or 0

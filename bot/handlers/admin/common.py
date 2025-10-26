@@ -98,8 +98,22 @@ async def admin_panel_actions_callback_handler(
         await admin_user_mgmnt_handlers.unban_user_prompt_handler(
             callback, state, i18n_data, settings, session)
     elif action == "users_management":
+        # This is deprecated, kept for compatibility
         from . import user_management as admin_user_management_handlers
-        await admin_user_management_handlers.user_management_menu_handler(
+        await admin_user_management_handlers.user_search_prompt_handler(
+            callback, state, i18n_data, settings, session)
+    elif action.startswith("users_list:"):
+        # Route to users list handler
+        from . import user_management as admin_user_management_handlers
+        try:
+            page = int(action.split(":")[1])
+            await admin_user_management_handlers.users_list_handler(
+                callback, i18n_data, settings, session, page)
+        except (IndexError, ValueError):
+            await callback.answer("Invalid page number", show_alert=True)
+    elif action == "users_search_prompt":
+        from . import user_management as admin_user_management_handlers
+        await admin_user_management_handlers.user_search_prompt_handler(
             callback, state, i18n_data, settings, session)
     elif action == "view_banned":
 

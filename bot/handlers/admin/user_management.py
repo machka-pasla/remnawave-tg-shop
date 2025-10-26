@@ -29,14 +29,57 @@ router = Router(name="admin_user_management_router")
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_]{5,32}$")
 
 
-async def user_management_menu_handler(callback: types.CallbackQuery,
-                                      state: FSMContext, i18n_data: dict,
-                                      settings: Settings, session: AsyncSession):
-    """Display user management menu"""
+async def users_list_handler(callback: types.CallbackQuery,
+                              i18n_data: dict, settings: Settings,
+                              session: AsyncSession, page: int = 0):
+    """Display paginated list of all users"""
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
     if not i18n or not callback.message:
-        await callback.answer("Error preparing user management.", show_alert=True)
+        await callback.answer("Error preparing user list.", show_alert=True)
+        return
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+    
+    try:
+        # Get paginated users
+        from bot.keyboards.inline.admin_keyboards import get_users_list_keyboard
+        from db.dal import user_dal
+        
+        users = await user_dal.get_all_users_paginated(session, page=page, page_size=15)
+        total_users = await user_dal.count_all_users(session)
+        total_pages = max(1, (total_users + 14) // 15)
+        
+        # Format message
+        header_text = _(
+            "admin_users_list_header",
+            default="👥 <b>Список пользователей</b>\n\nСтраница {current}/{total} ({total_users} пользователей)",
+            current=page + 1,
+            total=total_pages,
+            total_users=total_users
+        )
+        
+        keyboard = get_users_list_keyboard(users, page, total_users, i18n, current_lang, page_size=15)
+        
+        await callback.message.edit_text(
+            header_text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logging.error(f"Error displaying user list: {e}")
+        await callback.answer("Ошибка отображения списка пользователей", show_alert=True)
+
+
+async def user_search_prompt_handler(callback: types.CallbackQuery,
+                                     state: FSMContext, i18n_data: dict,
+                                     settings: Settings, session: AsyncSession):
+    """Display search prompt for user management"""
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    if not i18n or not callback.message:
+        await callback.answer("Error preparing search.", show_alert=True)
         return
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
@@ -911,9 +954,9 @@ async def process_ban_user_handler(message: types.Message, state: FSMContext,
 
 @router.message(AdminStates.waiting_for_user_id_to_unban, F.text)
 async def process_unban_user_handler(message: types.Message, state: FSMContext,
-                                    settings: Settings, i18n_data: dict,
-                                    panel_service: PanelApiService,
-                                    session: AsyncSession):
+                                   settings: Settings, i18n_data: dict,
+                                   panel_service: PanelApiService,
+                                   session: AsyncSession):
     """Process user unban input"""
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
@@ -978,3 +1021,78 @@ async def process_unban_user_handler(message: types.Message, state: FSMContext,
         ))
     
     await state.clear()
+
+
+@router.callback_query(F.data.startswith("admin_action:users_list:"))
+async def users_list_pagination_handler(callback: types.CallbackQuery,
+                                        i18n_data: dict, settings: Settings,
+                                        session: AsyncSession):
+    """Handle pagination for users list"""
+    try:
+        page = int(callback.data.split(":")[2])
+        await users_list_handler(callback, i18n_data, settings, session, page)
+    except (IndexError, ValueError):
+        await callback.answer("Invalid page number", show_alert=True)
+
+
+@router.callback_query(F.data == "admin_action:users_search_prompt")
+async def users_search_prompt_callback_handler(callback: types.CallbackQuery,
+                                               state: FSMContext, i18n_data: dict,
+                                               settings: Settings, session: AsyncSession):
+    """Handle search prompt callback"""
+    await user_search_prompt_handler(callback, state, i18n_data, settings, session)
+
+
+@router.callback_query(F.data.startswith("admin_user_card_from_list:"))
+async def user_card_from_list_handler(callback: types.CallbackQuery,
+                                     state: FSMContext, i18n_data: dict,
+                                     settings: Settings, bot: Bot,
+                                     subscription_service: SubscriptionService,
+                                     panel_service: PanelApiService,
+                                     session: AsyncSession):
+    """Display user card when clicked from user list"""
+    try:
+        parts = callback.data.split(":")
+        user_id = int(parts[1])
+        page = int(parts[2])
+    except (IndexError, ValueError):
+        await callback.answer("Invalid user data", show_alert=True)
+        return
+    
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    if not i18n:
+        await callback.answer("Language service error", show_alert=True)
+        return
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+    
+    # Get user from database
+    user = await user_dal.get_user_by_id(session, user_id)
+    if not user:
+        await callback.answer("User not found", show_alert=True)
+        return
+    
+    # Create keyboard with back to list button
+    keyboard = get_user_card_keyboard(user_id, i18n, current_lang)
+    keyboard.button(
+        text=_("admin_user_back_to_list_button", default="⬅️ К списку"),
+        callback_data=f"admin_action:users_list:{page}"
+    )
+    keyboard.adjust(2, 2, 2, 2, 1)
+    
+    # Format user card
+    try:
+        from bot.services.referral_service import ReferralService
+        referral_service = ReferralService(settings, subscription_service, bot, i18n)
+        user_card_text = await format_user_card(user, session, subscription_service, i18n, current_lang, referral_service)
+        
+        await callback.message.edit_text(
+            user_card_text,
+            reply_markup=keyboard.as_markup(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logging.error(f"Error displaying user card: {e}")
+        await callback.answer("Error displaying user card", show_alert=True)
