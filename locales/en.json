@@ -337,6 +337,8 @@
   "admin_user_na_value": "N/A",
   "admin_user_subscription_none": "No active subscription",
   "admin_user_actions_count_label": "📜 <b>Total actions:</b>",
+  "admin_user_total_paid_label": "💰 <b>Total Paid:</b>",
+  "admin_user_referral_revenue_label": "💸 <b>Referral Revenue:</b>",
   "admin_user_invited_friends_label": "👥 <b>Friends invited:</b>",
   "admin_user_ref_purchased_label": "💳 <b>Purchased subscription:</b>",
   "admin_user_subscription_active_until": "⏰ <b>Active until:</b>",
