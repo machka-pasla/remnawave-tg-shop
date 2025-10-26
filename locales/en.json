@@ -257,6 +257,7 @@
   "admin_user_invalid_days": "❌ Invalid number of days. Enter number from 1 to 3650.",
   "admin_user_subscription_added_success": "✅ Successfully added {days} days to user {user_id}",
   "admin_user_subscription_added_error": "❌ Error adding subscription days",
+  "admin_panel_user_creation_failed": "❌ Failed to create or link panel user for ID {user_id}. Manual intervention required.",
   "admin_user_ban_toggle_success": "✅ User {status}",
   "admin_user_ban_toggle_error": "❌ Error changing ban status",
   "admin_user_ban_success": "✅ User {input} has been banned",
