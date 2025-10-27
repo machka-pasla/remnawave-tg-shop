@@ -192,6 +192,20 @@ async def format_user_card(user: User, session: AsyncSession,
         trial_status = _("admin_user_trial_used", default="Использовал") if had_subscriptions else _("admin_user_trial_not_used", default="Не использовал")
         card_parts.append(f"{_('admin_user_trial_label', default='🏡 <b>Триал:</b>')} {hcode(trial_status)}")
 
+        # Financial analytics (admin-only)
+        try:
+            from db.dal import payment_dal
+            
+            # Total amount paid by this user
+            total_paid = await payment_dal.get_user_total_paid(session, user.user_id)
+            card_parts.append(f"{_('admin_user_total_paid_label', default='💰 <b>Всего оплачено:</b>')} {hcode(f'{total_paid:.2f} RUB')}")
+            
+            # Total revenue from referrals
+            referral_revenue = await payment_dal.get_referral_revenue(session, user.user_id)
+            card_parts.append(f"{_('admin_user_referral_revenue_label', default='💸 <b>Доход по рефералам:</b>')} {hcode(f'{referral_revenue:.2f} RUB')}")
+        except Exception as e_fin:
+            logging.error(f"Failed to build financial analytics for admin card {user.user_id}: {e_fin}")
+
         # Referral stats
         if referral_service is not None:
             try:

@@ -262,3 +262,37 @@ async def get_last_tribute_payment(
                  Payment.created_at.desc()).limit(1))
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_user_total_paid(session: AsyncSession, user_id: int) -> float:
+    """Get total amount paid by a specific user (sum of all succeeded payments)."""
+    stmt = select(func.sum(Payment.amount)).where(
+        and_(
+            Payment.user_id == user_id,
+            Payment.status == 'succeeded'
+        )
+    )
+    result = await session.execute(stmt)
+    total = result.scalar()
+    return float(total or 0)
+
+
+async def get_referral_revenue(session: AsyncSession, referrer_id: int) -> float:
+    """Get total revenue generated from referred users' payments.
+    
+    This calculates the sum of all succeeded payments made by users
+    where referred_by_id equals the referrer_id.
+    """
+    from db.models import User
+    
+    stmt = select(func.sum(Payment.amount)).join(
+        User, Payment.user_id == User.user_id
+    ).where(
+        and_(
+            User.referred_by_id == referrer_id,
+            Payment.status == 'succeeded'
+        )
+    )
+    result = await session.execute(stmt)
+    total = result.scalar()
+    return float(total or 0)
