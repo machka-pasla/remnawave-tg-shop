@@ -337,6 +337,8 @@
   "admin_user_na_value": "N/A",
   "admin_user_subscription_none": "Нет активной подписки",
   "admin_user_actions_count_label": "📜 <b>Всего действий:</b>",
+  "admin_user_total_paid_label": "💰 <b>Всего оплачено:</b>",
+  "admin_user_referral_revenue_label": "💸 <b>Доход по рефералам:</b>",
   "admin_user_invited_friends_label": "👥 <b>Приглашено друзей:</b>",
   "admin_user_ref_purchased_label": "💳 <b>Купили подписку:</b>",
   "admin_user_subscription_active_until": "⏰ <b>Действует до:</b>",
