@@ -40,6 +40,14 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
         if not event_user or event_user.id in self.settings.ADMIN_IDS:
             return await handler(event, data)
 
+        callback_query = event.callback_query
+        if (
+            callback_query
+            and callback_query.data
+            and callback_query.data == "channel_subscription:verify"
+        ):
+            return await handler(event, data)
+
         # Allow /start to reach the handler so the check can be re-run.
         message_object: Optional[Message] = event.message
         if (
