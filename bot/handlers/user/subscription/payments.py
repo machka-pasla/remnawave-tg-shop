@@ -881,10 +881,10 @@ async def pay_fk_callback_handler(
         months=months,
         amount=price_rub,
         currency=freekassa_service.default_currency,
-        method_code=44,
+        payment_method_id=freekassa_service.payment_method_id,
         ip_address=freekassa_service.server_ip,
         extra_params={
-            "us_method": 44,
+            "us_method": freekassa_service.payment_method_id,
         },
     )
 
