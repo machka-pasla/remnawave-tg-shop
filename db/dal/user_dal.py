@@ -3,11 +3,20 @@ from typing import Optional, List, Dict, Any, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy import update, delete, func, and_
+from sqlalchemy import update, delete, func, and_, or_
 from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from ..models import User, Subscription
+from ..models import (
+    User,
+    Subscription,
+    Payment,
+    PromoCodeActivation,
+    MessageLog,
+    UserBilling,
+    UserPaymentMethod,
+    AdAttribution,
+)
 
 
 async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
@@ -229,21 +238,39 @@ async def get_user_ids_without_active_subscription(session: AsyncSession) -> Lis
     return result.scalars().all()
 
 
-async def get_all_users_paginated(session: AsyncSession, page: int = 0, page_size: int = 15) -> List[User]:
-    """Get all users with pagination, ordered by registration date descending."""
-    offset = page * page_size
-    stmt = (
-        select(User)
-        .order_by(User.registration_date.desc())
-        .offset(offset)
-        .limit(page_size)
+async def delete_user_and_relations(session: AsyncSession, user_id: int) -> bool:
+    """Completely remove a user and all dependent records from the database.
+
+    This helper ensures we do not leave dangling foreign keys or orphaned data.
+    """
+    user = await get_user_by_id(session, user_id)
+    if not user:
+        return False
+
+    # Ensure referral pointers do not block deletion
+    await session.execute(
+        update(User).where(User.referred_by_id == user_id).values(referred_by_id=None)
     )
-    result = await session.execute(stmt)
-    return result.scalars().all()
 
+    # Clean up dependent tables that do not cascade automatically
+    await session.execute(
+        delete(MessageLog).where(
+            or_(MessageLog.user_id == user_id, MessageLog.target_user_id == user_id)
+        )
+    )
+    await session.execute(delete(Payment).where(Payment.user_id == user_id))
+    await session.execute(
+        delete(Subscription).where(Subscription.user_id == user_id)
+    )
+    await session.execute(
+        delete(PromoCodeActivation).where(PromoCodeActivation.user_id == user_id)
+    )
+    await session.execute(
+        delete(UserPaymentMethod).where(UserPaymentMethod.user_id == user_id)
+    )
+    await session.execute(delete(UserBilling).where(UserBilling.user_id == user_id))
+    await session.execute(delete(AdAttribution).where(AdAttribution.user_id == user_id))
 
-async def count_all_users(session: AsyncSession) -> int:
-    """Count total number of users in the database."""
-    stmt = select(func.count(User.user_id))
-    result = await session.execute(stmt)
-    return result.scalar() or 0
+    await session.delete(user)
+    await session.flush()
+    return True
