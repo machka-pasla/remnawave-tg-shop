@@ -455,6 +455,37 @@ class PanelApiService:
         )
         return False
 
+    async def delete_user_from_panel(self,
+                                     user_uuid: str,
+                                     log_response: bool = True) -> bool:
+        """Delete a user from the panel. Treat not-found as already deleted."""
+        endpoint = f"/users/{user_uuid}"
+        response_data = await self._request(
+            "DELETE", endpoint, log_full_response=log_response
+        )
+
+        if not response_data:
+            logging.error(
+                f"Panel API delete_user_from_panel returned no data for user {user_uuid}."
+            )
+            return False
+
+        if response_data.get("error"):
+            details = response_data.get("details") or {}
+            error_code = details.get("errorCode") or response_data.get("errorCode")
+            if error_code in {"A062", "A040"}:
+                logging.info(
+                    f"Panel user {user_uuid} already absent (errorCode {error_code}). Treating as deleted."
+                )
+                return True
+            logging.error(
+                f"Failed to delete user {user_uuid} on panel. Response: {response_data}"
+            )
+            return False
+
+        logging.info(f"Panel user {user_uuid} deleted successfully.")
+        return True
+
     async def get_subscription_link(
             self,
             short_uuid_or_sub_uuid: str,
