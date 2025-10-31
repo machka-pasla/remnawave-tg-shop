@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     YOOKASSA_PAYMENT_SUBJECT: str = Field(default="service")
     # Single toggle to enable recurring payments (saving cards, managing payment methods, auto-renew)
     YOOKASSA_AUTOPAYMENTS_ENABLED: bool = Field(default=False)
+    YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING: bool = Field(
+        default=True,
+        description="When true, new YooKassa payments in autopay mode force card binding without a user checkbox."
+    )
 
     WEBHOOK_BASE_URL: Optional[str] = None
 

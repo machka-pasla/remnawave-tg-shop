@@ -408,6 +408,9 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
     user_id = callback.from_user.id
     currency_code_for_yk = "RUB"
     autopay_enabled = bool(getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False))
+    autopay_require_binding = bool(
+        getattr(settings, 'YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING', True)
+    )
     saved_methods: List = []
     if autopay_enabled:
         try:
@@ -463,7 +466,7 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
         months=months,
         price_rub=price_rub,
         currency_code_for_yk=currency_code_for_yk,
-        save_payment_method=autopay_enabled,
+        save_payment_method=autopay_enabled and autopay_require_binding,
         back_callback=f"subscribe_period:{months}",
     )
     try:
@@ -520,6 +523,9 @@ async def pay_yk_new_card_handler(callback: types.CallbackQuery, settings: Setti
     user_id = callback.from_user.id
     currency_code_for_yk = "RUB"
     autopay_enabled = bool(getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False))
+    autopay_require_binding = bool(
+        getattr(settings, 'YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING', True)
+    )
 
     await _initiate_yk_payment(
         callback,
@@ -533,7 +539,7 @@ async def pay_yk_new_card_handler(callback: types.CallbackQuery, settings: Setti
         months=months,
         price_rub=price_rub,
         currency_code_for_yk=currency_code_for_yk,
-        save_payment_method=autopay_enabled,
+        save_payment_method=autopay_enabled and autopay_require_binding,
         back_callback=f"subscribe_period:{months}",
     )
     try:
