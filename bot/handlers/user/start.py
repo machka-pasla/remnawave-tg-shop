@@ -1,7 +1,6 @@
 import logging
 import re
 from aiogram import Router, F, types, Bot
-from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from typing import Optional, Union
@@ -27,6 +26,15 @@ from bot.utils.text_sanitizer import sanitize_username, sanitize_display_name
 
 router = Router(name="user_start_router")
 
+MAIN_MENU_TEXT = (
+    "🌐 *VPN•PRO* надёжный помощник в мире безграничного интернета!\n\n"
+    "📡 Приватное и быстрое *VPN-подключение* без лишних сложностей.\n\n"
+    "💬 [Служба поддержки](https://t.me/rusys)\n\n"
+    "Панель управления ⤵️"
+)
+
+INSTRUCTIONS_PLACEHOLDER_TEXT = "📘 Раздел в разработке."
+
 
 async def send_main_menu(target_event: Union[types.Message,
                                              types.CallbackQuery],
@@ -39,8 +47,6 @@ async def send_main_menu(target_event: Union[types.Message,
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
 
     user_id = target_event.from_user.id
-    user_full_name = hd.quote(target_event.from_user.full_name)
-
     if not i18n:
         logging.error(
             f"i18n_instance missing in send_main_menu for user {user_id}")
@@ -73,7 +79,7 @@ async def send_main_menu(target_event: Union[types.Message,
                 "Method has_had_any_subscription is missing in SubscriptionService for send_main_menu!"
             )
 
-    text = _(key="main_menu_greeting", user_name=user_full_name)
+    text = MAIN_MENU_TEXT
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings,
                                                  show_trial_button_in_menu)
 
@@ -95,9 +101,13 @@ async def send_main_menu(target_event: Union[types.Message,
 
     try:
         if is_edit:
-            await target_message_obj.edit_text(text, reply_markup=reply_markup)
+            await target_message_obj.edit_text(text,
+                                              reply_markup=reply_markup,
+                                              parse_mode="Markdown")
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup)
+            await target_message_obj.answer(text,
+                                            reply_markup=reply_markup,
+                                            parse_mode="Markdown")
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -110,7 +120,9 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(text, reply_markup=reply_markup)
+                await target_message_obj.answer(text,
+                                                reply_markup=reply_markup,
+                                                parse_mode="Markdown")
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
@@ -433,10 +445,6 @@ async def start_command_handler(message: types.Message,
                                                       db_user):
         return
 
-    # Send welcome message if not disabled
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
-
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
         try:
@@ -516,17 +524,6 @@ async def verify_channel_subscription_callback(
     else:
         _ = lambda key, **kwargs: key
 
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        welcome_text = _(key="welcome",
-                         user_name=hd.quote(callback.from_user.full_name))
-        if callback.message:
-            await callback.message.answer(welcome_text)
-        else:
-            fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
-            if fallback_bot:
-                await fallback_bot.send_message(callback.from_user.id,
-                                                welcome_text)
-
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
                               show_alert=True)
@@ -539,6 +536,24 @@ async def verify_channel_subscription_callback(
                          subscription_service,
                          session,
                          is_edit=bool(callback.message))
+
+
+@router.callback_query(F.data == "menu:instructions")
+async def instructions_placeholder(callback: types.CallbackQuery):
+    message = callback.message
+    if message:
+        await message.answer(INSTRUCTIONS_PLACEHOLDER_TEXT,
+                             parse_mode="Markdown")
+    else:
+        fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
+        if fallback_bot:
+            await fallback_bot.send_message(callback.from_user.id,
+                                            INSTRUCTIONS_PLACEHOLDER_TEXT,
+                                            parse_mode="Markdown")
+    try:
+        await callback.answer()
+    except Exception:
+        pass
 
 
 @router.message(Command("language"))
@@ -623,15 +638,17 @@ async def select_language_callback_handler(
                          is_edit=True)
 
 
-@router.callback_query(F.data.startswith("main_action:"))
-async def main_action_callback_handler(
-        callback: types.CallbackQuery, state: FSMContext, settings: Settings,
-        i18n_data: dict, bot: Bot, subscription_service: SubscriptionService,
-        referral_service: ReferralService, panel_service: PanelApiService,
-        promo_code_service: PromoCodeService, session: AsyncSession):
-    action = callback.data.split(":")[1]
-    user_id = callback.from_user.id
-
+async def _process_main_menu_action(
+        action: str,
+        callback: types.CallbackQuery,
+        state: FSMContext,
+        settings: Settings,
+        i18n_data: dict,
+        bot: Bot,
+        subscription_service: SubscriptionService,
+        referral_service: ReferralService,
+        panel_service: PanelApiService,
+        session: AsyncSession) -> None:
     from . import subscription as user_subscription_handlers
     from . import referral as user_referral_handlers
     from . import promo_user as user_promo_handlers
@@ -662,7 +679,6 @@ async def main_action_callback_handler(
         await user_trial_handlers.request_trial_confirmation_handler(
             callback, settings, i18n_data, subscription_service, session)
     elif action == "language":
-
         await language_command_handler(callback, i18n_data, settings)
     elif action == "back_to_main":
         await send_main_menu(callback,
@@ -681,5 +697,71 @@ async def main_action_callback_handler(
     else:
         i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
         _ = lambda key, **kwargs: i18n.gettext(
-            i18n_data.get("current_language"), key, **kw) if i18n else key
+            i18n_data.get("current_language"), key, **kwargs) if i18n else key
         await callback.answer(_("main_menu_unknown_action"), show_alert=True)
+
+
+@router.callback_query(F.data.in_({
+    "menu:buy",
+    "menu:subscription",
+    "menu:referrals",
+    "menu:promo",
+}))
+async def menu_action_callback_handler(
+        callback: types.CallbackQuery,
+        state: FSMContext,
+        settings: Settings,
+        i18n_data: dict,
+        bot: Bot,
+        subscription_service: SubscriptionService,
+        referral_service: ReferralService,
+        panel_service: PanelApiService,
+        session: AsyncSession) -> None:
+    menu_action = callback.data.split(":", 1)[1] if ":" in callback.data else ""
+    mapping = {
+        "buy": "subscribe",
+        "subscription": "my_subscription",
+        "referrals": "referral",
+        "promo": "apply_promo",
+    }
+    mapped_action = mapping.get(menu_action)
+    if not mapped_action:
+        i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+        _ = lambda key, **kwargs: i18n.gettext(
+            i18n_data.get("current_language"), key, **kwargs) if i18n else key
+        await callback.answer(_("main_menu_unknown_action"), show_alert=True)
+        return
+
+    await _process_main_menu_action(
+        mapped_action,
+        callback,
+        state,
+        settings,
+        i18n_data,
+        bot,
+        subscription_service,
+        referral_service,
+        panel_service,
+        session,
+    )
+
+
+@router.callback_query(F.data.startswith("main_action:"))
+async def main_action_callback_handler(
+        callback: types.CallbackQuery, state: FSMContext, settings: Settings,
+        i18n_data: dict, bot: Bot, subscription_service: SubscriptionService,
+        referral_service: ReferralService, panel_service: PanelApiService,
+        _promo_code_service: PromoCodeService, session: AsyncSession):
+    action = callback.data.split(":", 1)[1] if ":" in callback.data else ""
+    await _process_main_menu_action(
+        action,
+        callback,
+        state,
+        settings,
+        i18n_data,
+        bot,
+        subscription_service,
+        referral_service,
+        panel_service,
+        session,
+    )
