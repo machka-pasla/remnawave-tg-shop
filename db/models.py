@@ -263,3 +263,80 @@ class AdAttribution(Base):
 
     user = relationship("User")
     campaign = relationship("AdCampaign", back_populates="attributions")
+
+# === Referral tables (final spec) ===
+from sqlalchemy import CheckConstraint, SmallInteger, Enum, Index, UniqueConstraint as SAUniqueConstraint, Date
+
+# UID: either 12 digits or ####-####-#### (14 chars)
+UID_REGEX = r"(?:\d{12}|\d{4}-\d{4}-\d{4})"
+
+
+class RefClTokens(Base):
+    __tablename__ = "ref_cl_tokens"
+
+    clt_id = Column(String(16), primary_key=True)  # rand 8 --hex
+    referrer_uid = Column(String(14), nullable=False, index=True)
+    beneficiary_uid = Column(String(14), nullable=True, index=True)
+    clt_active = Column(Boolean, nullable=False, default=True, index=True)
+    assigned_at = Column(BigInteger, nullable=False)            # Unix epoch 64
+    reassign_available_at = Column(BigInteger, nullable=False)  # Unix epoch 64
+
+    __table_args__ = (
+        CheckConstraint(f"referrer_uid ~ '^{UID_REGEX}$'", name="ck_refcl_ref_uid_fmt"),
+        CheckConstraint(f"(beneficiary_uid IS NULL) OR (beneficiary_uid ~ '^{UID_REGEX}$')",
+                        name="ck_refcl_benef_uid_fmt"),
+        SAUniqueConstraint("referrer_uid", "beneficiary_uid", name="uq_refcl_ref_benef"),
+    )
+
+
+class RefClub(Base):
+    __tablename__ = "ref_club"
+
+    service_uid = Column(String(14), primary_key=True)
+    discount = Column(SmallInteger, nullable=False)
+    dis_manual = Column(Boolean, nullable=False, default=False, index=True)
+    rank = Column(String(20), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(f"service_uid ~ '^{UID_REGEX}$'", name="ck_refclub_service_uid_fmt"),
+        CheckConstraint("discount IN (10,20,30,40,50,60,70,80,90,100)", name="ck_refclub_discount_set"),
+        CheckConstraint("rank IN ('Demo','Member','Partner','Ambassador','Club’s Legend')",
+                        name="ck_refclub_rank_set"),
+    )
+
+
+class RefInvites(Base):
+    __tablename__ = "ref_invites"
+
+    referrer_uid = Column(String(14), primary_key=True, index=True)
+    ref_code = Column(String(16), primary_key=True, index=True)  # rand 8 --hex
+    ttl_sec = Column(Integer, nullable=False)
+    ts_issued = Column(BigInteger, nullable=False)
+    ts_expired = Column(BigInteger, nullable=False)
+    used = Column(Boolean, nullable=False, default=False, index=True)
+    used_by_uid = Column(String(14), nullable=True, index=True)
+    status = Column(Enum('issued', 'used', 'expired', 'revoked', 'invalid', name='ref_invites_status'),
+                    nullable=False, index=True)
+
+    __table_args__ = (
+        SAUniqueConstraint("ref_code", name="uq_refinv_ref_code"),
+        CheckConstraint(f"referrer_uid ~ '^{UID_REGEX}$'", name="ck_refinv_referrer_uid_fmt"),
+        CheckConstraint(f"(used_by_uid IS NULL) OR (used_by_uid ~ '^{UID_REGEX}$')",
+                        name="ck_refinv_used_by_uid_fmt"),
+        Index("idx_refinv_status_expired", "status", "ts_expired"),
+    )
+
+
+class RefList(Base):
+    __tablename__ = "ref_list"
+
+    referrer_uid = Column(String(14), primary_key=True, index=True)
+    referral_uid = Column(String(14), primary_key=True, index=True)
+    ref_active = Column(Boolean, nullable=False, default=False, index=True)
+    active_period = Column(Date, nullable=True, index=True)  # store 1st day of month (e.g. 2026-01-01)
+    na_since = Column(Date, nullable=True, index=True)
+
+    __table_args__ = (
+        CheckConstraint(f"referrer_uid ~ '^{UID_REGEX}$'", name="ck_rlist_referrer_uid_fmt"),
+        CheckConstraint(f"referral_uid ~ '^{UID_REGEX}$'", name="ck_rlist_referral_uid_fmt"),
+    )
