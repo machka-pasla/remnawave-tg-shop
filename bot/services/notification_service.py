@@ -158,6 +158,7 @@ class NotificationService:
         
         provider_emoji = {
             "yookassa": "💳",
+            "freekassa": "💳",
             "cryptopay": "₿",
             "stars": "⭐",
             "tribute": "💎"

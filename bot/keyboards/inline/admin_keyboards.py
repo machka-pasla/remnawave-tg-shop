@@ -59,13 +59,15 @@ def get_user_management_keyboard(i18n_instance, lang: str) -> InlineKeyboardMark
     builder = InlineKeyboardBuilder()
     
     builder.button(text=_(key="admin_users_management_button"),
-                   callback_data="admin_action:users_management")
+                   callback_data="admin_action:users_list:0")
+    builder.button(text=_(key="admin_users_search_button"),
+                   callback_data="admin_action:users_search_prompt")
     builder.button(text=_(key="admin_ban_management_section"),
                    callback_data="admin_section:ban_management")
     
     builder.button(text=_(key="back_to_admin_panel_button"),
                    callback_data="admin_action:main")
-    builder.adjust(2, 1)
+    builder.adjust(2, 1, 1)
     return builder.as_markup()
 
 
@@ -302,6 +304,68 @@ def get_banned_users_keyboard(banned_users: List[User], current_page: int,
     builder.row(
         InlineKeyboardButton(text=_("back_to_admin_panel_button"),
                              callback_data="admin_action:main"))
+    return builder.as_markup()
+
+
+def get_users_list_keyboard(users: List[User], current_page: int,
+                            total_users: int, i18n_instance, lang: str,
+                            page_size: int = 15) -> InlineKeyboardMarkup:
+    """Generate keyboard for paginated user list"""
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+    
+    # Add user buttons
+    for user in users:
+        user_display_parts = []
+        if user.username:
+            user_display_parts.append(f"@{user.username}")
+        user_display_parts.append(f"ID: {user.user_id}")
+        if user.first_name:
+            user_display_parts.append(f"- {user.first_name}")
+        
+        button_text = " ".join(user_display_parts)
+        builder.row(
+            InlineKeyboardButton(
+                text=button_text,
+                callback_data=f"admin_user_card_from_list:{user.user_id}:{current_page}"
+            )
+        )
+    
+    # Pagination buttons
+    if total_users > page_size:
+        total_pages = math.ceil(total_users / page_size)
+        pagination_buttons = []
+        if current_page > 0:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text=_("prev_page_button"),
+                    callback_data=f"admin_action:users_list:{current_page - 1}"
+                )
+            )
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=f"{current_page + 1}/{total_pages}",
+                callback_data="stub_page_display"
+            )
+        )
+        if current_page < total_pages - 1:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text=_("next_page_button"),
+                    callback_data=f"admin_action:users_list:{current_page + 1}"
+                )
+            )
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
+    
+    # Back button
+    builder.row(
+        InlineKeyboardButton(
+            text=_("back_to_user_management_button"),
+            callback_data="admin_section:user_management"
+        )
+    )
+    
     return builder.as_markup()
 
 

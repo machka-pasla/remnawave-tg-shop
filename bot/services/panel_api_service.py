@@ -21,11 +21,11 @@ class PanelApiService:
         self.api_key = settings.PANEL_API_KEY
         self._session: Optional[aiohttp.ClientSession] = None
         self.default_client_ip = "127.0.0.1"
-    
+
     async def __aenter__(self):
         """Context manager entry"""
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - automatically close session"""
         await self.close_session()
@@ -337,6 +337,7 @@ class PanelApiService:
             default_expire_days: int = 1,
             default_traffic_limit_bytes: int = 0,
             default_traffic_limit_strategy: str = "NO_RESET",
+            hwid_device_limit: Optional[int] = None,
             specific_squad_uuids: Optional[List[str]] = None,
             description: Optional[str] = None,
             tag: Optional[str] = None,
@@ -368,6 +369,18 @@ class PanelApiService:
             "trafficLimitStrategy": default_traffic_limit_strategy.upper(),
             "trafficLimitBytes": default_traffic_limit_bytes,
         }
+        hwid_limit_value = hwid_device_limit
+        if hwid_limit_value is None:
+            hwid_limit_value = self.settings.USER_HWID_DEVICE_LIMIT
+        if hwid_limit_value is not None:
+            try:
+                hwid_limit_int = int(hwid_limit_value)
+                if hwid_limit_int >= 0:
+                    payload["hwidDeviceLimit"] = hwid_limit_int
+            except (TypeError, ValueError):
+                logging.warning(
+                    f"Ignoring invalid HWID device limit '{hwid_limit_value}' while creating panel user '{username_on_panel}'."
+                )
         if specific_squad_uuids:
             payload["activeInternalSquads"] = specific_squad_uuids
         if telegram_id is not None: payload["telegramId"] = telegram_id
@@ -442,6 +455,37 @@ class PanelApiService:
         )
         return False
 
+    async def delete_user_from_panel(self,
+                                     user_uuid: str,
+                                     log_response: bool = True) -> bool:
+        """Delete a user from the panel. Treat not-found as already deleted."""
+        endpoint = f"/users/{user_uuid}"
+        response_data = await self._request(
+            "DELETE", endpoint, log_full_response=log_response
+        )
+
+        if not response_data:
+            logging.error(
+                f"Panel API delete_user_from_panel returned no data for user {user_uuid}."
+            )
+            return False
+
+        if response_data.get("error"):
+            details = response_data.get("details") or {}
+            error_code = details.get("errorCode") or response_data.get("errorCode")
+            if error_code in {"A062", "A040"}:
+                logging.info(
+                    f"Panel user {user_uuid} already absent (errorCode {error_code}). Treating as deleted."
+                )
+                return True
+            logging.error(
+                f"Failed to delete user {user_uuid} on panel. Response: {response_data}"
+            )
+            return False
+
+        logging.info(f"Panel user {user_uuid} deleted successfully.")
+        return True
+
     async def get_subscription_link(
             self,
             short_uuid_or_sub_uuid: str,
@@ -454,6 +498,30 @@ class PanelApiService:
         if client_type:
             return f"{base_sub_url}/{client_type.lower()}"
         return base_sub_url
+
+    async def get_user_devices(self, user_uuid: str) -> Optional[List[Dict[str, Any]]]:
+        endpoint = f"/hwid/devices/{user_uuid}"
+        response_data = await self._request("GET", endpoint, log_full_response=False)
+        if response_data and not response_data.get("error") and "response" in response_data:
+            return response_data.get("response")
+        logging.error(
+            f"Failed to get user devices for user {user_uuid}. Response: {response_data}"
+        )
+        return None
+
+    async def disconnect_device(self, user_uuid: str, hwid: str) -> bool:
+        endpoint = f"/hwid/devices/delete"
+        payload = {
+            "userUuid": user_uuid,
+            "hwid": hwid
+        }
+        response_data = await self._request("POST", endpoint, json=payload, log_full_response=False)
+        if response_data and not response_data.get("error") and "response" in response_data:
+            return True
+        logging.error(
+            f"Failed to disconnect device {hwid} for user {user_uuid}. Payload: {payload}, Response: {response_data}"
+        )
+        return False
 
     async def update_bot_db_sync_status(self,
                                         session: AsyncSession,
@@ -468,22 +536,21 @@ class PanelApiService:
     async def get_bot_db_last_sync_status(
             self, session: AsyncSession) -> Optional[PanelSyncStatus]:
         return await panel_sync_dal.get_panel_sync_status(session)
-    
-    
+
     async def get_system_stats(self) -> Optional[Dict[str, Any]]:
         """Get system statistics (CPU, memory, users counts)"""
         response_data = await self._request("GET", "/system/stats", log_full_response=False)
         if response_data and not response_data.get("error") and "response" in response_data:
             return response_data.get("response")
         return None
-    
+
     async def get_bandwidth_stats(self) -> Optional[Dict[str, Any]]:
         """Get bandwidth statistics"""
         response_data = await self._request("GET", "/system/stats/bandwidth", log_full_response=False)
         if response_data and not response_data.get("error") and "response" in response_data:
             return response_data.get("response")
         return None
-    
+
     async def get_nodes_statistics(self) -> Optional[Dict[str, Any]]:
         """Get nodes statistics"""
         response_data = await self._request("GET", "/system/stats/nodes", log_full_response=False)

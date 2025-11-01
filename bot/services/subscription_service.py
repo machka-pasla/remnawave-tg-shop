@@ -568,6 +568,11 @@ class SubscriptionService:
         bonus_days: int,
         reason: str = "bonus",
     ) -> Optional[datetime]:
+        reason_lower = (reason or "").lower()
+        apply_main_traffic_limit = any(
+            keyword in reason_lower for keyword in ("admin", "promo code", "referral", "bonus")
+        )
+
         user = await user_dal.get_user_by_id(session, user_id)
         if not user:
             logging.warning(
@@ -593,10 +598,14 @@ class SubscriptionService:
             )
             start_date = datetime.now(timezone.utc)
             new_end_date_obj = start_date + timedelta(days=bonus_days)
-            
-            # For promo code activations, use the configured user traffic limit
-            traffic_limit = self.settings.user_traffic_limit_bytes if "promo code" in reason.lower() else self.settings.trial_traffic_limit_bytes
-            
+
+            # Apply main traffic limit for admin/referral/promo bonuses, fallback to trial limit otherwise
+            traffic_limit = (
+                self.settings.user_traffic_limit_bytes
+                if apply_main_traffic_limit
+                else self.settings.trial_traffic_limit_bytes
+            )
+
             bonus_sub_payload = {
                 "user_id": user_id,
                 "panel_user_uuid": panel_uuid,
@@ -626,16 +635,27 @@ class SubscriptionService:
                 session, active_sub.subscription_id, new_end_date_obj
             )
 
+            if (
+                apply_main_traffic_limit
+                and updated_sub_model
+                and updated_sub_model.traffic_limit_bytes != self.settings.user_traffic_limit_bytes
+            ):
+                updated_sub_model = await subscription_dal.update_subscription(
+                    session,
+                    updated_sub_model.subscription_id,
+                    {"traffic_limit_bytes": self.settings.user_traffic_limit_bytes},
+                )
+
         if updated_sub_model:
             # Prepare panel update payload
             panel_update_payload = self._build_panel_update_payload(
                 expire_at=new_end_date_obj,
                 traffic_limit_bytes=(
-                    self.settings.user_traffic_limit_bytes if "promo code" in reason.lower() else None
+                    self.settings.user_traffic_limit_bytes if apply_main_traffic_limit else None
                 ),
                 include_uuid=False,
             )
-            
+
             panel_update_success = (
                 await self.panel_service.update_user_details_on_panel(
                     panel_uuid,
@@ -739,8 +759,12 @@ class SubscriptionService:
             if panel_user_data.get("expireAt")
             else None
         )
+        hwid_limit = panel_user_data.get("hwidDeviceLimit")
+        if hwid_limit is None:
+            hwid_limit = self.settings.USER_HWID_DEVICE_LIMIT
 
         return {
+            "user_id": panel_user_data.get("uuid"),
             "end_date": panel_end_date,
             "status_from_panel": panel_user_data.get("status", "UNKNOWN").upper(),
             "config_link": panel_user_data.get("subscriptionUrl"),
@@ -748,6 +772,7 @@ class SubscriptionService:
             "traffic_used_bytes": panel_user_data.get("usedTrafficBytes"),
             "user_bot_username": db_user.username,
             "is_panel_data": True,
+            "max_devices": hwid_limit,
         }
 
     async def get_subscriptions_ending_soon(

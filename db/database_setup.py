@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from config.settings import Settings
 from .models import Base
-from .migrator import run_simple_migrations
+from .migrator import run_database_migrations
 
 async_engine = None
 
@@ -63,8 +63,7 @@ async def init_db(settings: Settings, session_factory: sessionmaker):
 
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Run lightweight, idempotent migrations to add any missing columns
-        await conn.run_sync(run_simple_migrations)
+        await conn.run_sync(run_database_migrations)
     logging.info(
         "PostgreSQL database initialized/checked successfully using SQLAlchemy."
     )

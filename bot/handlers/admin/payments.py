@@ -39,7 +39,7 @@ def format_payment_text(payment: Payment, i18n: JsonI18n, lang: str) -> str:
     _ = lambda key, **kwargs: i18n.gettext(lang, key, **kwargs)
     
     status_emoji = "✅" if payment.status == 'succeeded' else (
-        "⏳" if payment.status in ['pending', 'pending_yookassa'] else "❌"
+        "⏳" if payment.status in ['pending', 'pending_yookassa', 'pending_freekassa'] else "❌"
     )
     
     user_info = f"User {payment.user_id}"
@@ -54,7 +54,8 @@ def format_payment_text(payment: Payment, i18n: JsonI18n, lang: str) -> str:
         'yookassa': 'YooKassa',
         'tribute': 'Tribute', 
         'telegram_stars': 'Telegram Stars',
-        'cryptopay': 'CryptoPay'
+        'cryptopay': 'CryptoPay',
+        'freekassa': 'FreeKassa',
     }.get(payment.provider, payment.provider or 'Unknown')
     
     return (

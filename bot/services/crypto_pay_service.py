@@ -209,7 +209,9 @@ class CryptoPayService:
                          end_date=final_end.strftime('%Y-%m-%d'),
                          config_link=config_link)
 
-            markup = get_connect_and_main_keyboard(lang, i18n, settings, config_link)
+            markup = get_connect_and_main_keyboard(
+                lang, i18n, settings, config_link, preserve_message=True
+            )
             try:
                 await bot.send_message(
                     user_id,

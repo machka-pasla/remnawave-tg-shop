@@ -26,6 +26,8 @@ class MessageQueue:
         self.last_send_times: deque[datetime] = deque()
         self.is_processing = False
         self.delay_between_messages = 1.0 / messages_per_second
+        self.total_sent = 0
+        self.total_failed = 0
         
     async def add_message(self, message: QueuedMessage) -> None:
         """Add message to queue"""
@@ -50,6 +52,7 @@ class MessageQueue:
                 try:
                     await self._send_message(message)
                     self.last_send_times.append(datetime.now())
+                    self.total_sent += 1
                     
                     # Keep only recent send times (last minute)
                     cutoff_time = datetime.now() - timedelta(seconds=60)
@@ -57,6 +60,7 @@ class MessageQueue:
                         self.last_send_times.popleft()
                         
                 except Exception as e:
+                    self.total_failed += 1
                     logging.error(f"Failed to send queued message to {message.chat_id}: {e}")
                     
         finally:
@@ -233,7 +237,11 @@ class MessageQueueManager:
             "group_queue_processing": self.group_queue.is_processing,
             "user_queue_processing": self.user_queue.is_processing,
             "group_recent_sends": len(self.group_queue.last_send_times),
-            "user_recent_sends": len(self.user_queue.last_send_times)
+            "user_recent_sends": len(self.user_queue.last_send_times),
+            "group_failed_messages": self.group_queue.total_failed,
+            "user_failed_messages": self.user_queue.total_failed,
+            "group_sent_messages": self.group_queue.total_sent,
+            "user_sent_messages": self.user_queue.total_sent,
         }
 
 

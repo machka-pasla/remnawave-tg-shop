@@ -280,7 +280,7 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                 details_message = _("payment_successful_error_details")
 
             details_markup = get_connect_and_main_keyboard(
-                user_lang, i18n, settings, config_link
+                user_lang, i18n, settings, config_link, preserve_message=True
             )
         try:
             await bot.send_message(

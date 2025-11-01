@@ -163,8 +163,7 @@ async def show_statistics_handler(callback: types.CallbackQuery,
             f"\n<b>{_('admin_stats_recent_payments_header')}</b>")
         for payment in last_payments_models:
             status_emoji = "✅" if payment.status == 'succeeded' else (
-                "⏳" if payment.status == 'pending'
-                or payment.status == 'pending_yookassa' else "❌")
+                "⏳" if payment.status in ['pending', 'pending_yookassa', 'pending_freekassa'] else "❌")
 
             user_info = f"User {payment.user_id}"
             if payment.user and payment.user.username:

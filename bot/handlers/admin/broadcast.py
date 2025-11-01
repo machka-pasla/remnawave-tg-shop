@@ -334,11 +334,18 @@ async def confirm_broadcast_callback_handler(
             await session.rollback()
             logging.error(f"Error committing broadcast logs: {e_commit}")
 
-        # Get queue stats for detailed report
+        # Prepare queue stats presentation
         queue_stats = queue_manager.get_queue_stats()
-        
-        result_message = (
-            _(
+        back_keyboard = get_back_to_admin_panel_keyboard(current_lang, i18n)
+        initial_user_failed = queue_stats.get("user_failed_messages", 0)
+        initial_group_failed = queue_stats.get("group_failed_messages", 0)
+
+        def build_queue_status(stats: dict) -> str:
+            dynamic_failed = max(
+                0, stats.get("user_failed_messages", 0) - initial_user_failed
+            ) + max(0, stats.get("group_failed_messages", 0) - initial_group_failed)
+            total_failed = failed_count + dynamic_failed
+            return _(
                 "broadcast_queue_result",
                 default=(
                     "🚀 Рассылка поставлена в очередь!\n"
@@ -350,15 +357,63 @@ async def confirm_broadcast_callback_handler(
                     "ℹ️ Сообщения будут отправлены автоматически с соблюдением лимитов Telegram."
                 ),
                 sent_count=sent_count,
-                failed_count=failed_count,
-                user_queue_size=queue_stats["user_queue_size"],
-                group_queue_size=queue_stats["group_queue_size"],
+                failed_count=total_failed,
+                user_queue_size=stats["user_queue_size"],
+                group_queue_size=stats["group_queue_size"],
             )
-        )
-        await callback.message.answer(
+
+        result_message = build_queue_status(queue_stats)
+
+        status_message = await callback.message.answer(
             result_message,
-            reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
+            reply_markup=back_keyboard,
         )
+
+        async def auto_update_queue_status() -> None:
+            """Refresh queue stats message twice per second via message edit."""
+            last_text = result_message
+            # Update for up to 2 minutes (240 iterations at 0.5s intervals)
+            max_iterations = 240
+            for _ in range(max_iterations):
+                await asyncio.sleep(0.5)
+
+                stats = queue_manager.get_queue_stats()
+                new_text = build_queue_status(stats)
+                queues_drained = (
+                    stats["user_queue_size"] == 0
+                    and stats["group_queue_size"] == 0
+                    and not stats.get("user_queue_processing")
+                    and not stats.get("group_queue_processing")
+                )
+
+                if new_text != last_text:
+                    try:
+                        await status_message.edit_text(
+                            new_text,
+                            reply_markup=back_keyboard,
+                        )
+                        last_text = new_text
+                    except TelegramBadRequest as e:
+                        if "message is not modified" in str(e):
+                            last_text = new_text
+                        else:
+                            logging.debug(
+                                "Broadcast queue auto-update stopped: %s", e
+                            )
+                            break
+                    except Exception as e:
+                        logging.debug(
+                            "Broadcast queue auto-update unexpected error: %s", e
+                        )
+                        break
+
+                if queues_drained:
+                    # Final refresh already attempted; exit loop.
+                    break
+            else:
+                logging.debug("Broadcast queue auto-update reached time limit.")
+
+        asyncio.create_task(auto_update_queue_status())
 
     elif action == "cancel":
         await callback.message.edit_text(

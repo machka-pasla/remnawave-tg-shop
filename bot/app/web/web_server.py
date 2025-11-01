@@ -27,6 +27,7 @@ async def build_and_start_web_app(
         "referral_service",
         "panel_service",
         "stars_service",
+        "freekassa_service",
         "cryptopay_service",
         "tribute_service",
         "panel_webhook_service",
@@ -50,6 +51,7 @@ async def build_and_start_web_app(
     from bot.services.tribute_service import tribute_webhook_route
     from bot.services.crypto_pay_service import cryptopay_webhook_route
     from bot.services.panel_webhook_service import panel_webhook_route
+    from bot.services.freekassa_service import freekassa_webhook_route
 
     tribute_path = settings.tribute_webhook_path
     if tribute_path.startswith("/"):
@@ -60,6 +62,11 @@ async def build_and_start_web_app(
     if cp_path.startswith("/"):
         app.router.add_post(cp_path, cryptopay_webhook_route)
         logging.info(f"CryptoPay webhook route configured at: [POST] {cp_path}")
+
+    fk_path = settings.freekassa_webhook_path
+    if fk_path.startswith("/"):
+        app.router.add_post(fk_path, freekassa_webhook_route)
+        logging.info(f"FreeKassa webhook route configured at: [POST] {fk_path}")
 
     # YooKassa webhook (register only when base URL present and path configured)
     yk_path = settings.yookassa_webhook_path
@@ -87,5 +94,4 @@ async def build_and_start_web_app(
 
     # Run until cancelled
     await asyncio.Event().wait()
-
 

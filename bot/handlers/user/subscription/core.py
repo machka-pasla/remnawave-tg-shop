@@ -173,6 +173,57 @@ async def my_subscription_command_handler(
                     )
                 ])
 
+        if settings.MY_DEVICES_SECTION_ENABLED:
+            max_devices_value = active.get("max_devices")
+            max_devices_display = get_text("devices_unlimited_label")
+            if max_devices_value not in (None, 0):
+                try:
+                    max_devices_int = int(max_devices_value)
+                    if max_devices_int >= 0:
+                        max_devices_display = str(max_devices_int)
+                except (TypeError, ValueError):
+                    max_devices_display = str(max_devices_value)
+            current_devices_display = "?"
+            user_uuid = active.get("user_id")
+            devices_response = None
+            if user_uuid:
+                try:
+                    devices_response = await panel_service.get_user_devices(user_uuid)
+                except Exception:
+                    logging.exception("Failed to load devices for user %s", user_uuid)
+            if devices_response:
+                devices_count: Optional[int] = None
+                if isinstance(devices_response, dict):
+                    devices_list = devices_response.get("devices")
+                    if isinstance(devices_list, list):
+                        devices_count = len(devices_list)
+                    elif isinstance(devices_list, int):
+                        devices_count = devices_list
+                    else:
+                        try:
+                            devices_count = len(devices_list)  # type: ignore[arg-type]
+                        except Exception:
+                            devices_count = None
+                    if devices_count is None:
+                        total_value = devices_response.get("total")
+                        if isinstance(total_value, int):
+                            devices_count = total_value
+                elif isinstance(devices_response, list):
+                    devices_count = len(devices_response)
+                if devices_count is not None:
+                    current_devices_display = str(devices_count)
+            devices_button_text = get_text(
+                "devices_button",
+                current_devices=current_devices_display,
+                max_devices=max_devices_display,
+            )
+            prepend_rows.append([
+                InlineKeyboardButton(
+                    text=devices_button_text,
+                    callback_data="main_action:my_devices",
+                )
+            ])
+
         # 2) Auto-renew toggle (if supported and not tribute)
         if local_sub and local_sub.provider != "tribute" and getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
             toggle_text = (
@@ -214,6 +265,161 @@ async def my_subscription_command_handler(
             )
     else:
         await target.answer(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+
+
+@router.callback_query(F.data == "main_action:my_devices")
+async def my_devices_command_handler(
+    event: Union[types.Message, types.CallbackQuery],
+    i18n_data: dict,
+    settings: Settings,
+    panel_service: PanelApiService,
+    subscription_service: SubscriptionService,
+    session: AsyncSession,
+    bot: Bot,
+):
+    target = event.message if isinstance(event, types.CallbackQuery) else event
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: JsonI18n = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kw: i18n.gettext(current_lang, key, **kw)
+
+    if not i18n or not target:
+        if isinstance(event, types.Message):
+            await event.answer(get_text("error_occurred_try_again"))
+        return
+
+    if not settings.MY_DEVICES_SECTION_ENABLED:
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer(get_text("my_devices_feature_disabled"), show_alert=True)
+            except Exception:
+                pass
+        else:
+            await target.answer(get_text("my_devices_feature_disabled"))
+        return
+
+    # TODO: context?
+    active = await subscription_service.get_active_subscription_details(session, event.from_user.id)
+    if not active or not active.get("user_id"):
+        message = get_text("subscription_not_active")
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer(message, show_alert=True)
+            except Exception:
+                pass
+        else:
+            await target.answer(message)
+        return
+
+    devices = await panel_service.get_user_devices(active.get("user_id")) if active else None
+    if not devices:
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer(get_text("no_devices_found"), show_alert=True)
+            except Exception:
+                pass
+        else:
+            await target.answer(get_text("no_devices_found"))
+        return
+
+    max_devices_value = active.get("max_devices")
+    max_devices_display = get_text("devices_unlimited_label")
+    if max_devices_value not in (None, 0):
+        try:
+            max_devices_int = int(max_devices_value)
+            if max_devices_int >= 0:
+                max_devices_display = str(max_devices_int)
+        except (TypeError, ValueError):
+            max_devices_display = str(max_devices_value)
+
+    if not devices or not devices.get('devices') or len(devices.get('devices')) == 0:
+        text = get_text("no_devices_details_found_message", max_devices=max_devices_display)
+    else:
+        devices_list = []
+        current_devices = len(devices.get('devices') or [])
+        for index, device in enumerate(devices.get('devices') or [], start=1):
+            device_model = device.get('deviceModel') or None
+            platform = device.get('platform') or None
+            user_agent = device.get('userAgent') or None
+            os_version = device.get('osVersion') or None
+            created_at = device.get('createdAt')
+            hwid = device.get('hwid')
+            created_at_str = datetime.fromisoformat(created_at).strftime("%d.%m.%Y %H:%M")
+
+            device_details = get_text("device_details", index=index, device_model=device_model, platform=platform, os_version=os_version, created_at_str=created_at_str, user_agent=user_agent, hwid=hwid)
+            devices_list.append(device_details)
+
+        text = get_text("my_devices_details", devices="\n\n".join(devices_list), current_devices=current_devices, max_devices=max_devices_display)
+
+    base_markup = get_back_to_main_menu_markup(current_lang, i18n, callback_data="main_action:my_subscription")
+    kb = base_markup.inline_keyboard
+
+    devices_kb = []
+    for index, device in enumerate(devices.get('devices') or [], start=1):
+        hwid = device.get('hwid')
+        device_button_text = get_text("disconnect_device_button", hwid=hwid, index=index)
+
+        devices_kb.append([InlineKeyboardButton(text=device_button_text, callback_data=f"disconnect_device:{hwid}")])
+    kb = devices_kb + kb
+    markup = InlineKeyboardMarkup(inline_keyboard=kb)
+
+    if isinstance(event, types.CallbackQuery):
+        try:
+            await event.answer()
+        except Exception:
+            pass
+        try:
+            await event.message.edit_text(text, reply_markup=markup)
+        except Exception:
+            await event.message.answer(text, reply_markup=markup)
+    else:
+        await target.answer(text, reply_markup=markup)
+
+
+@router.callback_query(F.data.startswith("disconnect_device:"))
+async def disconnect_device_handler(
+    callback: types.CallbackQuery,
+    settings: Settings,
+    i18n_data: dict,
+    session: AsyncSession,
+    subscription_service: SubscriptionService,
+    panel_service: PanelApiService,
+    bot: Bot,
+):
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+
+    if not settings.MY_DEVICES_SECTION_ENABLED:
+        try:
+            await callback.answer(get_text("my_devices_feature_disabled"), show_alert=True)
+        except Exception:
+            pass
+        return
+
+    try:
+        _, hwid = callback.data.split(":", 1)
+    except Exception:
+        try:
+            await callback.answer(get_text("error_try_again"), show_alert=True)
+        except Exception:
+            pass
+        return
+
+    active = await subscription_service.get_active_subscription_details(session, callback.from_user.id)
+    if not active:
+        await callback.answer(get_text("subscription_not_active"), show_alert=True)
+        return
+
+    success = await panel_service.disconnect_device(active.get("user_id"), hwid)
+    if not success:
+        await callback.answer(get_text("error_try_again"), show_alert=True)
+        return
+    await session.commit()
+    try:
+        await callback.answer(get_text("device_disconnected"))
+    except Exception:
+        pass
+    await my_devices_command_handler(callback, i18n_data, settings, panel_service, subscription_service, session, bot)
 
 
 @router.callback_query(F.data.startswith("toggle_autorenew:"))
@@ -359,5 +565,3 @@ async def connect_command_handler(
 ):
     logging.info(f"User {message.from_user.id} used /connect command.")
     await my_subscription_command_handler(message, i18n_data, settings, panel_service, subscription_service, session, bot)
-
-

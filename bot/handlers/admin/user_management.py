@@ -29,14 +29,57 @@ router = Router(name="admin_user_management_router")
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_]{5,32}$")
 
 
-async def user_management_menu_handler(callback: types.CallbackQuery,
-                                      state: FSMContext, i18n_data: dict,
-                                      settings: Settings, session: AsyncSession):
-    """Display user management menu"""
+async def users_list_handler(callback: types.CallbackQuery,
+                              i18n_data: dict, settings: Settings,
+                              session: AsyncSession, page: int = 0):
+    """Display paginated list of all users"""
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
     if not i18n or not callback.message:
-        await callback.answer("Error preparing user management.", show_alert=True)
+        await callback.answer("Error preparing user list.", show_alert=True)
+        return
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+    
+    try:
+        # Get paginated users
+        from bot.keyboards.inline.admin_keyboards import get_users_list_keyboard
+        from db.dal import user_dal
+        
+        users = await user_dal.get_all_users_paginated(session, page=page, page_size=15)
+        total_users = await user_dal.count_all_users(session)
+        total_pages = max(1, (total_users + 14) // 15)
+        
+        # Format message
+        header_text = _(
+            "admin_users_list_header",
+            default="👥 <b>Список пользователей</b>\n\nСтраница {current}/{total} ({total_users} пользователей)",
+            current=page + 1,
+            total=total_pages,
+            total_users=total_users
+        )
+        
+        keyboard = get_users_list_keyboard(users, page, total_users, i18n, current_lang, page_size=15)
+        
+        await callback.message.edit_text(
+            header_text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logging.error(f"Error displaying user list: {e}")
+        await callback.answer("Ошибка отображения списка пользователей", show_alert=True)
+
+
+async def user_search_prompt_handler(callback: types.CallbackQuery,
+                                     state: FSMContext, i18n_data: dict,
+                                     settings: Settings, session: AsyncSession):
+    """Display search prompt for user management"""
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    if not i18n or not callback.message:
+        await callback.answer("Error preparing search.", show_alert=True)
         return
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
@@ -95,8 +138,14 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str) -> InlineKeyb
         text=_(key="admin_user_refresh_button", default="🔄 Обновить"),
         callback_data=f"user_action:refresh:{user_id}"
     )
+
+    # Row 4: Destructive action
+    builder.button(
+        text=_(key="admin_user_delete_button", default="❌ Удалить пользователя"),
+        callback_data=f"user_action:delete_user:{user_id}"
+    )
     
-    # Row 4: Back button
+    # Row 5: Navigation
     builder.button(
         text=_(key="admin_user_search_new_button", default="🔍 Найти другого"),
         callback_data="admin_action:users_management"
@@ -106,7 +155,7 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str) -> InlineKeyb
         callback_data="admin_action:main"
     )
     
-    builder.adjust(2, 2, 2, 2)
+    builder.adjust(2, 2, 2, 1, 2)
     return builder
 
 
@@ -191,6 +240,20 @@ async def format_user_card(user: User, session: AsyncSession,
         had_subscriptions = await subscription_service.has_had_any_subscription(session, user.user_id)
         trial_status = _("admin_user_trial_used", default="Использовал") if had_subscriptions else _("admin_user_trial_not_used", default="Не использовал")
         card_parts.append(f"{_('admin_user_trial_label', default='🏡 <b>Триал:</b>')} {hcode(trial_status)}")
+
+        # Financial analytics (admin-only)
+        try:
+            from db.dal import payment_dal
+            
+            # Total amount paid by this user
+            total_paid = await payment_dal.get_user_total_paid(session, user.user_id)
+            card_parts.append(f"{_('admin_user_total_paid_label', default='💰 <b>Всего оплачено:</b>')} {hcode(f'{total_paid:.2f} RUB')}")
+            
+            # Total revenue from referrals
+            referral_revenue = await payment_dal.get_referral_revenue(session, user.user_id)
+            card_parts.append(f"{_('admin_user_referral_revenue_label', default='💸 <b>Доход по рефералам:</b>')} {hcode(f'{referral_revenue:.2f} RUB')}")
+        except Exception as e_fin:
+            logging.error(f"Failed to build financial analytics for admin card {user.user_id}: {e_fin}")
 
         # Referral stats
         if referral_service is not None:
@@ -310,6 +373,10 @@ async def user_action_handler(callback: types.CallbackQuery, state: FSMContext,
         await handle_view_user_logs(callback, user, session, settings, i18n, current_lang)
     elif action == "refresh":
         await handle_refresh_user_card(callback, user, subscription_service, session, i18n, current_lang)
+    elif action == "delete_user":
+        await handle_delete_user_prompt(
+            callback, state, user, settings, i18n, current_lang, session
+        )
     else:
         await callback.answer(_("admin_unknown_action"), show_alert=True)
 
@@ -535,7 +602,216 @@ async def handle_refresh_user_card(callback: types.CallbackQuery, user: User,
         await callback.answer("Error refreshing user card", show_alert=True)
 
 
+# Destructive deletion flow
+async def handle_delete_user_prompt(callback: types.CallbackQuery, state: FSMContext,
+                                    user: User, settings: Settings, i18n_instance,
+                                    lang: str, session: AsyncSession):
+    """Trigger confirmation workflow for destructive deletion."""
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+
+    admin = callback.from_user
+    admin_id = admin.id if admin else None
+    if not admin_id or admin_id not in settings.ADMIN_IDS:
+        logging.warning(
+            f"Unauthorized delete attempt by user {admin_id} targeting {user.user_id}."
+        )
+        await callback.answer(
+            _(
+                "admin_user_delete_not_allowed",
+                default="❌ У вас нет прав для удаления пользователей.",
+            ),
+            show_alert=True,
+        )
+        return
+
+    await state.update_data(
+        target_user_id=user.user_id,
+        delete_initiator_id=admin_id,
+    )
+    await state.set_state(AdminStates.waiting_for_user_delete_confirmation)
+
+    prompt_text = _(
+        "admin_user_delete_confirmation_prompt",
+        default=(
+            "⚠️ Вы хотите полностью удалить пользователя {user_id}.\n\n"
+            "Отправьте точный Telegram ID этого пользователя, чтобы подтвердить удаление.\n"
+            "Любой другой ответ отменит операцию."
+        ),
+        user_id=hcode(str(user.user_id)),
+    )
+
+    try:
+        await callback.message.answer(prompt_text, parse_mode="HTML")
+    except Exception as e:
+        logging.error(
+            f"Failed to send delete confirmation prompt for user {user.user_id}: {e}"
+        )
+        await callback.message.reply(prompt_text, parse_mode="HTML")
+
+    await callback.answer()
+
+
+async def _log_admin_user_deletion(
+    session: AsyncSession,
+    admin_id: int,
+    admin_user: Optional[types.User],
+    target_user_id: int,
+) -> None:
+    """Store audit log for successful deletion."""
+    try:
+        await message_log_dal.create_message_log_no_commit(
+            session,
+            {
+                "user_id": admin_id,
+                "telegram_username": admin_user.username if admin_user else None,
+                "telegram_first_name": admin_user.first_name if admin_user else None,
+                "event_type": "admin:user_deleted",
+                "content": f"Admin {admin_id} deleted user {target_user_id}",
+                "raw_update_preview": None,
+                "is_admin_event": True,
+                "target_user_id": target_user_id,
+                "timestamp": datetime.now(timezone.utc),
+            },
+        )
+    except Exception as e:
+        logging.error(
+            f"Failed to log deletion audit for admin {admin_id} -> user {target_user_id}: {e}",
+            exc_info=True,
+        )
+
+
 # Message handlers for state-based inputs
+
+@router.message(AdminStates.waiting_for_user_delete_confirmation, F.text)
+async def process_delete_user_confirmation_handler(message: types.Message,
+                                                   state: FSMContext,
+                                                   settings: Settings,
+                                                   i18n_data: dict,
+                                                   panel_service: PanelApiService,
+                                                   session: AsyncSession):
+    """Confirm and execute destructive user deletion."""
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    if not i18n:
+        await message.reply("Language service error.")
+        await state.clear()
+        return
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+
+    admin = message.from_user
+    admin_id = admin.id if admin else None
+    if not admin_id or admin_id not in settings.ADMIN_IDS:
+        logging.warning(
+            f"Unauthorized delete confirmation attempt by user {admin_id}."
+        )
+        await message.answer(
+            _(
+                "admin_user_delete_not_allowed",
+                default="❌ У вас нет прав для удаления пользователей.",
+            )
+        )
+        await state.clear()
+        return
+
+    data = await state.get_data()
+    target_user_id = data.get("target_user_id")
+    if not target_user_id:
+        await message.answer(
+            _(
+                "admin_user_delete_state_missing",
+                default="⚠️ Нет активной операции удаления. Начните заново.",
+            )
+        )
+        await state.clear()
+        return
+
+    confirmation_input = message.text.strip() if message.text else ""
+    if confirmation_input.lower() in {"/cancel", "cancel", "отмена"}:
+        await message.answer(
+            _(
+                "admin_user_delete_cancelled",
+                default="Операция удаления отменена по запросу.",
+            )
+        )
+        await state.clear()
+        return
+
+    if confirmation_input != str(target_user_id):
+        await message.answer(
+            _(
+                "admin_user_delete_mismatch",
+                default="⚠️ ID не совпадает. Удаление отменено.",
+            )
+        )
+        await state.clear()
+        return
+
+    user_model = await user_dal.get_user_by_id(session, target_user_id)
+    if not user_model:
+        await message.answer(
+            _(
+                "admin_user_delete_already_removed",
+                default="ℹ️ Пользователь уже удален.",
+            )
+        )
+        await state.clear()
+        return
+
+    try:
+        if user_model.panel_user_uuid:
+            panel_deleted = await panel_service.delete_user_from_panel(
+                user_model.panel_user_uuid
+            )
+            if not panel_deleted:
+                await message.answer(
+                    _(
+                        "admin_user_delete_panel_error",
+                        default=(
+                            "❌ Не удалось удалить пользователя на панели. "
+                            "Операция прервана."
+                        ),
+                    )
+                )
+                await session.rollback()
+                await state.clear()
+                return
+
+        deleted = await user_dal.delete_user_and_relations(
+            session, target_user_id
+        )
+        if not deleted:
+            await message.answer(
+                _(
+                    "admin_user_delete_already_removed",
+                    default="ℹ️ Пользователь уже удален.",
+                )
+            )
+            await state.clear()
+            return
+
+        await _log_admin_user_deletion(session, admin_id, admin, target_user_id)
+        await session.commit()
+
+        await message.answer(
+            _(
+                "admin_user_delete_success",
+                default="✅ Пользователь {user_id} удален из бота и панели.",
+                user_id=hcode(str(target_user_id)),
+            ),
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logging.error(f"Error deleting user {target_user_id}: {e}", exc_info=True)
+        await session.rollback()
+        await message.answer(
+            _(
+                "admin_user_delete_error",
+                default="❌ Не удалось завершить удаление пользователя. Попробуйте позже.",
+            )
+        )
+    finally:
+        await state.clear()
+
 
 @router.message(AdminStates.waiting_for_subscription_days_to_add, F.text)
 async def process_subscription_days_handler(message: types.Message, state: FSMContext,
@@ -897,9 +1173,9 @@ async def process_ban_user_handler(message: types.Message, state: FSMContext,
 
 @router.message(AdminStates.waiting_for_user_id_to_unban, F.text)
 async def process_unban_user_handler(message: types.Message, state: FSMContext,
-                                    settings: Settings, i18n_data: dict,
-                                    panel_service: PanelApiService,
-                                    session: AsyncSession):
+                                   settings: Settings, i18n_data: dict,
+                                   panel_service: PanelApiService,
+                                   session: AsyncSession):
     """Process user unban input"""
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
@@ -964,3 +1240,58 @@ async def process_unban_user_handler(message: types.Message, state: FSMContext,
         ))
     
     await state.clear()
+
+
+@router.callback_query(F.data.startswith("admin_user_card_from_list:"))
+async def user_card_from_list_handler(callback: types.CallbackQuery,
+                                     state: FSMContext, i18n_data: dict,
+                                     settings: Settings, bot: Bot,
+                                     subscription_service: SubscriptionService,
+                                     panel_service: PanelApiService,
+                                     session: AsyncSession):
+    """Display user card when clicked from user list"""
+    try:
+        parts = callback.data.split(":")
+        user_id = int(parts[1])
+        page = int(parts[2])
+    except (IndexError, ValueError):
+        await callback.answer("Invalid user data", show_alert=True)
+        return
+    
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    if not i18n:
+        await callback.answer("Language service error", show_alert=True)
+        return
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+    
+    # Get user from database
+    user = await user_dal.get_user_by_id(session, user_id)
+    if not user:
+        await callback.answer("User not found", show_alert=True)
+        return
+    
+    # Create keyboard with back to list button
+    keyboard = get_user_card_keyboard(user_id, i18n, current_lang)
+    keyboard.button(
+        text=_("admin_user_back_to_list_button", default="⬅️ К списку"),
+        callback_data=f"admin_action:users_list:{page}"
+    )
+    keyboard.adjust(2, 2, 2, 2, 1)
+    
+    # Format user card
+    try:
+        from bot.services.referral_service import ReferralService
+        referral_service = ReferralService(settings, subscription_service, bot, i18n)
+        user_card_text = await format_user_card(user, session, subscription_service, i18n, current_lang, referral_service)
+        
+        await callback.message.edit_text(
+            user_card_text,
+            reply_markup=keyboard.as_markup(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logging.error(f"Error displaying user card: {e}")
+        await callback.answer("Error displaying user card", show_alert=True)

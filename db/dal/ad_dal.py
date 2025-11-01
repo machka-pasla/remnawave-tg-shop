@@ -98,23 +98,37 @@ async def get_campaign_stats(session: AsyncSession, campaign_id: int) -> Dict[st
     trials = (await session.execute(trials_stmt)).scalar() or 0
 
     # Payers (unique users with succeeded payments)
-    payers_stmt = select(func.count(func.distinct(Payment.user_id))).select_from(Payment).where(
-        and_(
-            Payment.status == "succeeded",
-            Payment.user_id.in_(
-                select(AdAttribution.user_id).where(AdAttribution.ad_campaign_id == campaign_id)
-            ),
+    attrib_subq = (
+        select(
+            AdAttribution.user_id.label("user_id"),
+            AdAttribution.first_start_at.label("first_start_at"),
+        )
+        .where(AdAttribution.ad_campaign_id == campaign_id)
+        .subquery()
+    )
+    payers_stmt = (
+        select(func.count(func.distinct(Payment.user_id)))
+        .select_from(Payment)
+        .join(attrib_subq, Payment.user_id == attrib_subq.c.user_id)
+        .where(
+            and_(
+                Payment.status == "succeeded",
+                Payment.created_at >= attrib_subq.c.first_start_at,
+            )
         )
     )
     payers = (await session.execute(payers_stmt)).scalar() or 0
 
     # Revenue sum
-    revenue_stmt = select(func.coalesce(func.sum(Payment.amount), 0.0)).select_from(Payment).where(
-        and_(
-            Payment.status == "succeeded",
-            Payment.user_id.in_(
-                select(AdAttribution.user_id).where(AdAttribution.ad_campaign_id == campaign_id)
-            ),
+    revenue_stmt = (
+        select(func.coalesce(func.sum(Payment.amount), 0.0))
+        .select_from(Payment)
+        .join(attrib_subq, Payment.user_id == attrib_subq.c.user_id)
+        .where(
+            and_(
+                Payment.status == "succeeded",
+                Payment.created_at >= attrib_subq.c.first_start_at,
+            )
         )
     )
     revenue = float((await session.execute(revenue_stmt)).scalar() or 0.0)
@@ -151,10 +165,22 @@ async def get_totals(session: AsyncSession) -> Dict[str, float]:
     total_cost = float((await session.execute(total_cost_stmt)).scalar() or 0.0)
 
     # Total revenue from all attributed users (unique users counted across all campaigns)
-    revenue_stmt = select(func.coalesce(func.sum(Payment.amount), 0.0)).select_from(Payment).where(
-        and_(
-            Payment.status == "succeeded",
-            Payment.user_id.in_(select(AdAttribution.user_id)),
+    attrib_subq = (
+        select(
+            AdAttribution.user_id.label("user_id"),
+            AdAttribution.first_start_at.label("first_start_at"),
+        )
+        .subquery()
+    )
+    revenue_stmt = (
+        select(func.coalesce(func.sum(Payment.amount), 0.0))
+        .select_from(Payment)
+        .join(attrib_subq, Payment.user_id == attrib_subq.c.user_id)
+        .where(
+            and_(
+                Payment.status == "succeeded",
+                Payment.created_at >= attrib_subq.c.first_start_at,
+            )
         )
     )
     total_revenue = float((await session.execute(revenue_stmt)).scalar() or 0.0)
@@ -178,5 +204,3 @@ async def delete_campaign(session: AsyncSession, campaign_id: int) -> bool:
     except Exception as e:
         logging.error(f"Failed to delete AdCampaign id={campaign_id}: {e}", exc_info=True)
         raise
-
-
