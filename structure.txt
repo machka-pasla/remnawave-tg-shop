@@ -56,11 +56,13 @@ Altered_Internet_bot
 │   ├─ middlewares
 │   │	├─ action_logger_middleware.py
 │   │	├─ ban_check_middleware.py
+│   │   ├─ channel_subscription.py
 │   │	├─ db_session.py
 │   │	├─ i18n.py
 │   │	└─ profile_sync.py
 │   ├─ services
 │   │	├─ crypto_pay_service.py
+│   │	├─ freekassa_service.py
 │   │	├─ notification_service.py
 │   │	├─ panel_api_service.py
 │   │	├─ panel_webhook_service.py
@@ -86,6 +88,7 @@ Altered_Internet_bot
 │   ├─ database_setup.py
 │   ├─ migrator.py
 │   ├─ models.py
+│   ├─ old_models.py
 │   └─ dal
 │       ├─ __init__.py
 │       ├─ ad_dal.py
@@ -102,6 +105,8 @@ Altered_Internet_bot
 ├─ .dockerignore
 ├─ .env.example
 ├─ .gitignore
+├─ AGENTS.md
+├─ docker-compose-removed-server.yml
 ├─ docker-compose.yml
 ├─ Dockerfile
 ├─ LICENSE
