@@ -439,6 +439,7 @@
   "subscription_tribute_notice": "Paid via Tribute. Renew using your Tribute link.",
   "subscription_tribute_notice_with_link": "Paid via Tribute. Renew: {link}",
   "subscription_autorenew_not_supported_for_tribute": "Auto-renew is handled by Tribute. Manage renewal in the Tribute app/link.",
+  "autorenew_enable_requires_card": "Link a payment card in Payment Methods before enabling auto-renew.",
   "subscription_not_active": "You don't have an active subscription.",
   "error_service_unavailable": "Service unavailable. Please try again later.",
   "error_payment_gateway": "Payment service error. Please try again later.",

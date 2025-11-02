@@ -439,6 +439,7 @@
   "subscription_tribute_notice": "Оплачено через Tribute. Продление делайте по ссылке Tribute.",
   "subscription_tribute_notice_with_link": "Оплачено через Tribute. Продлить: {link}",
   "subscription_autorenew_not_supported_for_tribute": "Автопродление управляется Tribute. Управляйте продлением в приложении/ссылке Tribute.",
+  "autorenew_enable_requires_card": "Прежде чем включать автоплатёж, привяжите карту в разделе «Способы оплаты».",
   "subscription_not_active": "У вас нет активной подписки.",
   "error_service_unavailable": "Сервис недоступен. Попробуйте позже.",
   "error_payment_gateway": "Ошибка платежного сервиса. Попробуйте позже.",
