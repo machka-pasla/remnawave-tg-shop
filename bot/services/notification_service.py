@@ -4,7 +4,7 @@ from aiogram import Bot
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.exceptions import TelegramRetryAfter
 from datetime import datetime, timezone
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Union, Dict, Any, Callable
 
 from config.settings import Settings
 from sqlalchemy.orm import sessionmaker
@@ -34,6 +34,16 @@ class NotificationService:
         if username:
             base_display = f"{base_display} ({username_for_display(username)})"
         return base_display
+
+    @staticmethod
+    def _append_profile_link(message: str, translate: Callable[..., str], user_id: int) -> str:
+        """Append a Telegram deep link to the end of a log message."""
+        profile_link = translate(
+            "log_open_profile_link",
+            default='<a href="tg://user?id={user_id}">Открыть профиль пользователя в tg</a>',
+            user_id=user_id,
+        )
+        return f"{message}\n\n{profile_link}"
     
     async def _send_to_log_channel(self, message: str, thread_id: Optional[int] = None):
         """Send message to configured log channel/group using message queue"""
@@ -124,7 +134,11 @@ class NotificationService:
         
         referral_text = ""
         if referred_by_id:
-            referral_text = _("log_referral_suffix", default=" (реферал от {referrer_id})", referrer_id=referred_by_id)
+            referral_text = _(
+                "log_referral_suffix",
+                default=' (реферал от<a href="tg://user?id={referrer_id}">{referrer_id}</a>)',
+                referrer_id=referred_by_id,
+            )
         
         message = _(
             "log_new_user_registration",
@@ -137,9 +151,9 @@ class NotificationService:
             referral_text=referral_text,
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
-        
+
         # Send to log channel
-        await self._send_to_log_channel(message)
+        await self._send_to_log_channel(self._append_profile_link(message, _, user_id))
     
     async def notify_payment_received(self, user_id: int, amount: float, currency: str,
                                     months: int, payment_provider: str, 
@@ -182,7 +196,7 @@ class NotificationService:
         )
         
         # Send to log channel
-        await self._send_to_log_channel(message)
+        await self._send_to_log_channel(self._append_profile_link(message, _, user_id))
     
     async def notify_promo_activation(self, user_id: int, promo_code: str, bonus_days: int,
                                     username: Optional[str] = None):
@@ -212,7 +226,7 @@ class NotificationService:
         )
         
         # Send to log channel
-        await self._send_to_log_channel(message)
+        await self._send_to_log_channel(self._append_profile_link(message, _, user_id))
     
     async def notify_trial_activation(self, user_id: int, end_date: datetime,
                                     username: Optional[str] = None):
@@ -240,7 +254,7 @@ class NotificationService:
         )
         
         # Send to log channel
-        await self._send_to_log_channel(message)
+        await self._send_to_log_channel(self._append_profile_link(message, _, user_id))
 
     async def notify_panel_sync(self, status: str, details: str, 
                                users_processed: int, subs_synced: int,
@@ -275,8 +289,8 @@ class NotificationService:
             details=details
         )
         
-        # Send to log channel 
-        await self._send_to_log_channel(message)
+        # Send to log channel
+        await self._send_to_log_channel(self._append_profile_link(message, _, user_id))
 
     async def notify_suspicious_promo_attempt(
             self, user_id: int, suspicious_input: str,
