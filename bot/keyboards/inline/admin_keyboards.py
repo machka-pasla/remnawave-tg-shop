@@ -385,6 +385,13 @@ def get_user_card_keyboard(user_id: int,
             text=_(key="user_card_ban_button"),
             callback_data=f"admin_ban_confirm:{user_id}:{banned_list_page}")
     builder.button(
+        text=_(
+            key="user_card_open_profile_button",
+            default="👤 Open profile"
+        ),
+        url=f"tg://user?id={user_id}"
+    )
+    builder.button(
         text=_(key="user_card_back_to_banned_list_button"),
         callback_data=f"admin_action:view_banned:{banned_list_page}")
     builder.button(text=_(key="back_to_admin_panel_button"),

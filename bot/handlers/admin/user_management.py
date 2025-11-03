@@ -104,7 +104,8 @@ async def user_search_prompt_handler(callback: types.CallbackQuery,
     await state.set_state(AdminStates.waiting_for_user_search)
 
 
-def get_user_card_keyboard(user_id: int, i18n_instance, lang: str) -> InlineKeyboardBuilder:
+def get_user_card_keyboard(user_id: int, i18n_instance, lang: str,
+                           referrer_id: Optional[int] = None) -> InlineKeyboardBuilder:
     """Generate keyboard for user management actions"""
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
@@ -139,13 +140,26 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str) -> InlineKeyb
         callback_data=f"user_action:refresh:{user_id}"
     )
 
-    # Row 4: Destructive action
+    # Row 4: Quick links
+    builder.button(
+        text=_(key="user_card_open_profile_button",
+               default="👤 Открыть профиль"),
+        url=f"tg://user?id={user_id}"
+    )
+    if referrer_id:
+        builder.button(
+            text=_(key="user_card_open_referrer_profile_button",
+                   default="👤 Открыть профиль пригласившего"),
+            url=f"tg://user?id={referrer_id}"
+        )
+
+    # Row 5: Destructive action
     builder.button(
         text=_(key="admin_user_delete_button", default="❌ Удалить пользователя"),
         callback_data=f"user_action:delete_user:{user_id}"
     )
     
-    # Row 5: Navigation
+    # Row 6: Navigation
     builder.button(
         text=_(key="admin_user_search_new_button", default="🔍 Найти другого"),
         callback_data="admin_action:users_management"
@@ -155,7 +169,8 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str) -> InlineKeyb
         callback_data="admin_action:main"
     )
     
-    builder.adjust(2, 2, 2, 1, 2)
+    quick_links_width = 2 if referrer_id else 1
+    builder.adjust(2, 2, 2, quick_links_width, 1, 2)
     return builder
 
 
@@ -315,7 +330,12 @@ async def process_user_search_handler(message: types.Message, state: FSMContext,
     try:
         referral_service = ReferralService(settings, subscription_service, message.bot, i18n)
         user_card_text = await format_user_card(user_model, session, subscription_service, i18n, current_lang, referral_service)
-        keyboard = get_user_card_keyboard(user_model.user_id, i18n, current_lang)
+        keyboard = get_user_card_keyboard(
+            user_model.user_id,
+            i18n,
+            current_lang,
+            user_model.referred_by_id
+        )
         
         await message.answer(
             user_card_text,
@@ -580,7 +600,12 @@ async def handle_refresh_user_card(callback: types.CallbackQuery, user: User,
         _settings = _Settings()
         referral_service = ReferralService(_settings, subscription_service, callback.message.bot, i18n_instance)
         user_card_text = await format_user_card(fresh_user, session, subscription_service, i18n_instance, lang, referral_service)
-        keyboard = get_user_card_keyboard(fresh_user.user_id, i18n_instance, lang)
+        keyboard = get_user_card_keyboard(
+            fresh_user.user_id,
+            i18n_instance,
+            lang,
+            fresh_user.referred_by_id
+        )
         
         try:
             await callback.message.edit_text(
@@ -864,7 +889,12 @@ async def process_subscription_days_handler(message: types.Message, state: FSMCo
             if user:
                 referral_service = ReferralService(settings, subscription_service, message.bot, i18n)
                 user_card_text = await format_user_card(user, session, subscription_service, i18n, current_lang, referral_service)
-                keyboard = get_user_card_keyboard(user.user_id, i18n, current_lang)
+                keyboard = get_user_card_keyboard(
+                    user.user_id,
+                    i18n,
+                    current_lang,
+                    user.referred_by_id
+                )
                 
                 await message.answer(
                     user_card_text,
@@ -973,7 +1003,12 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
             subscription_service = SubscriptionService(settings, panel_service)
             referral_service = ReferralService(settings, subscription_service, bot, i18n)
             user_card_text = await format_user_card(target_user, session, subscription_service, i18n, current_lang, referral_service)
-            keyboard = get_user_card_keyboard(target_user.user_id, i18n, current_lang)
+            keyboard = get_user_card_keyboard(
+                target_user.user_id,
+                i18n,
+                current_lang,
+                target_user.referred_by_id
+            )
             
             await message.answer(
                 user_card_text,
@@ -1272,12 +1307,18 @@ async def user_card_from_list_handler(callback: types.CallbackQuery,
         return
     
     # Create keyboard with back to list button
-    keyboard = get_user_card_keyboard(user_id, i18n, current_lang)
+    keyboard = get_user_card_keyboard(
+        user_id,
+        i18n,
+        current_lang,
+        user.referred_by_id
+    )
     keyboard.button(
         text=_("admin_user_back_to_list_button", default="⬅️ К списку"),
         callback_data=f"admin_action:users_list:{page}"
     )
-    keyboard.adjust(2, 2, 2, 2, 1)
+    quick_links_width = 2 if user.referred_by_id else 1
+    keyboard.adjust(2, 2, 2, quick_links_width, 1, 2, 1)
     
     # Format user card
     try:
