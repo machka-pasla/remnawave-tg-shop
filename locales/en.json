@@ -211,6 +211,7 @@
   "user_card_ban_button": "🚫 Ban",
   "user_card_unban_button": "✅ Unban",
   "user_card_open_profile_button": "👤 Open profile",
+  "user_card_open_referrer_profile_button": "👤 Open referrer profile",
   "user_card_back_to_banned_list_button": "⬅️ Back to Ban List",
   "admin_logs_menu_title": "Logs Menu:",
   "admin_view_all_logs_button": "📜 All Message Logs",
