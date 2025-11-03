@@ -38,11 +38,11 @@ class NotificationService:
     @staticmethod
     def _append_profile_link(message: str, translate: Callable[..., str], user_id: int) -> str:
         """Append a Telegram deep link to the end of a log message."""
-        profile_link = translate(
+        link_text = translate(
             "log_open_profile_link",
-            default='<a href="tg://user?id={user_id}">Открыть профиль пользователя в tg</a>',
-            user_id=user_id,
+            default="Открыть профиль пользователя в tg",
         )
+        profile_link = hd.link(link_text, f"tg://user?id={user_id}")
         return f"{message}\n\n{profile_link}"
     
     async def _send_to_log_channel(self, message: str, thread_id: Optional[int] = None):
@@ -134,10 +134,11 @@ class NotificationService:
         
         referral_text = ""
         if referred_by_id:
+            referrer_link = hd.link(str(referred_by_id), f"tg://user?id={referred_by_id}")
             referral_text = _(
                 "log_referral_suffix",
-                default=' (реферал от<a href="tg://user?id={referrer_id}">{referrer_id}</a>)',
-                referrer_id=referred_by_id,
+                default=" (реферал от {referrer_link})",
+                referrer_link=referrer_link,
             )
         
         message = _(

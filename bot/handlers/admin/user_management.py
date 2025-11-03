@@ -139,13 +139,20 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str) -> InlineKeyb
         callback_data=f"user_action:refresh:{user_id}"
     )
 
-    # Row 4: Destructive action
+    # Row 4: Quick links
+    builder.button(
+        text=_(key="user_card_open_profile_button",
+               default="👤 Открыть профиль"),
+        url=f"tg://user?id={user_id}"
+    )
+
+    # Row 5: Destructive action
     builder.button(
         text=_(key="admin_user_delete_button", default="❌ Удалить пользователя"),
         callback_data=f"user_action:delete_user:{user_id}"
     )
     
-    # Row 5: Navigation
+    # Row 6: Navigation
     builder.button(
         text=_(key="admin_user_search_new_button", default="🔍 Найти другого"),
         callback_data="admin_action:users_management"
@@ -155,7 +162,7 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str) -> InlineKeyb
         callback_data="admin_action:main"
     )
     
-    builder.adjust(2, 2, 2, 1, 2)
+    builder.adjust(2, 2, 2, 1, 1, 2)
     return builder
 
 
