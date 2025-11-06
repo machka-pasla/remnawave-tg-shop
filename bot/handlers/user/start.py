@@ -357,6 +357,17 @@ async def start_command_handler(message: types.Message,
             db_user, created = await user_dal.create_user(session, user_data_to_create)
 
             if created:
+                try:
+                    await session.commit()
+                except Exception as commit_error:
+                    await session.rollback()
+                    logging.error(
+                        f"Failed to commit new user {user_id}: {commit_error}",
+                        exc_info=True,
+                    )
+                    await message.answer(_("error_occurred_processing_request"))
+                    return
+
                 logging.info(
                     f"New user {user_id} added to session. Referred by: {referred_by_user_id or 'N/A'}."
                 )
