@@ -10,21 +10,58 @@ def get_main_menu_inline_keyboard(
         i18n_instance,
         settings: Settings,
         show_trial_button: bool = False) -> InlineKeyboardMarkup:
-    """Return the redesigned main menu keyboard.
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
 
-    The signature remains unchanged for compatibility with existing calls,
-    but the parameters are no longer used by the static layout.
-    """
-    buttons = [
-        [InlineKeyboardButton(text="🌐 Купить VPN", callback_data="menu:buy")],
-        [InlineKeyboardButton(text="👤 Моя подписка", callback_data="menu:subscription")],
-        [InlineKeyboardButton(text="📘 Инструкции", callback_data="menu:instructions")],
-        [
-            InlineKeyboardButton(text="🤝🏻 Рефералы", callback_data="menu:referrals"),
-            InlineKeyboardButton(text="🎟️ Промокод", callback_data="menu:promo"),
-        ],
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    if show_trial_button and settings.TRIAL_ENABLED:
+        builder.row(
+            InlineKeyboardButton(text=_(key="menu_activate_trial_button"),
+                                 callback_data="main_action:request_trial"))
+
+    builder.row(
+        InlineKeyboardButton(text=_(key="menu_subscribe_inline"),
+                             callback_data="main_action:subscribe"))
+    builder.row(
+        InlineKeyboardButton(
+            text=_(key="menu_my_subscription_inline"),
+            callback_data="main_action:my_subscription",
+        )
+    )
+
+    referral_button = InlineKeyboardButton(
+        text=_(key="menu_referral_inline"),
+        callback_data="main_action:referral")
+    promo_button = InlineKeyboardButton(
+        text=_(key="menu_apply_promo_button"),
+        callback_data="main_action:apply_promo")
+    builder.row(referral_button, promo_button)
+
+    language_button = InlineKeyboardButton(
+        text=_(key="menu_language_settings_inline"),
+        callback_data="main_action:language")
+    status_button_list = []
+    # Temporarily hide the server status button for users
+    # if settings.SERVER_STATUS_URL:
+    #     status_button_list.append(
+    #         InlineKeyboardButton(text=_(key="menu_server_status_button"),
+    #                              url=settings.SERVER_STATUS_URL))
+
+    if status_button_list:
+        builder.row(language_button, *status_button_list)
+    else:
+        builder.row(language_button)
+
+    if settings.SUPPORT_LINK:
+        builder.row(
+            InlineKeyboardButton(text=_(key="menu_support_button"),
+                                 url=settings.SUPPORT_LINK))
+
+    if settings.TERMS_OF_SERVICE_URL:
+        builder.row(
+            InlineKeyboardButton(text=_(key="menu_terms_button"),
+                                 url=settings.TERMS_OF_SERVICE_URL))
+
+    return builder.as_markup()
 
 
 def get_language_selection_keyboard(i18n_instance,
