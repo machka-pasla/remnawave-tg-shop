@@ -49,7 +49,7 @@ jobs:
             ${{ env.DOCKERHUB_IMAGE }}
           tags: |
             type=raw,value=dev
-            type=sha,prefix=dev-
+            type=sha,format=short,prefix=dev-,suffix=
           flavor: |
             latest=false
 
