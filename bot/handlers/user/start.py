@@ -1,7 +1,6 @@
 import logging
 import re
 from aiogram import Router, F, types, Bot
-from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from typing import Optional, Union
@@ -16,6 +15,7 @@ from bot.keyboards.inline.user_keyboards import (
     get_main_menu_inline_keyboard,
     get_language_selection_keyboard,
     get_channel_subscription_keyboard,
+    get_back_to_main_menu_markup,
 )
 from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
@@ -39,8 +39,6 @@ async def send_main_menu(target_event: Union[types.Message,
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
 
     user_id = target_event.from_user.id
-    user_full_name = hd.quote(target_event.from_user.full_name)
-
     if not i18n:
         logging.error(
             f"i18n_instance missing in send_main_menu for user {user_id}")
@@ -72,10 +70,14 @@ async def send_main_menu(target_event: Union[types.Message,
             logging.error(
                 "Method has_had_any_subscription is missing in SubscriptionService for send_main_menu!"
             )
-
-    text = _(key="main_menu_greeting", user_name=user_full_name)
+    text = _(key="main_menu_greeting")
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings,
                                                  show_trial_button_in_menu)
+    send_kwargs = {
+        "reply_markup": reply_markup,
+        "disable_web_page_preview": True,
+        "parse_mode": "HTML",
+    }
 
     target_message_obj: Optional[types.Message] = None
     if isinstance(target_event, types.Message):
@@ -95,9 +97,9 @@ async def send_main_menu(target_event: Union[types.Message,
 
     try:
         if is_edit:
-            await target_message_obj.edit_text(text, reply_markup=reply_markup)
+            await target_message_obj.edit_text(text, **send_kwargs)
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup)
+            await target_message_obj.answer(text, **send_kwargs)
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -110,7 +112,7 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(text, reply_markup=reply_markup)
+                await target_message_obj.answer(text, **send_kwargs)
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
@@ -433,10 +435,6 @@ async def start_command_handler(message: types.Message,
                                                       db_user):
         return
 
-    # Send welcome message if not disabled
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
-
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
         try:
@@ -515,17 +513,6 @@ async def verify_channel_subscription_callback(
         _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
     else:
         _ = lambda key, **kwargs: key
-
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        welcome_text = _(key="welcome",
-                         user_name=hd.quote(callback.from_user.full_name))
-        if callback.message:
-            await callback.message.answer(welcome_text)
-        else:
-            fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
-            if fallback_bot:
-                await fallback_bot.send_message(callback.from_user.id,
-                                                welcome_text)
 
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
@@ -664,6 +651,38 @@ async def main_action_callback_handler(
     elif action == "language":
 
         await language_command_handler(callback, i18n_data, settings)
+    elif action == "instructions":
+        current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+        i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+        if not callback.message:
+            await callback.answer("Error: message context lost.", show_alert=True)
+            return
+        if not i18n:
+            await callback.answer("Service error. Please try again later.", show_alert=True)
+            return
+
+        _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+        placeholder_text = _(key="instructions_placeholder_text")
+        reply_markup = get_back_to_main_menu_markup(current_lang, i18n)
+
+        try:
+            await callback.message.edit_text(
+                placeholder_text,
+                reply_markup=reply_markup,
+                disable_web_page_preview=True,
+                parse_mode="HTML",
+            )
+            try:
+                await callback.answer()
+            except Exception:
+                pass
+        except Exception as e_edit:
+            logging.error(
+                "Failed to display instructions placeholder for user %s: %s",
+                user_id,
+                e_edit,
+            )
+            await callback.answer(_("error_displaying_menu"), show_alert=True)
     elif action == "back_to_main":
         await send_main_menu(callback,
                              settings,
