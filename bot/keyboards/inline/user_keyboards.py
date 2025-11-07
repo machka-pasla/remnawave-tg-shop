@@ -28,6 +28,13 @@ def get_main_menu_inline_keyboard(
         )
     )
 
+    builder.row(
+        InlineKeyboardButton(
+            text=_(key="menu_instructions_inline"),
+            callback_data="main_action:instructions",
+        )
+    )
+
     referral_button = InlineKeyboardButton(
         text=_(key="menu_referral_inline"),
         callback_data="main_action:referral")
