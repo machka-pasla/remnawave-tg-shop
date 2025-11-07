@@ -1,10 +1,9 @@
 import logging
 import re
 from aiogram import Router, F, types, Bot
-from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
-from typing import Optional, Union
+from typing import Optional, Union, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
@@ -28,6 +27,33 @@ from bot.utils.text_sanitizer import sanitize_username, sanitize_display_name
 router = Router(name="user_start_router")
 
 
+MAIN_MENU_GREETING_FALLBACKS: Dict[str, str] = {
+    "ru": (
+        "🌐 *VPN•PRO* надёжный помощник в мире безграничного интернета!\n\n"
+        "📡 Приватное и быстрое *VPN-подключение* без лишних сложностей.\n\n"
+        "💬 [Служба поддержки](https://t.me/rusys)\n\n"
+        "Панель управления ⤵️"
+    ),
+    "en": (
+        "🌐 *VPN•PRO* is your reliable assistant in the world of limitless internet!\n\n"
+        "📡 Private and fast *VPN connection* without extra hassle.\n\n"
+        "💬 [Support](https://t.me/rusys)\n\n"
+        "Control panel ⤵️"
+    ),
+}
+
+
+def _get_fallback_text(mapping: Dict[str, str], lang: str) -> str:
+    normalized_lang = (lang or "").lower()
+    if normalized_lang in mapping:
+        return mapping[normalized_lang]
+    if "-" in normalized_lang:
+        base_lang = normalized_lang.split("-", 1)[0]
+        if base_lang in mapping:
+            return mapping[base_lang]
+    return mapping.get("en") or next(iter(mapping.values()))
+
+
 async def send_main_menu(target_event: Union[types.Message,
                                              types.CallbackQuery],
                          settings: Settings,
@@ -39,8 +65,6 @@ async def send_main_menu(target_event: Union[types.Message,
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
 
     user_id = target_event.from_user.id
-    user_full_name = hd.quote(target_event.from_user.full_name)
-
     if not i18n:
         logging.error(
             f"i18n_instance missing in send_main_menu for user {user_id}")
@@ -73,9 +97,12 @@ async def send_main_menu(target_event: Union[types.Message,
                 "Method has_had_any_subscription is missing in SubscriptionService for send_main_menu!"
             )
 
-    text = _(key="main_menu_greeting", user_name=user_full_name)
+    text = _(key="main_menu_greeting")
+    if text == "main_menu_greeting":
+        text = _get_fallback_text(MAIN_MENU_GREETING_FALLBACKS, current_lang)
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings,
                                                  show_trial_button_in_menu)
+    parse_mode = "Markdown"
 
     target_message_obj: Optional[types.Message] = None
     if isinstance(target_event, types.Message):
@@ -95,9 +122,19 @@ async def send_main_menu(target_event: Union[types.Message,
 
     try:
         if is_edit:
-            await target_message_obj.edit_text(text, reply_markup=reply_markup)
+            await target_message_obj.edit_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+                disable_web_page_preview=True,
+            )
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup)
+            await target_message_obj.answer(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+                disable_web_page_preview=True,
+            )
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -110,7 +147,12 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(text, reply_markup=reply_markup)
+                await target_message_obj.answer(
+                    text,
+                    reply_markup=reply_markup,
+                    parse_mode=parse_mode,
+                    disable_web_page_preview=True,
+                )
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
@@ -433,10 +475,6 @@ async def start_command_handler(message: types.Message,
                                                       db_user):
         return
 
-    # Send welcome message if not disabled
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
-
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
         try:
@@ -515,17 +553,6 @@ async def verify_channel_subscription_callback(
         _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
     else:
         _ = lambda key, **kwargs: key
-
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        welcome_text = _(key="welcome",
-                         user_name=hd.quote(callback.from_user.full_name))
-        if callback.message:
-            await callback.message.answer(welcome_text)
-        else:
-            fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
-            if fallback_bot:
-                await fallback_bot.send_message(callback.from_user.id,
-                                                welcome_text)
 
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
@@ -630,7 +657,6 @@ async def main_action_callback_handler(
         referral_service: ReferralService, panel_service: PanelApiService,
         promo_code_service: PromoCodeService, session: AsyncSession):
     action = callback.data.split(":")[1]
-    user_id = callback.from_user.id
 
     from . import subscription as user_subscription_handlers
     from . import referral as user_referral_handlers
@@ -640,6 +666,14 @@ async def main_action_callback_handler(
     if not callback.message:
         await callback.answer("Error: message context lost.", show_alert=True)
         return
+
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    _ = (
+        lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+        if i18n
+        else key
+    )
 
     if action == "subscribe":
         await user_subscription_handlers.display_subscription_options(
@@ -652,6 +686,8 @@ async def main_action_callback_handler(
         await user_subscription_handlers.my_devices_command_handler(
             callback, i18n_data, settings, panel_service, subscription_service,
             session, bot)
+    elif action == "instructions":
+        await callback.answer(_(key="instructions_placeholder"), show_alert=True)
     elif action == "referral":
         await user_referral_handlers.referral_command_handler(
             callback, settings, i18n_data, referral_service, bot, session)
@@ -679,7 +715,4 @@ async def main_action_callback_handler(
                              session,
                              is_edit=False)
     else:
-        i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-        _ = lambda key, **kwargs: i18n.gettext(
-            i18n_data.get("current_language"), key, **kw) if i18n else key
         await callback.answer(_("main_menu_unknown_action"), show_alert=True)
