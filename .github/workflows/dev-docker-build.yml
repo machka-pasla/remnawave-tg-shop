@@ -15,6 +15,8 @@ env:
 
 jobs:
   build:
+    # 👇 Запускать только если пуш или PR в dev
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       contents: read
