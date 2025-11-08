@@ -74,6 +74,35 @@ async def send_main_menu(target_event: Union[types.Message,
             )
 
     text = _(key="main_menu_greeting", user_name=user_full_name)
+
+    # Ensure the refreshed marketing copy is shown even if legacy translations
+    # are still cached on disk. This covers the scenario when the deployment
+    # hasn't yet picked up the updated locale files.
+    refreshed_greetings = {
+        "ru": (
+            "<b>VPN•PRO</b> надёжный помощник в мире безграничного интернета!\n\n"
+            "🛸 Приватное и быстрое <b>VPN-подключение</b> без лишних сложностей.\n\n"
+            "💬 <a href=\"https://t.me/rusys\">Служба поддержки</a>\n\n"
+            "Панель управления ⤵️"
+        ),
+        "en": (
+            "<b>VPN•PRO</b> is your reliable guide to the world of borderless internet!\n\n"
+            "🛸 Private and fast <b>VPN connection</b> without extra hassle.\n\n"
+            "💬 <a href=\"https://t.me/rusys\">Support service</a>\n\n"
+            "Control panel ⤵️"
+        ),
+    }
+    legacy_markers = {
+        "ru": "Что бы вы хотели сделать?",
+        "en": "What would you like to do?",
+    }
+
+    normalized_text = text.strip()
+    fallback_text = refreshed_greetings.get(current_lang) or refreshed_greetings.get(settings.DEFAULT_LANGUAGE) or refreshed_greetings.get("en")
+    if fallback_text:
+        marker = legacy_markers.get(current_lang)
+        if not normalized_text or (marker and marker in normalized_text):
+            text = fallback_text
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings,
                                                  show_trial_button_in_menu)
 
@@ -95,9 +124,19 @@ async def send_main_menu(target_event: Union[types.Message,
 
     try:
         if is_edit:
-            await target_message_obj.edit_text(text, reply_markup=reply_markup)
+            await target_message_obj.edit_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup)
+            await target_message_obj.answer(
+                text,
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -110,7 +149,12 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(text, reply_markup=reply_markup)
+                await target_message_obj.answer(
+                    text,
+                    reply_markup=reply_markup,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
@@ -433,10 +477,6 @@ async def start_command_handler(message: types.Message,
                                                       db_user):
         return
 
-    # Send welcome message if not disabled
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
-
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
         try:
@@ -515,17 +555,6 @@ async def verify_channel_subscription_callback(
         _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
     else:
         _ = lambda key, **kwargs: key
-
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        welcome_text = _(key="welcome",
-                         user_name=hd.quote(callback.from_user.full_name))
-        if callback.message:
-            await callback.message.answer(welcome_text)
-        else:
-            fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
-            if fallback_bot:
-                await fallback_bot.send_message(callback.from_user.id,
-                                                welcome_text)
 
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
