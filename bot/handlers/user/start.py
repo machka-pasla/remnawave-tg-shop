@@ -1,7 +1,7 @@
 import logging
 import re
 from aiogram import Router, F, types, Bot
-from aiogram.enums import ParseMode
+from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from typing import Optional, Union
@@ -39,6 +39,7 @@ async def send_main_menu(target_event: Union[types.Message,
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
 
     user_id = target_event.from_user.id
+    user_full_name = hd.quote(target_event.from_user.full_name)
 
     if not i18n:
         logging.error(
@@ -72,19 +73,7 @@ async def send_main_menu(target_event: Union[types.Message,
                 "Method has_had_any_subscription is missing in SubscriptionService for send_main_menu!"
             )
 
-    default_menu_text = (
-        "🌐 *VPN•PRO* надёжный помощник в мире безграничного интернета!\n\n"
-        "📡 Приватное и быстрое *VPN-подключение* без лишних сложностей.\n\n"
-        "💬 [Служба поддержки](https://t.me/rusys)\n\n"
-        "Панель управления ⤵️"
-    )
-
-    if i18n:
-        text = i18n.gettext(current_lang, "main_menu_greeting")
-        if text == "main_menu_greeting":
-            text = default_menu_text
-    else:
-        text = default_menu_text
+    text = _(key="main_menu_greeting", user_name=user_full_name)
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings,
                                                  show_trial_button_in_menu)
 
@@ -106,19 +95,9 @@ async def send_main_menu(target_event: Union[types.Message,
 
     try:
         if is_edit:
-            await target_message_obj.edit_text(
-                text,
-                reply_markup=reply_markup,
-                disable_web_page_preview=True,
-                parse_mode=ParseMode.MARKDOWN,
-            )
+            await target_message_obj.edit_text(text, reply_markup=reply_markup)
         else:
-            await target_message_obj.answer(
-                text,
-                reply_markup=reply_markup,
-                disable_web_page_preview=True,
-                parse_mode=ParseMode.MARKDOWN,
-            )
+            await target_message_obj.answer(text, reply_markup=reply_markup)
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -131,12 +110,7 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(
-                    text,
-                    reply_markup=reply_markup,
-                    disable_web_page_preview=True,
-                    parse_mode=ParseMode.MARKDOWN,
-                )
+                await target_message_obj.answer(text, reply_markup=reply_markup)
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
@@ -459,6 +433,10 @@ async def start_command_handler(message: types.Message,
                                                       db_user):
         return
 
+    # Send welcome message if not disabled
+    if not settings.DISABLE_WELCOME_MESSAGE:
+        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
+
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
         try:
@@ -537,6 +515,17 @@ async def verify_channel_subscription_callback(
         _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
     else:
         _ = lambda key, **kwargs: key
+
+    if not settings.DISABLE_WELCOME_MESSAGE:
+        welcome_text = _(key="welcome",
+                         user_name=hd.quote(callback.from_user.full_name))
+        if callback.message:
+            await callback.message.answer(welcome_text)
+        else:
+            fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
+            if fallback_bot:
+                await fallback_bot.send_message(callback.from_user.id,
+                                                welcome_text)
 
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
@@ -672,16 +661,8 @@ async def main_action_callback_handler(
     elif action == "request_trial":
         await user_trial_handlers.request_trial_confirmation_handler(
             callback, settings, i18n_data, subscription_service, session)
-    elif action == "instructions":
-        i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-        current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
-        if i18n:
-            placeholder_text = i18n.gettext(
-                current_lang, "menu_instructions_placeholder")
-        else:
-            placeholder_text = "Instructions are not available yet."
-        await callback.answer(placeholder_text, show_alert=True)
     elif action == "language":
+
         await language_command_handler(callback, i18n_data, settings)
     elif action == "back_to_main":
         await send_main_menu(callback,
