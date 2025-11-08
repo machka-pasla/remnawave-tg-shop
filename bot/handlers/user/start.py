@@ -433,9 +433,7 @@ async def start_command_handler(message: types.Message,
                                                       db_user):
         return
 
-    # Send welcome message if not disabled
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
+    # Welcome message intentionally omitted to avoid duplicate responses on /start
 
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
@@ -516,16 +514,7 @@ async def verify_channel_subscription_callback(
     else:
         _ = lambda key, **kwargs: key
 
-    if not settings.DISABLE_WELCOME_MESSAGE:
-        welcome_text = _(key="welcome",
-                         user_name=hd.quote(callback.from_user.full_name))
-        if callback.message:
-            await callback.message.answer(welcome_text)
-        else:
-            fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
-            if fallback_bot:
-                await fallback_bot.send_message(callback.from_user.id,
-                                                welcome_text)
+    # Skip welcome message to avoid sending duplicate responses
 
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
