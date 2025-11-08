@@ -19,26 +19,38 @@ def get_main_menu_inline_keyboard(
                                  callback_data="main_action:request_trial"))
 
     builder.row(
-        InlineKeyboardButton(text=_(key="menu_subscribe_inline"),
-                             callback_data="main_action:subscribe"))
+        InlineKeyboardButton(
+            text=_(key="menu_subscribe_inline"),
+            callback_data="main_action:subscribe",
+        )
+    )
     builder.row(
         InlineKeyboardButton(
             text=_(key="menu_my_subscription_inline"),
             callback_data="main_action:my_subscription",
         )
     )
+    builder.row(
+        InlineKeyboardButton(
+            text=_(key="menu_instructions_button"),
+            callback_data="main_action:instructions",
+        )
+    )
 
     referral_button = InlineKeyboardButton(
         text=_(key="menu_referral_inline"),
-        callback_data="main_action:referral")
+        callback_data="main_action:referral",
+    )
     promo_button = InlineKeyboardButton(
         text=_(key="menu_apply_promo_button"),
-        callback_data="main_action:apply_promo")
+        callback_data="main_action:apply_promo",
+    )
     builder.row(referral_button, promo_button)
 
     language_button = InlineKeyboardButton(
         text=_(key="menu_language_settings_inline"),
-        callback_data="main_action:language")
+        callback_data="main_action:language",
+    )
     status_button_list = []
     # Temporarily hide the server status button for users
     # if settings.SERVER_STATUS_URL:
