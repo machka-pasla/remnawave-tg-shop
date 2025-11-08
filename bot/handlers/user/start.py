@@ -79,23 +79,18 @@ async def send_main_menu(target_event: Union[types.Message,
     # are still cached on disk. This covers the scenario when the deployment
     # hasn't yet picked up the updated locale files.
     refreshed_greetings = {
-        "ru": "".join(
-            (
-                "<b>VPN•PRO</b> 🌐\n",
-                "Профессиональный помощник в мире безграничного интернета!\n\n",
-                "📡 Приватное и быстрое <b>VPN-подключение</b> без лишних сложностей.\n\n",
-                "💬 <a href=\"https://t.me/rusys\">Служба поддержки</a>\n\n",
-                "Панель управления ⤵️",
-            )
+        "ru": (
+            "<b>VPN•PRO</b> 🌐"
+            "Профессиональный помощник в мире безграничного интернета!\n\n"
+            "📡 Приватное и быстрое <b>VPN-подключение</b> без лишних сложностей.\n\n"
+            "💬 <a href=\"https://t.me/rusys\">Служба поддержки</a>\n\n"
+            "Панель управления ⤵️"
         ),
-        "en": "".join(
-            (
-                "<b>VPN•PRO</b> 🌐\n",
-                "is your reliable guide to the world of borderless internet!\n\n",
-                "📡 Private and fast <b>VPN connection</b> without extra hassle.\n\n",
-                "💬 <a href=\"https://t.me/rusys\">Support service</a>\n\n",
-                "Control panel ⤵️",
-            )
+        "en": (
+            "<b>VPN•PRO</b> 🌐 is your reliable guide to the world of borderless internet!\n\n"
+            "📡 Private and fast <b>VPN connection</b> without extra hassle.\n\n"
+            "💬 <a href=\"https://t.me/rusys\">Support service</a>\n\n"
+            "Control panel ⤵️"
         ),
     }
     legacy_markers = {
