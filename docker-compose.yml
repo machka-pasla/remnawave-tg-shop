@@ -8,8 +8,8 @@ services:
       - .env
     networks:
       - remnawave-network
-    volumes:
-      - ./locales:/app/locales
+#    volumes:
+#      - ./locales:/app/locales
     restart: unless-stopped
     depends_on:
       remnawave-tg-shop-db:
