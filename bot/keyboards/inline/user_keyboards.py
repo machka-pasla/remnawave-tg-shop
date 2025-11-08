@@ -5,23 +5,6 @@ from typing import Dict, Optional, List, Tuple
 from config.settings import Settings
 
 
-INSTRUCTIONS_BUTTON_FALLBACKS: Dict[str, str] = {
-    "ru": "📘 Инструкции",
-    "en": "📘 Instructions",
-}
-
-
-def _get_fallback_text(mapping: Dict[str, str], lang: str) -> str:
-    normalized_lang = (lang or "").lower()
-    if normalized_lang in mapping:
-        return mapping[normalized_lang]
-    if "-" in normalized_lang:
-        base_lang = normalized_lang.split("-", 1)[0]
-        if base_lang in mapping:
-            return mapping[base_lang]
-    return mapping.get("en") or next(iter(mapping.values()))
-
-
 def get_main_menu_inline_keyboard(
         lang: str,
         i18n_instance,
@@ -42,18 +25,6 @@ def get_main_menu_inline_keyboard(
         InlineKeyboardButton(
             text=_(key="menu_my_subscription_inline"),
             callback_data="main_action:my_subscription",
-        )
-    )
-
-    instructions_text = _(key="menu_instructions_inline")
-    if instructions_text == "menu_instructions_inline":
-        instructions_text = _get_fallback_text(
-            INSTRUCTIONS_BUTTON_FALLBACKS, lang)
-
-    builder.row(
-        InlineKeyboardButton(
-            text=instructions_text,
-            callback_data="main_action:instructions",
         )
     )
 
