@@ -5,7 +5,7 @@
   "channel_subscription_verify_button": "Check subscription",
   "channel_subscription_check_failed": "Couldn't verify the subscription. Please try again later or contact support.",
   "channel_subscription_verified_success": "✅ Subscription confirmed! You're good to go.",
-  "main_menu_greeting": "Hi, {user_name}! 👋\nWhat would you like to do?",
+  "main_menu_greeting": "<b>VPN•PRO</b> is your reliable guide to the world of borderless internet!\n\n🛸 Private and fast <b>VPN connection</b> without extra hassle.\n\n💬 <a href=\"https://t.me/rusys\">Support service</a>\n\nControl panel ⤵️",
   "menu_activate_trial_button": "🆓 Free Trial",
   "menu_subscribe_inline": "🚀 Purchase",
   "menu_my_subscription_inline": "🔐 My Subscription",
