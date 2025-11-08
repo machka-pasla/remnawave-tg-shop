@@ -95,19 +95,9 @@ async def send_main_menu(target_event: Union[types.Message,
 
     try:
         if is_edit:
-            await target_message_obj.edit_text(
-                text,
-                reply_markup=reply_markup,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
+            await target_message_obj.edit_text(text, reply_markup=reply_markup)
         else:
-            await target_message_obj.answer(
-                text,
-                reply_markup=reply_markup,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
+            await target_message_obj.answer(text, reply_markup=reply_markup)
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -120,12 +110,7 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(
-                    text,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML",
-                    disable_web_page_preview=True,
-                )
+                await target_message_obj.answer(text, reply_markup=reply_markup)
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
@@ -448,6 +433,10 @@ async def start_command_handler(message: types.Message,
                                                       db_user):
         return
 
+    # Send welcome message if not disabled
+    if not settings.DISABLE_WELCOME_MESSAGE:
+        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
+
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
         try:
@@ -526,6 +515,17 @@ async def verify_channel_subscription_callback(
         _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
     else:
         _ = lambda key, **kwargs: key
+
+    if not settings.DISABLE_WELCOME_MESSAGE:
+        welcome_text = _(key="welcome",
+                         user_name=hd.quote(callback.from_user.full_name))
+        if callback.message:
+            await callback.message.answer(welcome_text)
+        else:
+            fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
+            if fallback_bot:
+                await fallback_bot.send_message(callback.from_user.id,
+                                                welcome_text)
 
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
