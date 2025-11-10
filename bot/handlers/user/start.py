@@ -96,9 +96,9 @@ async def send_main_menu(target_event: Union[types.Message,
 
     try:
         if is_edit:
-            await target_message_obj.edit_text(text, reply_markup=reply_markup)
+            await target_message_obj.edit_text(text, reply_markup=reply_markup, disable_web_page_preview=True)
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup)
+            await target_message_obj.answer(text, reply_markup=reply_markup, disable_web_page_preview=True)
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -111,7 +111,7 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(text, reply_markup=reply_markup)
+                await target_message_obj.answer(text, reply_markup=reply_markup, disable_web_page_preview=True)
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
@@ -123,6 +123,49 @@ async def send_main_menu(target_event: Union[types.Message,
             except Exception:
                 pass
 
+async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_data: dict, settings: Settings, session: AsyncSession):
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+
+    if not i18n:
+        err_msg = "Language service error."
+        print(err_msg)
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer(err_msg, show_alert=True)
+            except Exception:
+                pass
+        elif isinstance(event, types.Message):
+            await event.answer(err_msg)
+        return
+
+    user_id = event.from_user.id
+    user_full_name = hd.quote(event.from_user.full_name)
+
+    text = get_text(key="main_menu_greeting", user_name=user_full_name)
+    reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings)
+
+    target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
+    if not target_message_obj:
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer(get_text("error_occurred_try_again"), show_alert=True)
+            except Exception as e:
+                pass
+        return
+
+    if isinstance(event, types.CallbackQuery):
+        try:
+            await target_message_obj.edit_text(text=text, reply_markup=reply_markup, disable_web_page_preview=True)
+        except Exception as e:
+            print(repr(e))
+        try:
+            await event.answer()
+        except Exception as e:
+            print(repr(e))
+    else:
+        pass
 
 async def ensure_required_channel_subscription(
         event: Union[types.Message, types.CallbackQuery],
@@ -450,7 +493,7 @@ async def start_command_handler(message: types.Message,
 
     # Send welcome message if not disabled
     if not settings.DISABLE_WELCOME_MESSAGE:
-        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)))
+        await message.answer(_(key="welcome", user_name=hd.quote(user.full_name)), disable_web_page_preview=True)
 
     # Auto-apply promo code if provided via start parameter
     if promo_code_to_apply:
@@ -483,7 +526,7 @@ async def start_command_handler(message: types.Message,
                 await message.answer(
                     promo_success_text,
                     reply_markup=get_connect_and_main_keyboard(current_lang, i18n, settings, config_link),
-                    parse_mode="HTML"
+                    parse_mode="HTML", disable_web_page_preview=True
                 )
 
                 # Don't show main menu if promo was successfully applied
@@ -535,7 +578,7 @@ async def verify_channel_subscription_callback(
         welcome_text = _(key="welcome",
                          user_name=hd.quote(callback.from_user.full_name))
         if callback.message:
-            await callback.message.answer(welcome_text)
+            await callback.message.answer(welcome_text, disable_web_page_preview=True)
         else:
             fallback_bot: Optional[Bot] = getattr(callback, "bot", None)
             if fallback_bot:
@@ -582,14 +625,14 @@ async def language_command_handler(
         if event.message:
             try:
                 await event.message.edit_text(text_to_send,
-                                              reply_markup=reply_markup)
+                                              reply_markup=reply_markup, disable_web_page_preview=True)
             except Exception:
                 await target_message_obj.answer(text_to_send,
-                                                reply_markup=reply_markup)
+                                                reply_markup=reply_markup, disable_web_page_preview=True)
         await event.answer()
     else:
         await target_message_obj.answer(text_to_send,
-                                        reply_markup=reply_markup)
+                                        reply_markup=reply_markup, disable_web_page_preview=True)
 
 
 @router.callback_query(F.data.startswith("set_lang_"))
@@ -656,7 +699,9 @@ async def main_action_callback_handler(
         await callback.answer("Error: message context lost.", show_alert=True)
         return
 
-    if action == "subscribe":
+    if action == "own":
+        await send_own_menu(callback, i18n_data, settings, session)
+    elif action == "subscribe":
         await user_subscription_handlers.display_subscription_options(
             callback, i18n_data, settings, session)
     elif action == "my_subscription":
@@ -680,19 +725,15 @@ async def main_action_callback_handler(
 
         await language_command_handler(callback, i18n_data, settings)
     elif action == "back_to_main":
-        await send_main_menu(callback,
-                             settings,
+        await send_own_menu(callback,
                              i18n_data,
-                             subscription_service,
-                             session,
-                             is_edit=True)
+                             settings,
+                             session)
     elif action == "back_to_main_keep":
-        await send_main_menu(callback,
-                             settings,
-                             i18n_data,
-                             subscription_service,
-                             session,
-                             is_edit=False)
+        await send_own_menu(callback,
+                            i18n_data,
+                            settings,
+                            session)
     else:
         i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
         _ = lambda key, **kwargs: i18n.gettext(
