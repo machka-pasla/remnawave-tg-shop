@@ -138,13 +138,17 @@ async def my_subscription_command_handler(
 
     text = get_text(
         "my_subscription_details",
+        ider=event.from_user.id,
         end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
         days_left=max(0, days_left),
         status=active.get("status_from_panel", get_text("status_active")).capitalize(),
         config_link=active.get("config_link") or get_text("config_link_not_available"),
-        traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
+        traffic_limit=(
+            f"{active['traffic_limit_bytes'] / 2 ** 30:.2f} GB" if active.get("traffic_limit_bytes") else get_text(
+                "traffic_unlimited")),
         traffic_used=(
-            f"{active['traffic_used_bytes'] / 2**30:.2f} GB" if active.get("traffic_used_bytes") is not None else get_text("traffic_na")
+            f"{active['traffic_used_bytes'] / 2 ** 30:.2f} GB" if active.get(
+                "traffic_used_bytes") is not None else get_text("traffic_na")
         ),
     )
 
