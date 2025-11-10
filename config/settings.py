@@ -17,6 +17,18 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = Field(default=5432)
     POSTGRES_DB: str = Field(default="vpn_shop_db")
 
+    PHOTO_ID_START: str = Field(default=None)
+    PHOTO_ID_MAIN_MENU: str = Field(default=None)
+    PHOTO_ID_TRY_PRODUCT: str = Field(default=None)
+    PHOTO_ID_NEW_KEY: str = Field(default=None)
+    PHOTO_ID_PAY_METHOD: str = Field(default=None)
+    PHOTO_ID_PAY_CREATED: str = Field(default=None)
+    PHOTO_ID_YOUR_PROF: str = Field(default=None)
+    PHOTO_ID_PM_ME: str = Field(default=None)
+    PHOTO_ID_INSTRUCT: str = Field(default=None)
+    PHOTO_ID_GET_BONUS: str = Field(default=None)
+    PHOTO_ID_GIFT_BRO: str = Field(default=None)
+
     DEFAULT_LANGUAGE: str = Field(default="ru")
     DEFAULT_CURRENCY_SYMBOL: str = Field(default="RUB")
 

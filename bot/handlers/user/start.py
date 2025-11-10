@@ -98,7 +98,10 @@ async def send_main_menu(target_event: Union[types.Message,
         if is_edit:
             await target_message_obj.edit_text(text, reply_markup=reply_markup, disable_web_page_preview=True)
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup, disable_web_page_preview=True)
+            if settings.PHOTO_ID_START:
+                await target_message_obj.answer_photo(photo=settings.PHOTO_ID_START, caption=text, reply_markup=reply_markup, disable_web_page_preview=True)
+            else:
+                await target_message_obj.answer(text, reply_markup=reply_markup, disable_web_page_preview=True)
 
         if isinstance(target_event, types.CallbackQuery):
             try:
