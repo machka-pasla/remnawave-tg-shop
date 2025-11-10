@@ -60,7 +60,7 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
     if isinstance(event, types.CallbackQuery):
         try:
             if settings.PHOTO_ID_NEW_KEY:
-                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=text_content), reply_markup=reply_markup, disable_web_page_preview=True)
+                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_NEW_KEY, caption=text_content), reply_markup=reply_markup, disable_web_page_preview=True)
             else:
                 await target_message_obj.edit_text(text_content, reply_markup=reply_markup)
         except Exception:

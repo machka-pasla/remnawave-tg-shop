@@ -136,9 +136,9 @@ class YooKassaService:
                 "vat_code":
                 str(self.settings.YOOKASSA_VAT_CODE),
                 "payment_mode":
-                getattr(self.settings, 'yk_receipt_payment_mode', self.settings.YOOKASSA_PAYMENT_MODE),
+                getattr(self.settings, 'yk_receipt_payment_subject', self.settings.YOOKASSA_PAYMENT_SUBJECT),
                 "payment_subject":
-                getattr(self.settings, 'yk_receipt_payment_subject', self.settings.YOOKASSA_PAYMENT_SUBJECT)
+                getattr(self.settings, 'yk_receipt_payment_mode', self.settings.YOOKASSA_PAYMENT_MODE)
             }]
 
             receipt_data_dict: Dict[str, Any] = {
