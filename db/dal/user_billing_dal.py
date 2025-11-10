@@ -162,3 +162,19 @@ async def delete_user_payment_method_by_provider_id(
     await session.delete(method)
     await session.flush()
     return True
+
+
+async def user_has_saved_payment_method(
+    session: AsyncSession,
+    user_id: int,
+    provider: str = "yookassa",
+) -> bool:
+    """Return True if the user has at least one saved payment method."""
+    try:
+        methods = await list_user_payment_methods(session, user_id, provider)
+        if methods:
+            return True
+        billing = await get_user_billing(session, user_id)
+        return bool(billing and billing.yookassa_payment_method_id)
+    except Exception:
+        return False

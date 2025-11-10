@@ -212,6 +212,7 @@ async def perform_sync(panel_service: PanelApiService, session: AsyncSession,
                                     "is_active": panel_status == "ACTIVE",
                                     "status_from_panel": panel_status,
                                     "traffic_limit_bytes": settings.user_traffic_limit_bytes,
+                                    "auto_renew_enabled": False,
                                 }
                                 created_sub = await subscription_dal.upsert_subscription(
                                     session, sub_payload

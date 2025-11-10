@@ -498,6 +498,15 @@ class SubscriptionService:
             session, panel_user_uuid, panel_sub_link_id
         )
 
+        auto_renew_should_enable = False
+        if (
+            provider == "yookassa"
+            and getattr(self.settings, "YOOKASSA_AUTOPAYMENTS_ENABLED", False)
+        ):
+            auto_renew_should_enable = await user_billing_dal.user_has_saved_payment_method(
+                session, user_id
+            )
+
         sub_payload = {
             "user_id": user_id,
             "panel_user_uuid": panel_user_uuid,
@@ -510,7 +519,7 @@ class SubscriptionService:
             "traffic_limit_bytes": self.settings.user_traffic_limit_bytes,
             "provider": provider,
             "skip_notifications": provider == "tribute" and self.settings.TRIBUTE_SKIP_NOTIFICATIONS,
-            "auto_renew_enabled": True,
+            "auto_renew_enabled": auto_renew_should_enable,
         }
         try:
             new_or_updated_sub = await subscription_dal.upsert_subscription(
@@ -616,6 +625,7 @@ class SubscriptionService:
                 "is_active": True,
                 "status_from_panel": "ACTIVE_BONUS",
                 "traffic_limit_bytes": traffic_limit,
+                "auto_renew_enabled": False,
             }
             await subscription_dal.deactivate_other_active_subscriptions(
                 session, panel_uuid, panel_sub_uuid

@@ -16,7 +16,7 @@ from bot.keyboards.inline.user_keyboards import (
 from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
 from bot.middlewares.i18n import JsonI18n
-from db.dal import subscription_dal
+from db.dal import subscription_dal, user_billing_dal
 from db.models import Subscription
 
 router = Router(name="user_subscription_core_router")
@@ -455,6 +455,14 @@ async def toggle_autorenew_handler(
     if sub.provider == "tribute":
         await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
         return
+    if enable:
+        has_saved_card = await user_billing_dal.user_has_saved_payment_method(session, callback.from_user.id)
+        if not has_saved_card:
+            try:
+                await callback.answer(get_text("autorenew_enable_requires_card"), show_alert=True)
+            except Exception:
+                pass
+            return
 
     # Show confirmation popup and inline buttons
     confirm_text = get_text("autorenew_confirm_enable") if enable else get_text("autorenew_confirm_disable")
@@ -505,6 +513,18 @@ async def confirm_autorenew_handler(
     if sub.provider == "tribute":
         await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
         return
+    if enable:
+        has_saved_card = await user_billing_dal.user_has_saved_payment_method(session, callback.from_user.id)
+        if not has_saved_card:
+            try:
+                await callback.answer(get_text("autorenew_enable_requires_card"), show_alert=True)
+            except Exception:
+                pass
+            try:
+                await my_subscription_command_handler(callback, i18n_data, settings, panel_service, subscription_service, session, bot)
+            except Exception:
+                pass
+            return
 
     await subscription_dal.update_subscription(session, sub.subscription_id, {"auto_renew_enabled": enable})
     await session.commit()

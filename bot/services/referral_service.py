@@ -177,6 +177,8 @@ class ReferralService:
                                     "ACTIVE_BONUS",
                                     "traffic_limit_bytes":
                                     self.settings.user_traffic_limit_bytes,
+                                    "auto_renew_enabled":
+                                    False,
                                 }
                                 try:
                                     await subscription_dal.deactivate_other_active_subscriptions(
