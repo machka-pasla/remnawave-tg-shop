@@ -162,7 +162,7 @@ async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_d
     if isinstance(event, types.CallbackQuery):
         try:
             if settings.PHOTO_ID_MAIN_MENU:
-                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU), caption=text, reply_markup=reply_markup, disable_web_page_preview=True)
+                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=text), reply_markup=reply_markup, disable_web_page_preview=True)
             else:
                 await target_message_obj.edit_text(text=text, reply_markup=reply_markup, disable_web_page_preview=True)
         except Exception as e:

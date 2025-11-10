@@ -1,7 +1,7 @@
 import logging
 from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, InputMediaPhoto
 from typing import Optional, Union
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,7 +59,10 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
 
     if isinstance(event, types.CallbackQuery):
         try:
-            await target_message_obj.edit_text(text_content, reply_markup=reply_markup)
+            if settings.PHOTO_ID_NEW_KEY:
+                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=text_content), reply_markup=reply_markup, disable_web_page_preview=True)
+            else:
+                await target_message_obj.edit_text(text_content, reply_markup=reply_markup)
         except Exception:
             await target_message_obj.answer(text_content, reply_markup=reply_markup)
         try:
