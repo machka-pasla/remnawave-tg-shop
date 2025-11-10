@@ -1,6 +1,7 @@
 import logging
 import re
 from aiogram import Router, F, types, Bot
+from aiogram.types import InputMediaPhoto
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -160,7 +161,10 @@ async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_d
 
     if isinstance(event, types.CallbackQuery):
         try:
-            await target_message_obj.edit_text(text=text, reply_markup=reply_markup, disable_web_page_preview=True)
+            if settings.PHOTO_ID_MAIN_MENU:
+                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU), caption=text, reply_markup=reply_markup, disable_web_page_preview=True)
+            else:
+                await target_message_obj.edit_text(text=text, reply_markup=reply_markup, disable_web_page_preview=True)
         except Exception as e:
             print(repr(e))
         try:
