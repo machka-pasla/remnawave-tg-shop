@@ -301,6 +301,9 @@ async def ensure_required_channel_subscription(
 
     return False
 
+@router.message(F.photo)
+async def phpphph(message: types.Message):
+    logging.info(f"PENIS: {message.photo}")
 
 @router.message(CommandStart())
 @router.message(CommandStart(magic=F.args.regexp(r"^ref_(\d+)$").as_("ref_match")))
