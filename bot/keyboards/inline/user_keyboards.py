@@ -5,8 +5,7 @@ from typing import Dict, Optional, List, Tuple
 from config.settings import Settings
 
 
-def get_main_menu_inline_keyboard(
-        lang: str,
+def get_main_start_inline_keyboard(lang: str,
         i18n_instance,
         settings: Settings,
         show_trial_button: bool = False) -> InlineKeyboardMarkup:
@@ -16,11 +15,30 @@ def get_main_menu_inline_keyboard(
     if show_trial_button and settings.TRIAL_ENABLED:
         builder.row(
             InlineKeyboardButton(text=_(key="menu_activate_trial_button"),
-                                 callback_data="main_action:request_trial"))
+                                 callback_data="main_action:request_trial")
+        )
 
     builder.row(
         InlineKeyboardButton(text=_(key="menu_subscribe_inline"),
-                             callback_data="main_action:subscribe"))
+                             callback_data="main_action:subscribe")
+    )
+
+    builder.row(
+        InlineKeyboardButton(text=_(key="menu_own_button"),
+                             callback_data="main_action:own")
+    )
+
+    return builder.as_markup()
+
+
+def get_main_menu_inline_keyboard(
+        lang: str,
+        i18n_instance,
+        settings: Settings,
+        show_trial_button: bool = False) -> InlineKeyboardMarkup:
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+
     builder.row(
         InlineKeyboardButton(
             text=_(key="menu_my_subscription_inline"),
@@ -28,37 +46,43 @@ def get_main_menu_inline_keyboard(
         )
     )
 
-    # referral_button = InlineKeyboardButton(
-    #     text=_(key="menu_referral_inline"),
-    #     callback_data="main_action:referral")
-    # promo_button = InlineKeyboardButton(
-    #     text=_(key="menu_apply_promo_button"),
-    #     callback_data="main_action:apply_promo")
-    # builder.row(referral_button, promo_button)
+    referral_button = InlineKeyboardButton(
+        text=_(key="menu_referral_inline"),
+        callback_data="main_action:referral")
+    builder.row(referral_button)
 
-    language_button = InlineKeyboardButton(
+    rw_row = []
+    rw_row.append(InlineKeyboardButton(
         text=_(key="menu_language_settings_inline"),
-        callback_data="main_action:language")
+        callback_data="main_action:language"))
+
+    rw_row.append(InlineKeyboardButton(
+        text=_(key="menu_apply_promo_button"),
+        callback_data="main_action:apply_promo")
+    )
+
+    if settings.SUPPORT_LINK:
+        rw_row.append(
+            (InlineKeyboardButton(text=_(key="menu_support_button"), url=settings.SUPPORT_LINK))
+        )
+
+    builder.row(*rw_row)
+
+
     status_button_list = []
+    if settings.TERMS_OF_SERVICE_URL:
+        builder.row(
+            InlineKeyboardButton(text=_(key="menu_terms_button"),
+                                 url=settings.TERMS_OF_SERVICE_URL)
+        )
+
     if settings.SERVER_STATUS_URL:
         status_button_list.append(
             InlineKeyboardButton(text=_(key="menu_server_status_button"),
                                  url=settings.SERVER_STATUS_URL))
 
     if status_button_list:
-        builder.row(language_button, *status_button_list)
-    else:
-        builder.row(language_button)
-
-    if settings.SUPPORT_LINK:
-        builder.row(
-            InlineKeyboardButton(text=_(key="menu_support_button"),
-                                 url=settings.SUPPORT_LINK))
-
-    if settings.TERMS_OF_SERVICE_URL:
-        builder.row(
-            InlineKeyboardButton(text=_(key="menu_terms_button"),
-                                 url=settings.TERMS_OF_SERVICE_URL))
+        builder.row(*status_button_list)
 
     return builder.as_markup()
 

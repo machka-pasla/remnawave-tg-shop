@@ -14,6 +14,7 @@ from db.models import User
 
 from bot.keyboards.inline.user_keyboards import (
     get_main_menu_inline_keyboard,
+    get_main_start_inline_keyboard,
     get_language_selection_keyboard,
     get_channel_subscription_keyboard,
 )
@@ -74,7 +75,7 @@ async def send_main_menu(target_event: Union[types.Message,
             )
 
     text = _(key="main_menu_greeting", user_name=user_full_name)
-    reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings,
+    reply_markup = get_main_start_inline_keyboard(current_lang, i18n, settings,
                                                  show_trial_button_in_menu)
 
     target_message_obj: Optional[types.Message] = None
