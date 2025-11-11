@@ -3,7 +3,7 @@ from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from typing import Optional, Union
 
-from aiogram.types import InputMediaPhoto
+from aiogram.types import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
@@ -140,9 +140,14 @@ async def referral_action_handler(callback: types.CallbackQuery, settings: Setti
             referral_link = referral_service.generate_referral_link(bot_username, inviter_user_id)
             
             friend_message = _("referral_friend_message", referral_link=referral_link)
-            
+
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=_("referral_friend_message_button"), url=referral_link)]
+            ])
+
             await callback.message.answer(
                 friend_message,
+                reply_markup=kb,
                 disable_web_page_preview=True
             )
             
