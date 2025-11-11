@@ -163,12 +163,25 @@ async def request_trial_confirmation_handler(
         )
 
         if callback.message:
-            await callback.message.answer(
-                final_message_text_in_chat,
-                parse_mode="HTML",
-                reply_markup=reply_markup,
-                disable_web_page_preview=True,
-            )
+            try:
+                await callback.message.answer(
+                    final_message_text_in_chat,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup,
+                    disable_web_page_preview=True,
+                )
+            except Exception as send_error:
+                logging.error(
+                    f"Failed to send trial result message for user {callback.from_user.id}: {send_error}"
+                )
+            finally:
+                try:
+                    await callback.message.delete()
+                except Exception as delete_error:
+                    logging.debug(
+                        "Could not delete previous message during trial activation fallback: %s",
+                        delete_error,
+                    )
 
 
 @router.callback_query(F.data == "trial_action:confirm_activate")
