@@ -3,6 +3,8 @@ import re
 from aiogram import Router, F, types, Bot
 from aiogram.fsm.context import FSMContext
 from typing import Optional
+
+from aiogram.types import InputMediaPhoto
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.utils.markdown import hcode
 
@@ -47,7 +49,11 @@ async def prompt_promo_code_input(callback: types.CallbackQuery,
         return
 
     try:
-        await callback.message.edit_text(
+        if settings.PHOTO_ID_MAIN_MENU:
+            await callback.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=_(key="promo_code_prompt")),
+                                              reply_markup=get_back_to_main_menu_markup(current_lang, i18n), disable_web_page_preview=True)
+        else:
+            await callback.message.edit_text(
             text=_(key="promo_code_prompt"),
             reply_markup=get_back_to_main_menu_markup(current_lang, i18n))
     except Exception as e_edit:
