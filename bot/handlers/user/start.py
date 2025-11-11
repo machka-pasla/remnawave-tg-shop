@@ -1,6 +1,8 @@
 import logging
 import re
+from pathlib import Path
 from aiogram import Router, F, types, Bot
+from aiogram.types import FSInputFile, InputMediaPhoto, LinkPreviewOptions
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -93,11 +95,77 @@ async def send_main_menu(target_event: Union[types.Message,
                                       show_alert=True)
         return
 
+    menu_image_path = Path("/app/bot/static/images/main_menu.png")
+    image_exists = menu_image_path.is_file()
+    link_preview_disabled = LinkPreviewOptions(is_disabled=True)
+
     try:
         if is_edit:
-            await target_message_obj.edit_text(text, reply_markup=reply_markup)
+            if image_exists:
+                if target_message_obj.photo:
+                    await target_message_obj.edit_caption(
+                        caption=text,
+                        reply_markup=reply_markup,
+                    )
+                else:
+                    media = InputMediaPhoto(
+                        media=FSInputFile(menu_image_path),
+                        caption=text,
+                    )
+                    try:
+                        await target_message_obj.edit_media(
+                            media=media,
+                            reply_markup=reply_markup,
+                        )
+                    except TelegramBadRequest as media_error:
+                        logging.warning(
+                            "Failed to replace text main menu with media for user %s: %s",
+                            user_id,
+                            media_error,
+                        )
+                        await target_message_obj.edit_text(
+                            text,
+                            reply_markup=reply_markup,
+                            link_preview_options=link_preview_disabled,
+                        )
+            else:
+                if target_message_obj.photo:
+                    await target_message_obj.edit_caption(
+                        caption=text,
+                        reply_markup=reply_markup,
+                    )
+                else:
+                    await target_message_obj.edit_text(
+                        text,
+                        reply_markup=reply_markup,
+                        link_preview_options=link_preview_disabled,
+                    )
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup)
+            if image_exists and hasattr(target_message_obj, "bot"):
+                try:
+                    await target_message_obj.bot.send_photo(
+                        chat_id=target_message_obj.chat.id,
+                        photo=FSInputFile(menu_image_path),
+                        caption=text,
+                        reply_markup=reply_markup,
+                    )
+                except TelegramBadRequest as send_photo_error:
+                    logging.warning(
+                        "Failed to send main menu photo for user %s: %s",
+                        user_id,
+                        send_photo_error,
+                    )
+                    await target_message_obj.answer(
+                        text,
+                        reply_markup=reply_markup,
+                        link_preview_options=link_preview_disabled,
+                    )
+            else:
+                await target_message_obj.answer(
+                    text,
+                    reply_markup=reply_markup,
+                    link_preview_options=link_preview_disabled,
+                )
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -110,7 +178,11 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(text, reply_markup=reply_markup)
+                await target_message_obj.answer(
+                    text,
+                    reply_markup=reply_markup,
+                    link_preview_options=link_preview_disabled,
+                )
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
