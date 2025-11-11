@@ -39,50 +39,77 @@ def get_main_menu_inline_keyboard(
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
 
-    builder.row(
+    first_row = []
+    first_row.append(
         InlineKeyboardButton(
             text=_(key="menu_my_subscription_inline"),
             callback_data="main_action:my_subscription",
         )
     )
+    if settings.SUPPORT_LINK:
+        first_row.append(
+            (InlineKeyboardButton(text=_(key="menu_support_button"), url=settings.SUPPORT_LINK))
+        )
+    builder.row(*first_row)
+
+    #####################
 
     referral_button = InlineKeyboardButton(
         text=_(key="menu_referral_inline"),
         callback_data="main_action:referral")
     builder.row(referral_button)
 
+    #####################
+
     rw_row = []
+    rw_row.append(
+        InlineKeyboardButton(
+            text=_(key="menu_get_bonus"),
+            callback_data="main_action:get_bonus"
+        )
+    )
+    rw_row.append(
+        InlineKeyboardButton(
+            text=_(key="menu_gift"),
+            callback_data="main_action:gift_vpn"
+        )
+    )
+    builder.row(*rw_row)
+
+    ######################
+
+    builder.row(InlineKeyboardButton(
+        text=_(key="menu_terms_button"),
+        callback_data="main_action:terms"
+    ))
+
     # rw_row.append(InlineKeyboardButton(
     #     text=_(key="menu_language_settings_inline"),
     #     callback_data="main_action:language"))
+    # rw_row.append(InlineKeyboardButton(
+    #     text=_(key="menu_apply_promo_button"),
+    #     callback_data="main_action:apply_promo")
+    # )
 
-    rw_row.append(InlineKeyboardButton(
-        text=_(key="menu_apply_promo_button"),
-        callback_data="main_action:apply_promo")
-    )
+    # if settings.SUPPORT_LINK:
+    #     rw_row.append(
+    #         (InlineKeyboardButton(text=_(key="menu_support_button"), url=settings.SUPPORT_LINK))
+    #     )
 
-    if settings.SUPPORT_LINK:
-        rw_row.append(
-            (InlineKeyboardButton(text=_(key="menu_support_button"), url=settings.SUPPORT_LINK))
-        )
-
-    builder.row(*rw_row)
-
-
-    status_button_list = []
-    if settings.TERMS_OF_SERVICE_URL:
-        builder.row(
-            InlineKeyboardButton(text=_(key="menu_terms_button"),
-                                 url=settings.TERMS_OF_SERVICE_URL)
-        )
-
-    if settings.SERVER_STATUS_URL:
-        status_button_list.append(
-            InlineKeyboardButton(text=_(key="menu_server_status_button"),
-                                 url=settings.SERVER_STATUS_URL))
-
-    if status_button_list:
-        builder.row(*status_button_list)
+    # status_button_list = []
+    # if settings.TERMS_OF_SERVICE_URL:
+    #     builder.row(
+    #         InlineKeyboardButton(text=_(key="menu_terms_button"),
+    #                              url=settings.TERMS_OF_SERVICE_URL)
+    #     )
+    #
+    # if settings.SERVER_STATUS_URL:
+    #     status_button_list.append(
+    #         InlineKeyboardButton(text=_(key="menu_server_status_button"),
+    #                              url=settings.SERVER_STATUS_URL))
+    #
+    # if status_button_list:
+    #     builder.row(*status_button_list)
 
     return builder.as_markup()
 
