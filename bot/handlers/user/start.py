@@ -302,7 +302,7 @@ async def ensure_required_channel_subscription(
 
 
 @router.message(CommandStart())
-@router.message(CommandStart(magic=F.args.regexp(r"^ref_(\d+)$").as_("ref_match")))
+@router.message(CommandStart(magic=F.args.regexp(r"^ref_((?:[uU][A-Za-z0-9]{9})|(?:[A-Za-z0-9]{9})|\d+)$").as_("ref_match")))
 @router.message(CommandStart(magic=F.args.regexp(r"^promo_(\w+)$").as_("promo_match")))
 @router.message(CommandStart(magic=F.args.regexp(r"^(?!ref_|promo_)([A-Za-z0-9_\-]{2,64})$").as_("ad_param_match")))
 async def start_command_handler(message: types.Message,
@@ -328,9 +328,23 @@ async def start_command_handler(message: types.Message,
     ad_start_param: Optional[str] = None
 
     if ref_match:
-        potential_referrer_id = int(ref_match.group(1))
-        if await user_dal.get_user_by_id(session, potential_referrer_id):
-            referred_by_user_id = potential_referrer_id
+        raw_ref_value = ref_match.group(1)
+        if raw_ref_value.isdigit():
+            if settings.LEGACY_REFS:
+                potential_referrer_id = int(raw_ref_value)
+                if potential_referrer_id != user_id and await user_dal.get_user_by_id(
+                        session, potential_referrer_id):
+                    referred_by_user_id = potential_referrer_id
+        else:
+            normalized_code = raw_ref_value.strip()
+            if normalized_code and normalized_code[0].lower() == "u":
+                normalized_code = normalized_code[1:]
+            ref_user = None
+            if normalized_code:
+                ref_user = await user_dal.get_user_by_referral_code(
+                    session, normalized_code)
+            if ref_user and ref_user.user_id != user_id:
+                referred_by_user_id = ref_user.user_id
     elif promo_match:
         promo_code_to_apply = promo_match.group(1)
         logging.info(f"User {user_id} started with promo code: {promo_code_to_apply}")

@@ -118,7 +118,11 @@ class Settings(BaseSettings):
     # Referral program configuration
     REFERRAL_ONE_BONUS_PER_REFEREE: bool = Field(
         default=True,
-        description="When true, referral bonuses (for inviter and referee) are applied only once per invited user – on their first successful payment."
+        description="When true, referral bonuses (for inviter and referee) are applied only once per invited user - on their first successful payment."
+    )
+    LEGACY_REFS: bool = Field(
+        default=True,
+        description="Allow legacy referral links like ref_<telegram_id> to continue working. Defaults to True when unset."
     )
 
     PANEL_API_URL: Optional[str] = None
