@@ -1,17 +1,13 @@
 import logging
 import re
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional, Union
-
-from aiogram import Bot, F, Router, types
-from aiogram.exceptions import (TelegramAPIError, TelegramBadRequest,
-                                TelegramForbiddenError)
-from aiogram.filters import Command, CommandStart
-from aiogram.fsm.context import FSMContext
-from aiogram.types import FSInputFile, InputMediaPhoto
+from aiogram import Router, F, types, Bot
 from aiogram.utils.text_decorations import html_decoration as hd
+from aiogram.filters import CommandStart, Command
+from aiogram.fsm.context import FSMContext
+from typing import Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
 
 from db.dal import user_dal
 from db.models import User
@@ -21,16 +17,13 @@ from bot.keyboards.inline.user_keyboards import (
     get_language_selection_keyboard,
     get_channel_subscription_keyboard,
 )
-from bot.middlewares.i18n import JsonI18n
-from bot.services.panel_api_service import PanelApiService
-from bot.services.promo_code_service import PromoCodeService
-from bot.services.referral_service import ReferralService
 from bot.services.subscription_service import SubscriptionService
-from bot.utils.text_sanitizer import sanitize_display_name, sanitize_username
+from bot.services.panel_api_service import PanelApiService
+from bot.services.referral_service import ReferralService
+from bot.services.promo_code_service import PromoCodeService
 from config.settings import Settings
-
-MAIN_MENU_IMAGE_PATH = Path(
-    "/opt/remnawave-tg-shop/bot/static/images/main_menu.png")
+from bot.middlewares.i18n import JsonI18n
+from bot.utils.text_sanitizer import sanitize_username, sanitize_display_name
 
 router = Router(name="user_start_router")
 
@@ -100,57 +93,11 @@ async def send_main_menu(target_event: Union[types.Message,
                                       show_alert=True)
         return
 
-    def _create_main_menu_photo() -> Optional[FSInputFile]:
-        if MAIN_MENU_IMAGE_PATH.exists():
-            try:
-                return FSInputFile(str(MAIN_MENU_IMAGE_PATH))
-            except Exception as file_error:
-                logging.error(
-                    "Failed to load main menu image from %s: %s",
-                    MAIN_MENU_IMAGE_PATH,
-                    file_error,
-                )
-        else:
-            logging.warning(
-                "Main menu image not found at %s", MAIN_MENU_IMAGE_PATH)
-        return None
-
     try:
-        photo_file = _create_main_menu_photo()
-
-        if photo_file:
-            if is_edit:
-                if target_message_obj.content_type == "photo":
-                    await target_message_obj.edit_media(
-                        InputMediaPhoto(
-                            media=photo_file,
-                            caption=text,
-                            parse_mode="HTML",
-                        ),
-                        reply_markup=reply_markup,
-                    )
-                else:
-                    await target_message_obj.delete()
-                    await target_message_obj.answer_photo(
-                        photo=FSInputFile(str(MAIN_MENU_IMAGE_PATH)),
-                        caption=text,
-                        reply_markup=reply_markup,
-                        parse_mode="HTML",
-                    )
-            else:
-                await target_message_obj.answer_photo(
-                    photo=photo_file,
-                    caption=text,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML",
-                )
+        if is_edit:
+            await target_message_obj.edit_text(text, reply_markup=reply_markup)
         else:
-            if is_edit:
-                await target_message_obj.edit_text(
-                    text, reply_markup=reply_markup)
-            else:
-                await target_message_obj.answer(
-                    text, reply_markup=reply_markup)
+            await target_message_obj.answer(text, reply_markup=reply_markup)
 
         if isinstance(target_event, types.CallbackQuery):
             try:
