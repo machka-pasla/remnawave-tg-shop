@@ -41,7 +41,10 @@ async def send_main_menu(target_event: Union[types.Message,
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
 
     user_id = target_event.from_user.id
-    username = hd.quote(target_event.from_user.username)
+    try:
+        username = hd.quote(target_event.from_user.username)
+    except:
+        username = '-'
 
     if not i18n:
         logging.error(

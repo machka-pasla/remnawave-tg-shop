@@ -104,7 +104,7 @@ async def referral_command_handler(event: Union[types.Message,
     elif isinstance(event, types.CallbackQuery) and event.message:
         try:
             if settings.PHOTO_ID_GIFT_BRO:
-                await event.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_GIFT_BRO, caption=settings.PHOTO_ID_GIFT_BRO), reply_markup=reply_markup_val, disable_web_page_preview=True)
+                await event.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_GIFT_BRO, caption=text), reply_markup=reply_markup_val, disable_web_page_preview=True)
             else:
                 await event.message.edit_text(text,
                                           reply_markup=reply_markup_val,
