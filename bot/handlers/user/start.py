@@ -148,7 +148,11 @@ async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_d
         return
 
     user_id = event.from_user.id
-    username = hd.quote(event.from_user.username)
+    try:
+        username = hd.quote(event.from_user.username)
+    except:
+        username = '-'
+
 
     text = get_text(key="main_menu_greeting", username=username)
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings)
