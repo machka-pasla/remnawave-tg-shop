@@ -1,13 +1,16 @@
 import logging
 import re
-from aiogram import Router, F, types, Bot
-from aiogram.utils.text_decorations import html_decoration as hd
-from aiogram.filters import CommandStart, Command
-from aiogram.fsm.context import FSMContext
+from pathlib import Path
 from typing import Optional, Union
+
+from aiogram import F, Bot, Router, types
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
+from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.types import FSInputFile, InputMediaPhoto
+from aiogram.utils.text_decorations import html_decoration as hd
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
 
 from db.dal import user_dal
 from db.models import User
@@ -23,7 +26,13 @@ from bot.services.referral_service import ReferralService
 from bot.services.promo_code_service import PromoCodeService
 from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
-from bot.utils.text_sanitizer import sanitize_username, sanitize_display_name
+from bot.utils.file_cache import FileIDCache
+from bot.utils.text_sanitizer import sanitize_display_name, sanitize_username
+
+MAIN_MENU_IMAGE_PATH = Path(__file__).resolve().parents[2] / "static" / "images" / "main_menu.png"
+MAIN_MENU_CACHE_PATH = Path(__file__).resolve().parents[2] / "static" / "images" / "cache.json"
+MAIN_MENU_CACHE_KEY = "main_menu_image"
+_main_menu_file_id_cache = FileIDCache(MAIN_MENU_CACHE_PATH)
 
 router = Router(name="user_start_router")
 
@@ -93,11 +102,69 @@ async def send_main_menu(target_event: Union[types.Message,
                                       show_alert=True)
         return
 
+    cached_photo_id = await _main_menu_file_id_cache.get(MAIN_MENU_CACHE_KEY)
+    use_cached_photo = bool(cached_photo_id)
+    photo_resource: Optional[Union[str, FSInputFile]] = None
+    if cached_photo_id:
+        photo_resource = cached_photo_id
+    elif MAIN_MENU_IMAGE_PATH.exists():
+        photo_resource = FSInputFile(MAIN_MENU_IMAGE_PATH)
+    else:
+        logging.warning(
+            "Main menu image not found at %s. Falling back to text-only menu.",
+            MAIN_MENU_IMAGE_PATH,
+        )
+
+    result_message: Optional[types.Message] = None
+
     try:
-        if is_edit:
-            await target_message_obj.edit_text(text, reply_markup=reply_markup)
+        if photo_resource is not None:
+            if is_edit and not target_message_obj.photo:
+                try:
+                    await target_message_obj.delete()
+                except Exception as delete_error:
+                    logging.debug(
+                        "Failed to delete previous main menu message for user %s: %s",
+                        user_id,
+                        delete_error,
+                    )
+                result_message = await target_message_obj.answer_photo(
+                    photo=photo_resource,
+                    caption=text,
+                    reply_markup=reply_markup,
+                )
+            elif is_edit:
+                result_message = await target_message_obj.edit_media(
+                    media=InputMediaPhoto(media=photo_resource, caption=text),
+                    reply_markup=reply_markup,
+                )
+            else:
+                result_message = await target_message_obj.answer_photo(
+                    photo=photo_resource,
+                    caption=text,
+                    reply_markup=reply_markup,
+                )
         else:
-            await target_message_obj.answer(text, reply_markup=reply_markup)
+            if is_edit:
+                result_message = await target_message_obj.edit_text(
+                    text,
+                    reply_markup=reply_markup,
+                )
+            else:
+                result_message = await target_message_obj.answer(
+                    text,
+                    reply_markup=reply_markup,
+                )
+
+        if (
+            photo_resource is not None
+            and not use_cached_photo
+            and result_message
+            and result_message.photo
+        ):
+            await _main_menu_file_id_cache.set(
+                MAIN_MENU_CACHE_KEY, result_message.photo[-1].file_id
+            )
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -110,7 +177,26 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                await target_message_obj.answer(text, reply_markup=reply_markup)
+                if photo_resource is not None:
+                    fallback_message = await target_message_obj.answer_photo(
+                        photo=photo_resource,
+                        caption=text,
+                        reply_markup=reply_markup,
+                    )
+                    if (
+                        not use_cached_photo
+                        and fallback_message
+                        and fallback_message.photo
+                    ):
+                        await _main_menu_file_id_cache.set(
+                            MAIN_MENU_CACHE_KEY,
+                            fallback_message.photo[-1].file_id,
+                        )
+                else:
+                    await target_message_obj.answer(
+                        text,
+                        reply_markup=reply_markup,
+                    )
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
