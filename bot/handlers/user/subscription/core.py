@@ -104,7 +104,7 @@ async def my_subscription_command_handler(
     active = await subscription_service.get_active_subscription_details(session, event.from_user.id)
 
     if not active:
-        text = get_text("subscription_not_active")
+        text = get_text("subscription_not_active", ider=event.message.from_user.id)
 
         buy_button = InlineKeyboardButton(
             text=get_text("menu_subscribe_inline", default="Купить"), callback_data="main_action:subscribe"
@@ -119,7 +119,10 @@ async def my_subscription_command_handler(
             except Exception:
                 pass
             try:
-                await event.message.edit_text(text, reply_markup=kb)
+                if settings.PHOTO_ID_YOUR_PROF:
+                    await event.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_YOUR_PROF, caption=text), reply_markup=kb, disable_web_page_preview=True)
+                else:
+                    await event.message.edit_text(text, reply_markup=kb)
             except Exception:
                 await event.message.answer(text, reply_markup=kb)
         else:
@@ -261,7 +264,11 @@ async def my_subscription_command_handler(
         except Exception:
             pass
         try:
-            await event.message.edit_text(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+            if settings.PHOTO_ID_YOUR_PROF:
+                await event.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_YOUR_PROF, caption=text + tribute_hint),
+                                               reply_markup=markup, disable_web_page_preview=True)
+            else:
+                await event.message.edit_text(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
         except Exception:
             await bot.send_message(
                 chat_id=target.chat.id,
@@ -307,7 +314,7 @@ async def my_devices_command_handler(
     # TODO: context?
     active = await subscription_service.get_active_subscription_details(session, event.from_user.id)
     if not active or not active.get("user_id"):
-        message = get_text("subscription_not_active")
+        message = get_text("subscription_not_active", ider=event.message.from_user.id)
         if isinstance(event, types.CallbackQuery):
             try:
                 await event.answer(message, show_alert=True)
@@ -414,7 +421,7 @@ async def disconnect_device_handler(
 
     active = await subscription_service.get_active_subscription_details(session, callback.from_user.id)
     if not active:
-        await callback.answer(get_text("subscription_not_active"), show_alert=True)
+        await callback.answer(get_text("subscription_not_active", ider=callback.message.from_user.id), show_alert=True)
         return
 
     success = await panel_service.disconnect_device(active.get("user_id"), hwid)
@@ -561,7 +568,7 @@ async def autorenew_cancel_from_webhook_button(
     sub = await subscription_dal.get_active_subscription_by_user_id(session, callback.from_user.id)
     if not sub:
         try:
-            await callback.answer(get_text("subscription_not_active"), show_alert=True)
+            await callback.answer(get_text("subscription_not_active", ider=callback.message.from_user.id), show_alert=True)
         except Exception:
             pass
         return
