@@ -2,6 +2,8 @@ import logging
 from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from typing import Optional, Union
+
+from aiogram.types import InputMediaPhoto
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
@@ -101,7 +103,10 @@ async def referral_command_handler(event: Union[types.Message,
                            disable_web_page_preview=True)
     elif isinstance(event, types.CallbackQuery) and event.message:
         try:
-            await event.message.edit_text(text,
+            if settings.PHOTO_ID_GIFT_BRO:
+                await event.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_GIFT_BRO, caption=settings.PHOTO_ID_GIFT_BRO), reply_markup=reply_markup_val, disable_web_page_preview=True)
+            else:
+                await event.message.edit_text(text,
                                           reply_markup=reply_markup_val,
                                           disable_web_page_preview=True)
         except Exception as e_edit:
