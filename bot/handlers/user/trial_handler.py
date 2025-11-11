@@ -14,6 +14,7 @@ from bot.keyboards.inline.user_keyboards import (
     get_connect_and_main_keyboard,
 )
 from bot.middlewares.i18n import JsonI18n
+from bot.utils.menu_renderer import update_menu_message
 from .start import send_main_menu
 
 router = Router(name="user_trial_router")
@@ -44,8 +45,10 @@ async def request_trial_confirmation_handler(
             show_trial_btn_in_menu_if_fail = True
 
     if not settings.TRIAL_ENABLED:
-        await callback.message.edit_text(
+        await update_menu_message(
+            callback.message,
             _("trial_feature_disabled"),
+            "menu_activate_trial.png",
             reply_markup=get_main_menu_inline_keyboard(
                 current_lang, i18n, settings, False
             ),
@@ -57,8 +60,10 @@ async def request_trial_confirmation_handler(
         return
 
     if await subscription_service.has_had_any_subscription(session, user_id):
-        await callback.message.edit_text(
+        await update_menu_message(
+            callback.message,
             _("trial_already_had_subscription_or_trial"),
+            "menu_activate_trial.png",
             reply_markup=get_main_menu_inline_keyboard(
                 current_lang, i18n, settings, False
             ),
@@ -150,38 +155,13 @@ async def request_trial_confirmation_handler(
         )
     )
 
-    try:
-        await callback.message.edit_text(
-            final_message_text_in_chat,
-            parse_mode="HTML",
-            reply_markup=reply_markup,
-            disable_web_page_preview=True,
-        )
-    except Exception as e_edit:
-        logging.warning(
-            f"Could not edit trial result message: {e_edit}. Sending new one."
-        )
-
-        if callback.message:
-            try:
-                await callback.message.answer(
-                    final_message_text_in_chat,
-                    parse_mode="HTML",
-                    reply_markup=reply_markup,
-                    disable_web_page_preview=True,
-                )
-            except Exception as send_error:
-                logging.error(
-                    f"Failed to send trial result message for user {callback.from_user.id}: {send_error}"
-                )
-            finally:
-                try:
-                    await callback.message.delete()
-                except Exception as delete_error:
-                    logging.debug(
-                        "Could not delete previous message during trial activation fallback: %s",
-                        delete_error,
-                    )
+    await update_menu_message(
+        callback.message,
+        final_message_text_in_chat,
+        "menu_activate_trial.png",
+        reply_markup=reply_markup,
+        parse_mode="HTML",
+    )
 
 
 @router.callback_query(F.data == "trial_action:confirm_activate")

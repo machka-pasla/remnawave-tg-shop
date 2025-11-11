@@ -9,6 +9,7 @@ from bot.services.referral_service import ReferralService
 
 from bot.keyboards.inline.user_keyboards import get_back_to_main_menu_markup
 from bot.middlewares.i18n import JsonI18n
+from bot.utils.menu_renderer import update_menu_message
 
 router = Router(name="user_referral_router")
 
@@ -36,9 +37,21 @@ async def referral_command_handler(event: Union[types.Message,
         logging.error(
             "Dependencies (i18n or ReferralService) missing in referral_command_handler"
         )
-        await target_message_obj.answer(
-            "Service error. Please try again later.")
-        if isinstance(event, types.CallbackQuery): await event.answer()
+        if isinstance(event, types.CallbackQuery):
+            await update_menu_message(
+                target_message_obj,
+                "Service error. Please try again later.",
+                "menu_referral.png",
+                reply_markup=None,
+            )
+            try:
+                await event.answer()
+            except Exception:
+                pass
+        else:
+            await target_message_obj.answer(
+                "Service error. Please try again later."
+            )
         return
 
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
@@ -49,14 +62,36 @@ async def referral_command_handler(event: Union[types.Message,
     except Exception as e_bot_info:
         logging.error(
             f"Failed to get bot info for referral link: {e_bot_info}")
-        await target_message_obj.answer(_("error_generating_referral_link"))
-        if isinstance(event, types.CallbackQuery): await event.answer()
+        if isinstance(event, types.CallbackQuery):
+            await update_menu_message(
+                target_message_obj,
+                _("error_generating_referral_link"),
+                "menu_referral.png",
+                reply_markup=get_back_to_main_menu_markup(current_lang, i18n),
+            )
+            try:
+                await event.answer()
+            except Exception:
+                pass
+        else:
+            await target_message_obj.answer(_("error_generating_referral_link"))
         return
 
     if not bot_username:
         logging.error("Bot username is None, cannot generate referral link.")
-        await target_message_obj.answer(_("error_generating_referral_link"))
-        if isinstance(event, types.CallbackQuery): await event.answer()
+        if isinstance(event, types.CallbackQuery):
+            await update_menu_message(
+                target_message_obj,
+                _("error_generating_referral_link"),
+                "menu_referral.png",
+                reply_markup=get_back_to_main_menu_markup(current_lang, i18n),
+            )
+            try:
+                await event.answer()
+            except Exception:
+                pass
+        else:
+            await target_message_obj.answer(_("error_generating_referral_link"))
         return
 
     inviter_user_id = event.from_user.id
@@ -96,22 +131,23 @@ async def referral_command_handler(event: Union[types.Message,
     reply_markup_val = get_referral_link_keyboard(current_lang, i18n)
 
     if isinstance(event, types.Message):
-        await event.answer(text,
-                           reply_markup=reply_markup_val,
-                           disable_web_page_preview=True)
+        await event.answer(
+            text,
+            reply_markup=reply_markup_val,
+            disable_web_page_preview=True,
+        )
     elif isinstance(event, types.CallbackQuery) and event.message:
+        await update_menu_message(
+            event.message,
+            text,
+            "menu_referral.png",
+            reply_markup=reply_markup_val,
+            parse_mode="HTML",
+        )
         try:
-            await event.message.edit_text(text,
-                                          reply_markup=reply_markup_val,
-                                          disable_web_page_preview=True)
-        except Exception as e_edit:
-            logging.warning(
-                f"Failed to edit message for referral info: {e_edit}. Sending new one."
-            )
-            await event.message.answer(text,
-                                       reply_markup=reply_markup_val,
-                                       disable_web_page_preview=True)
-        await event.answer()
+            await event.answer()
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data.startswith("referral_action:"))

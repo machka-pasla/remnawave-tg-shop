@@ -18,6 +18,7 @@ from bot.services.panel_api_service import PanelApiService
 from bot.middlewares.i18n import JsonI18n
 from db.dal import subscription_dal
 from db.models import Subscription
+from bot.utils.menu_renderer import update_menu_message
 
 router = Router(name="user_subscription_core_router")
 
@@ -58,16 +59,20 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
         return
 
     if isinstance(event, types.CallbackQuery):
-        try:
-            await target_message_obj.edit_text(text_content, reply_markup=reply_markup)
-        except Exception:
-            await target_message_obj.answer(text_content, reply_markup=reply_markup)
+        await update_menu_message(
+            target_message_obj,
+            text_content,
+            "menu_subscribe.png",
+            reply_markup=reply_markup,
+        )
         try:
             await event.answer()
         except Exception:
             pass
     else:
-        await target_message_obj.answer(text_content, reply_markup=reply_markup)
+        logging.warning(
+            "display_subscription_options invoked with message event; menu update skipped."
+        )
 
 
 @router.callback_query(F.data == "main_action:subscribe")
@@ -90,12 +95,27 @@ async def my_subscription_command_handler(
     get_text = lambda key, **kw: i18n.gettext(current_lang, key, **kw)
 
     if not i18n or not target:
-        if isinstance(event, types.Message):
-            await event.answer(get_text("error_occurred_try_again"))
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer("Service unavailable", show_alert=True)
+            except Exception:
+                pass
         return
 
     if not panel_service or not subscription_service:
-        await target.answer(get_text("error_service_unavailable"))
+        if isinstance(event, types.CallbackQuery):
+            await update_menu_message(
+                target,
+                get_text("error_service_unavailable"),
+                "menu_my_subscription.png",
+                reply_markup=get_back_to_main_menu_markup(current_lang, i18n),
+            )
+            try:
+                await event.answer()
+            except Exception:
+                pass
+        else:
+            await target.answer(get_text("error_service_unavailable"))
         return
 
     active = await subscription_service.get_active_subscription_details(session, event.from_user.id)
@@ -111,14 +131,16 @@ async def my_subscription_command_handler(
         kb = InlineKeyboardMarkup(inline_keyboard=[[buy_button], *back_markup.inline_keyboard])
 
         if isinstance(event, types.CallbackQuery):
+            await update_menu_message(
+                event.message,
+                text,
+                "menu_my_subscription.png",
+                reply_markup=kb,
+            )
             try:
                 await event.answer()
             except Exception:
                 pass
-            try:
-                await event.message.edit_text(text, reply_markup=kb)
-            except Exception:
-                await event.message.answer(text, reply_markup=kb)
         else:
             await event.answer(text, reply_markup=kb)
         return
@@ -249,20 +271,17 @@ async def my_subscription_command_handler(
     markup = InlineKeyboardMarkup(inline_keyboard=kb)
 
     if isinstance(event, types.CallbackQuery):
+        await update_menu_message(
+            event.message,
+            text + tribute_hint,
+            "menu_my_subscription.png",
+            reply_markup=markup,
+            parse_mode="HTML",
+        )
         try:
             await event.answer()
         except Exception:
             pass
-        try:
-            await event.message.edit_text(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
-        except Exception:
-            await bot.send_message(
-                chat_id=target.chat.id,
-                text=text + tribute_hint,
-                reply_markup=markup,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
     else:
         await target.answer(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
 
