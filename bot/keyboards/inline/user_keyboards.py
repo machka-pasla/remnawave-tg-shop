@@ -52,9 +52,9 @@ def get_main_menu_inline_keyboard(
     builder.row(referral_button)
 
     rw_row = []
-    rw_row.append(InlineKeyboardButton(
-        text=_(key="menu_language_settings_inline"),
-        callback_data="main_action:language"))
+    # rw_row.append(InlineKeyboardButton(
+    #     text=_(key="menu_language_settings_inline"),
+    #     callback_data="main_action:language"))
 
     rw_row.append(InlineKeyboardButton(
         text=_(key="menu_apply_promo_button"),

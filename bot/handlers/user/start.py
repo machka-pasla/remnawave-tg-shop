@@ -75,7 +75,7 @@ async def send_main_menu(target_event: Union[types.Message,
                 "Method has_had_any_subscription is missing in SubscriptionService for send_main_menu!"
             )
 
-    text = _(key="main_menu_greeting", user_name=username)
+    text = _(key="main_menu_greeting", username=username)
     reply_markup = get_main_start_inline_keyboard(current_lang, i18n, settings,
                                                  show_trial_button_in_menu)
 
@@ -147,7 +147,7 @@ async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_d
     user_id = event.from_user.id
     username = hd.quote(event.from_user.username)
 
-    text = get_text(key="main_menu_greeting", user_name=username)
+    text = get_text(key="main_menu_greeting", username=username)
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings)
 
     target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
