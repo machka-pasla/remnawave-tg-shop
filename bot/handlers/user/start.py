@@ -1,16 +1,13 @@
 import logging
 import re
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional, Union
-
 from aiogram import Router, F, types, Bot
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
+from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import FSInputFile
-from aiogram.utils.text_decorations import html_decoration as hd
+from typing import Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
 
 from db.dal import user_dal
 from db.models import User
@@ -96,59 +93,11 @@ async def send_main_menu(target_event: Union[types.Message,
                                       show_alert=True)
         return
 
-    main_menu_image_path = Path("/app/bot/static/images/main_menu.png")
-    main_menu_image_exists = main_menu_image_path.exists()
-    if not main_menu_image_exists:
-        logging.warning(
-            "Main menu image not found at %s. Falling back to text-only menu.",
-            main_menu_image_path,
-        )
-
     try:
         if is_edit:
-            if main_menu_image_exists and target_message_obj.content_type == "photo":
-                await target_message_obj.edit_caption(
-                    text,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML",
-                )
-            elif main_menu_image_exists:
-                try:
-                    await target_message_obj.delete()
-                except Exception as delete_error:
-                    logging.warning(
-                        "Failed to delete previous main menu message for user %s: %s",
-                        user_id,
-                        delete_error,
-                    )
-                await target_message_obj.answer_photo(
-                    FSInputFile(main_menu_image_path),
-                    caption=text,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML",
-                )
-            else:
-                await target_message_obj.edit_text(
-                    text,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML",
-                    disable_web_page_preview=True,
-                )
+            await target_message_obj.edit_text(text, reply_markup=reply_markup)
         else:
-            if main_menu_image_exists:
-                await target_message_obj.answer_photo(
-                    FSInputFile(main_menu_image_path),
-                    caption=text,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML",
-                )
-            else:
-                await target_message_obj.answer(
-                    text,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML",
-                    disable_web_page_preview=True,
-                )
+            await target_message_obj.answer(text, reply_markup=reply_markup)
 
         if isinstance(target_event, types.CallbackQuery):
             try:
@@ -161,20 +110,7 @@ async def send_main_menu(target_event: Union[types.Message,
         )
         if is_edit and target_message_obj:
             try:
-                if main_menu_image_exists:
-                    await target_message_obj.answer_photo(
-                        FSInputFile(main_menu_image_path),
-                        caption=text,
-                        reply_markup=reply_markup,
-                        parse_mode="HTML",
-                    )
-                else:
-                    await target_message_obj.answer(
-                        text,
-                        reply_markup=reply_markup,
-                        parse_mode="HTML",
-                        disable_web_page_preview=True,
-                    )
+                await target_message_obj.answer(text, reply_markup=reply_markup)
             except Exception as e_send_new:
                 logging.error(
                     f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
