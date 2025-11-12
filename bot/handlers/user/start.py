@@ -24,8 +24,14 @@ from bot.services.promo_code_service import PromoCodeService
 from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
 from bot.utils.text_sanitizer import sanitize_username, sanitize_display_name
+from bot.handlers.admin.user_management import (
+    format_user_card as admin_format_user_card,
+    get_user_card_keyboard as admin_get_user_card_keyboard,
+    _send_with_profile_link_fallback as send_with_profile_link_fallback,
+)
 
 router = Router(name="user_start_router")
+ADMIN_USER_CARD_DEEPLINK_PREFIX = "admin_user_card_"
 
 
 async def send_main_menu(target_event: Union[types.Message,
@@ -326,6 +332,7 @@ async def start_command_handler(message: types.Message,
     referred_by_user_id: Optional[int] = None
     promo_code_to_apply: Optional[str] = None
     ad_start_param: Optional[str] = None
+    admin_user_card_target_id: Optional[int] = None
 
     if ref_match:
         potential_referrer_id = int(ref_match.group(1))
@@ -335,8 +342,14 @@ async def start_command_handler(message: types.Message,
         promo_code_to_apply = promo_match.group(1)
         logging.info(f"User {user_id} started with promo code: {promo_code_to_apply}")
     elif ad_param_match:
-        ad_start_param = ad_param_match.group(1)
-        logging.info(f"User {user_id} started with ad start param: {ad_start_param}")
+        ad_param_value = ad_param_match.group(1)
+        admin_card_match = re.fullmatch(rf"{ADMIN_USER_CARD_DEEPLINK_PREFIX}(\d+)", ad_param_value)
+        if admin_card_match:
+            admin_user_card_target_id = int(admin_card_match.group(1))
+            logging.info(f"Admin deeplink requested by {user_id} for user_id={admin_user_card_target_id}")
+        else:
+            ad_start_param = ad_param_value
+            logging.info(f"User {user_id} started with ad start param: {ad_start_param}")
 
     sanitized_username = sanitize_username(user.username)
     sanitized_first_name = sanitize_display_name(user.first_name)
@@ -499,6 +512,76 @@ async def start_command_handler(message: types.Message,
                          subscription_service,
                          session,
                          is_edit=False)
+
+    if admin_user_card_target_id is not None:
+        await _open_admin_card_from_deeplink(
+            message=message,
+            target_user_id=admin_user_card_target_id,
+            settings=settings,
+            i18n_data=i18n_data,
+            subscription_service=subscription_service,
+            session=session,
+        )
+
+
+async def _open_admin_card_from_deeplink(message: types.Message,
+                                         target_user_id: int,
+                                         settings: Settings,
+                                         i18n_data: dict,
+                                         subscription_service: SubscriptionService,
+                                         session: AsyncSession) -> None:
+    """Show admin user card when deeplink is used."""
+    if target_user_id <= 0:
+        return
+
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    if not i18n:
+        logging.error("i18n instance missing for admin deeplink handling")
+        await message.answer("Language service error.")
+        return
+
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+
+    admin_ids = settings.ADMIN_IDS or []
+    if message.from_user.id not in admin_ids:
+        await message.answer(_(
+            "admin_user_card_deeplink_forbidden",
+            default="❌ Доступ к этой карточке есть только у администраторов.",
+        ))
+        return
+
+    user_model = await user_dal.get_user_by_id(session, target_user_id)
+    if not user_model:
+        await message.answer(_(
+            "admin_user_card_deeplink_not_found",
+            default="❌ Пользователь с таким ID не найден.",
+        ))
+        return
+
+    referral_service = ReferralService(settings, subscription_service, message.bot, i18n)
+    user_card_text = await admin_format_user_card(
+        user_model,
+        session,
+        subscription_service,
+        i18n,
+        current_lang,
+        referral_service,
+    )
+    keyboard_builder = admin_get_user_card_keyboard(
+        user_model.user_id,
+        i18n,
+        current_lang,
+        user_model.referred_by_id,
+    )
+
+    await send_with_profile_link_fallback(
+        message.answer,
+        text=user_card_text,
+        markup=keyboard_builder.as_markup(),
+        user_id=user_model.user_id,
+        parse_mode="HTML",
+    )
 
 
 @router.callback_query(F.data == "channel_subscription:verify")

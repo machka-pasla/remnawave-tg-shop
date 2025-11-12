@@ -266,6 +266,8 @@
   "admin_user_not_found": "❌ User not found: {input}",
   "admin_user_not_found_action": "User not found",
   "admin_user_card_error": "❌ Error displaying user card",
+  "admin_user_card_deeplink_forbidden": "❌ Only administrators can open this card.",
+  "admin_user_card_deeplink_not_found": "❌ User with this ID was not found.",
   "admin_user_trial_reset_success": "✅ Trial reset! User can activate trial again.",
   "admin_user_trial_reset_error": "❌ Error resetting trial",
   "admin_user_add_subscription_prompt": "➕ Adding subscription days for user {user_id}\n\nEnter number of days to add:",

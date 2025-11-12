@@ -24,6 +24,24 @@ class NotificationService:
         self.bot = bot
         self.settings = settings
         self.i18n = i18n
+        self._bot_username: Optional[str] = None
+        self._bot_username_lock = asyncio.Lock()
+
+    async def _get_bot_username(self) -> Optional[str]:
+        """Fetch and cache bot username for deep links."""
+        if self._bot_username:
+            return self._bot_username
+
+        async with self._bot_username_lock:
+            if self._bot_username:
+                return self._bot_username
+            try:
+                me = await self.bot.get_me()
+                self._bot_username = me.username
+            except Exception as e:
+                logging.error(f"Failed to fetch bot username for deeplinks: {e}")
+                self._bot_username = None
+            return self._bot_username
 
     @staticmethod
     def _format_user_display(
@@ -41,22 +59,32 @@ class NotificationService:
         translate: Callable[..., str],
         user_id: int,
         referrer_id: Optional[int] = None,
+        bot_username: Optional[str] = None,
     ) -> InlineKeyboardMarkup:
         """Create inline keyboard with links to user (and referrer) profiles."""
-        buttons = [
-            [
-                InlineKeyboardButton(
-                    text=translate(
-                        "log_open_profile_link",
-                        default="👤 Открыть профиль",
-                    ),
-                    url=f"tg://user?id={user_id}",
-                )
-            ]
+        def build_admin_card_button(target_id: int) -> Optional[InlineKeyboardButton]:
+            if not bot_username:
+                return None
+            deeplink = NotificationService._admin_card_deeplink(bot_username, target_id)
+            return InlineKeyboardButton(text="🪪", url=deeplink)
+
+        user_row = [
+            InlineKeyboardButton(
+                text=translate(
+                    "log_open_profile_link",
+                    default="👤 Открыть профиль",
+                ),
+                url=f"tg://user?id={user_id}",
+            )
         ]
+        user_admin_button = build_admin_card_button(user_id)
+        if user_admin_button:
+            user_row.append(user_admin_button)
+
+        buttons = [user_row]
 
         if referrer_id:
-            buttons.append([
+            ref_row = [
                 InlineKeyboardButton(
                     text=translate(
                         "log_open_referrer_profile_button",
@@ -64,9 +92,17 @@ class NotificationService:
                     ),
                     url=f"tg://user?id={referrer_id}",
                 )
-            ])
+            ]
+            ref_admin_button = build_admin_card_button(referrer_id)
+            if ref_admin_button:
+                ref_row.append(ref_admin_button)
+            buttons.append(ref_row)
 
         return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def _admin_card_deeplink(bot_username: str, target_user_id: int) -> str:
+        return f"https://t.me/{bot_username}?start=admin_user_card_{target_user_id}"
     
     async def _send_to_log_channel(
         self,
@@ -185,7 +221,8 @@ class NotificationService:
         )
 
         # Send to log channel
-        profile_keyboard = self._build_profile_keyboard(_, user_id, referred_by_id)
+        bot_username = await self._get_bot_username()
+        profile_keyboard = self._build_profile_keyboard(_, user_id, referred_by_id, bot_username)
         await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def notify_payment_received(self, user_id: int, amount: float, currency: str,
@@ -229,7 +266,8 @@ class NotificationService:
         )
         
         # Send to log channel
-        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        bot_username = await self._get_bot_username()
+        profile_keyboard = self._build_profile_keyboard(_, user_id, bot_username=bot_username)
         await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def notify_promo_activation(self, user_id: int, promo_code: str, bonus_days: int,
@@ -260,7 +298,8 @@ class NotificationService:
         )
         
         # Send to log channel
-        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        bot_username = await self._get_bot_username()
+        profile_keyboard = self._build_profile_keyboard(_, user_id, bot_username=bot_username)
         await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def notify_trial_activation(self, user_id: int, end_date: datetime,
@@ -289,7 +328,8 @@ class NotificationService:
         )
         
         # Send to log channel
-        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        bot_username = await self._get_bot_username()
+        profile_keyboard = self._build_profile_keyboard(_, user_id, bot_username=bot_username)
         await self._send_to_log_channel(message, reply_markup=profile_keyboard)
 
     async def notify_panel_sync(self, status: str, details: str, 
@@ -358,7 +398,8 @@ class NotificationService:
             timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z"))
 
         # Send to log channel
-        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        bot_username = await self._get_bot_username()
+        profile_keyboard = self._build_profile_keyboard(_, user_id, bot_username=bot_username)
         await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def send_custom_notification(self, message: str, to_admins: bool = False, 

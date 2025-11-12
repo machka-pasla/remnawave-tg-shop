@@ -152,6 +152,10 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str,
                    default="👤 Открыть профиль пригласившего"),
             url=f"tg://user?id={referrer_id}"
         )
+        builder.button(
+            text="🪪",
+            callback_data=f"user_action:view_referrer_card:{referrer_id}"
+        )
 
     # Row 5: Destructive action
     builder.button(
@@ -169,7 +173,7 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str,
         callback_data="admin_action:main"
     )
     
-    quick_links_width = 2 if referrer_id else 1
+    quick_links_width = 3 if referrer_id else 1
     builder.adjust(2, 2, 2, quick_links_width, 1, 2)
     return builder
 
@@ -443,7 +447,7 @@ async def user_action_handler(callback: types.CallbackQuery, state: FSMContext,
         await handle_send_message_prompt(callback, state, user, i18n, current_lang)
     elif action == "view_logs":
         await handle_view_user_logs(callback, user, session, settings, i18n, current_lang)
-    elif action == "refresh":
+    elif action in {"refresh", "view_referrer_card"}:
         await handle_refresh_user_card(callback, user, subscription_service, session, i18n, current_lang)
     elif action == "delete_user":
         await handle_delete_user_prompt(

@@ -266,6 +266,8 @@
   "admin_user_not_found": "❌ Пользователь не найден: {input}",
   "admin_user_not_found_action": "Пользователь не найден",
   "admin_user_card_error": "❌ Ошибка отображения карточки пользователя",
+  "admin_user_card_deeplink_forbidden": "❌ Доступ к этой карточке есть только у администраторов.",
+  "admin_user_card_deeplink_not_found": "❌ Пользователь с таким ID не найден.",
   "admin_user_trial_reset_success": "✅ Триал сброшен! Пользователь может активировать триал заново.",
   "admin_user_trial_reset_error": "❌ Ошибка сброса триала",
   "admin_user_add_subscription_prompt": "➕ Добавление дней подписки для пользователя {user_id}\n\nВведите количество дней для добавления:",
