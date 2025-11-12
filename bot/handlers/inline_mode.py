@@ -1,6 +1,6 @@
 import logging
 from aiogram import Router, types, Bot
-from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent, LinkPreviewOptions
+from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -101,7 +101,8 @@ async def create_referral_result(inline_query: InlineQuery, bot: Bot,
                 default="Поделиться реферальной ссылкой для получения бонусов"
             ),
             input_message_content=InputTextMessageContent(
-                message_text=message_text
+                message_text=message_text,
+                disable_web_page_preview=True
             ),
             thumbnail_url=settings.INLINE_REFERRAL_THUMBNAIL_URL
         )
@@ -178,7 +179,7 @@ async def create_user_stats_result(session: AsyncSession, i18n_instance, lang: s
             ),
             input_message_content=InputTextMessageContent(
                 message_text=stats_text,
-                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+                parse_mode="HTML"
             ),
             thumbnail_url=settings.INLINE_USER_STATS_THUMBNAIL_URL
         )
@@ -224,7 +225,7 @@ async def create_financial_stats_result(session: AsyncSession, i18n_instance, la
             ),
             input_message_content=InputTextMessageContent(
                 message_text=stats_text,
-                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+                parse_mode="HTML"
             ),
             thumbnail_url=settings.INLINE_FINANCIAL_STATS_THUMBNAIL_URL
         )
@@ -332,7 +333,7 @@ async def create_system_stats_result(session: AsyncSession, i18n_instance, lang:
             ),
             input_message_content=InputTextMessageContent(
                 message_text=stats_text,
-                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+                parse_mode="HTML"
             ),
             thumbnail_url=settings.INLINE_SYSTEM_STATS_THUMBNAIL_URL
         )
@@ -351,7 +352,7 @@ async def create_system_stats_result(session: AsyncSession, i18n_instance, lang:
             description=_("inline_system_error", default="Ошибка получения данных"),
             input_message_content=InputTextMessageContent(
                 message_text=error_text,
-                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+                parse_mode="HTML"
             ),
             thumbnail_url=settings.INLINE_SYSTEM_STATS_THUMBNAIL_URL
         )

@@ -1,6 +1,5 @@
 import logging
 from aiogram import Router, F, types, Bot
-from aiogram.types import LinkPreviewOptions
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
@@ -282,7 +281,7 @@ async def confirm_activate_trial_handler(
             final_message_text_in_chat,
             parse_mode="HTML",
             reply_markup=reply_markup,
-            link_preview_options=LinkPreviewOptions(is_disabled=True),
+            disable_web_page_preview=True,
         )
     except Exception as e_edit:
         logging.warning(
@@ -294,7 +293,7 @@ async def confirm_activate_trial_handler(
                 final_message_text_in_chat,
                 parse_mode="HTML",
                 reply_markup=reply_markup,
-                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                disable_web_page_preview=True,
             )
 
     if activation_result and activation_result.get("activated") and end_date_obj:

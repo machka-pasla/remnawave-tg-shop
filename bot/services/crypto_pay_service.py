@@ -3,7 +3,6 @@ import json
 from typing import Optional
 
 from aiogram import Bot
-from aiogram.types import LinkPreviewOptions
 from aiohttp import web
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -219,7 +218,7 @@ class CryptoPayService:
                     text,
                     reply_markup=markup,
                     parse_mode="HTML",
-                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                    disable_web_page_preview=True,
                 )
             except Exception as e:
                 logging.error(f"Failed to send CryptoPay success message: {e}")

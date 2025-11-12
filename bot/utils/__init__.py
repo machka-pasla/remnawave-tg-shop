@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 from aiogram import types
-from aiogram.types import LinkPreviewOptions
 
 
 @dataclass
@@ -16,24 +15,16 @@ class MessageContent:
 
 # Словари поддерживаемых параметров для каждого типа сообщения
 SUPPORTED_PARAMS = {
-    "text": {"parse_mode", "entities", "link_preview_options", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
-    "photo": {"caption", "parse_mode", "caption_entities", "link_preview_options", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
-    "video": {"duration", "width", "height", "thumbnail", "caption", "parse_mode", "caption_entities", "link_preview_options", "supports_streaming", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
-    "animation": {"duration", "width", "height", "thumbnail", "caption", "parse_mode", "caption_entities", "link_preview_options", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
-    "document": {"thumbnail", "caption", "parse_mode", "caption_entities", "link_preview_options", "disable_content_type_detection", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
-    "audio": {"caption", "parse_mode", "caption_entities", "link_preview_options", "duration", "performer", "title", "thumbnail", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
-    "voice": {"caption", "parse_mode", "caption_entities", "link_preview_options", "duration", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
+    "text": {"parse_mode", "entities", "disable_web_page_preview", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
+    "photo": {"caption", "parse_mode", "caption_entities", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
+    "video": {"duration", "width", "height", "thumbnail", "caption", "parse_mode", "caption_entities", "supports_streaming", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
+    "animation": {"duration", "width", "height", "thumbnail", "caption", "parse_mode", "caption_entities", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
+    "document": {"thumbnail", "caption", "parse_mode", "caption_entities", "disable_content_type_detection", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
+    "audio": {"caption", "parse_mode", "caption_entities", "duration", "performer", "title", "thumbnail", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
+    "voice": {"caption", "parse_mode", "caption_entities", "duration", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
     "sticker": {"disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
     "video_note": {"duration", "length", "thumbnail", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
 }
-
-
-def ensure_html_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
-    """Guarantee HTML parse mode and disabled link previews"""
-    result = dict(kwargs)
-    result.setdefault("parse_mode", "HTML")
-    result.setdefault("link_preview_options", LinkPreviewOptions(is_disabled=True))
-    return result
 
 
 def filter_kwargs(content_type: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
@@ -84,8 +75,6 @@ async def send_message_by_type(bot, chat_id: int, content: MessageContent, **kwa
     Использует match/case вместо длинных if-elif цепочек.
     Автоматически фильтрует неподдерживаемые параметры.
     """
-    kwargs = ensure_html_kwargs(kwargs)
-
     # Фильтруем kwargs для данного типа сообщения
     filtered_kwargs = filter_kwargs(content.content_type, kwargs)
     
@@ -166,8 +155,6 @@ async def send_message_via_queue(queue_manager, uid: int, content: MessageConten
     Использует match/case вместо длинных if-elif цепочек.
     Автоматически фильтрует неподдерживаемые параметры.
     """
-    kwargs = ensure_html_kwargs(kwargs)
-
     # Фильтруем kwargs для данного типа сообщения
     filtered_kwargs = filter_kwargs(content.content_type, kwargs)
     

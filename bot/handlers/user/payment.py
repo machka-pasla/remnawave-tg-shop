@@ -6,7 +6,6 @@ from typing import Optional, Dict, Any
 
 from aiohttp import web
 from aiogram import Bot
-from aiogram.types import LinkPreviewOptions
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -288,7 +287,8 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                 user_id,
                 details_message,
                 reply_markup=details_markup,
-                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
+                parse_mode="HTML",
+                disable_web_page_preview=True,
             )
         except Exception as e_notify:
             logging.error(
@@ -360,12 +360,7 @@ async def process_cancelled_payment(session: AsyncSession, bot: Bot,
         if db_user and db_user.language_code: user_lang = db_user.language_code
 
         _ = lambda key, **kwargs: i18n.gettext(user_lang, key, **kwargs)
-        await bot.send_message(
-            user_id,
-            _("payment_failed"),
-            parse_mode="HTML",
-            link_preview_options=LinkPreviewOptions(is_disabled=True),
-        )
+        await bot.send_message(user_id, _("payment_failed"))
 
     except Exception as e_process_cancel:
         logging.error(
@@ -554,9 +549,7 @@ async def yookassa_webhook_route(request: web.Request):
                                             await bot.send_message(
                                                 chat_id=user_id,
                                                 text=_("payment_method_bound_success"),
-                                                reply_markup=get_back_to_payment_methods_keyboard(i18n_lang, i18n_instance),
-                                                parse_mode="HTML",
-                                                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                                                reply_markup=get_back_to_payment_methods_keyboard(i18n_lang, i18n_instance)
                                             )
                                         except Exception:
                                             pass
