@@ -2,7 +2,7 @@ import logging
 import re
 from pathlib import Path
 from aiogram import Router, F, types, Bot
-from aiogram.types import FSInputFile, InputMediaPhoto, LinkPreviewOptions
+from aiogram.types import FSInputFile, LinkPreviewOptions
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -25,6 +25,7 @@ from bot.services.referral_service import ReferralService
 from bot.services.promo_code_service import PromoCodeService
 from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
+from bot.utils.menu_renderer import update_menu_message
 from bot.utils.text_sanitizer import sanitize_username, sanitize_display_name
 
 router = Router(name="user_start_router")
@@ -99,49 +100,18 @@ async def send_main_menu(target_event: Union[types.Message,
     image_exists = menu_image_path.is_file()
     link_preview_disabled = LinkPreviewOptions(is_disabled=True)
 
+    should_edit_existing_message = isinstance(target_event, types.CallbackQuery) or is_edit
+
     try:
-        if is_edit:
+        if should_edit_existing_message and target_message_obj:
+            await update_menu_message(
+                target_message_obj,
+                text,
+                "main_menu.png" if image_exists else None,
+                reply_markup=reply_markup,
+            )
+        elif target_message_obj and hasattr(target_message_obj, "bot"):
             if image_exists:
-                if target_message_obj.photo:
-                    await target_message_obj.edit_caption(
-                        caption=text,
-                        reply_markup=reply_markup,
-                    )
-                else:
-                    media = InputMediaPhoto(
-                        media=FSInputFile(menu_image_path),
-                        caption=text,
-                    )
-                    try:
-                        await target_message_obj.edit_media(
-                            media=media,
-                            reply_markup=reply_markup,
-                        )
-                    except TelegramBadRequest as media_error:
-                        logging.warning(
-                            "Failed to replace text main menu with media for user %s: %s",
-                            user_id,
-                            media_error,
-                        )
-                        await target_message_obj.edit_text(
-                            text,
-                            reply_markup=reply_markup,
-                            link_preview_options=link_preview_disabled,
-                        )
-            else:
-                if target_message_obj.photo:
-                    await target_message_obj.edit_caption(
-                        caption=text,
-                        reply_markup=reply_markup,
-                    )
-                else:
-                    await target_message_obj.edit_text(
-                        text,
-                        reply_markup=reply_markup,
-                        link_preview_options=link_preview_disabled,
-                    )
-        else:
-            if image_exists and hasattr(target_message_obj, "bot"):
                 try:
                     await target_message_obj.bot.send_photo(
                         chat_id=target_message_obj.chat.id,
@@ -155,14 +125,16 @@ async def send_main_menu(target_event: Union[types.Message,
                         user_id,
                         send_photo_error,
                     )
-                    await target_message_obj.answer(
-                        text,
+                    await target_message_obj.bot.send_message(
+                        chat_id=target_message_obj.chat.id,
+                        text=text,
                         reply_markup=reply_markup,
                         link_preview_options=link_preview_disabled,
                     )
             else:
-                await target_message_obj.answer(
-                    text,
+                await target_message_obj.bot.send_message(
+                    chat_id=target_message_obj.chat.id,
+                    text=text,
                     reply_markup=reply_markup,
                     link_preview_options=link_preview_disabled,
                 )
@@ -176,21 +148,10 @@ async def send_main_menu(target_event: Union[types.Message,
         logging.warning(
             f"Failed to send/edit main menu (user: {user_id}, is_edit: {is_edit}): {type(e_send_edit).__name__} - {e_send_edit}."
         )
-        if is_edit and target_message_obj:
-            try:
-                await target_message_obj.answer(
-                    text,
-                    reply_markup=reply_markup,
-                    link_preview_options=link_preview_disabled,
-                )
-            except Exception as e_send_new:
-                logging.error(
-                    f"Also failed to send new main menu message for user {user_id}: {e_send_new}"
-                )
         if isinstance(target_event, types.CallbackQuery):
             try:
                 await target_event.answer(
-                    _("error_occurred_try_again") if is_edit else None)
+                    _("error_occurred_try_again") if should_edit_existing_message else None)
             except Exception:
                 pass
 
@@ -624,18 +585,31 @@ async def language_command_handler(
             await event.answer(_("error_occurred_try_again"), show_alert=True)
         return
 
-    if isinstance(event, types.CallbackQuery):
-        if event.message:
-            try:
-                await event.message.edit_text(text_to_send,
-                                              reply_markup=reply_markup)
-            except Exception:
-                await target_message_obj.answer(text_to_send,
-                                                reply_markup=reply_markup)
+    language_image_path = Path("/app/bot/static/images/menu_language_settings.png")
+    image_exists = language_image_path.is_file()
+
+    if isinstance(event, types.CallbackQuery) and event.message:
+        await update_menu_message(
+            event.message,
+            text_to_send,
+            "menu_language_settings.png" if image_exists else None,
+            reply_markup=reply_markup,
+        )
         await event.answer()
-    else:
-        await target_message_obj.answer(text_to_send,
-                                        reply_markup=reply_markup)
+    elif target_message_obj and hasattr(target_message_obj, "bot"):
+        if image_exists:
+            await target_message_obj.bot.send_photo(
+                chat_id=target_message_obj.chat.id,
+                photo=FSInputFile(language_image_path),
+                caption=text_to_send,
+                reply_markup=reply_markup,
+            )
+        else:
+            await target_message_obj.bot.send_message(
+                chat_id=target_message_obj.chat.id,
+                text=text_to_send,
+                reply_markup=reply_markup,
+            )
 
 
 @router.callback_query(F.data.startswith("set_lang_"))

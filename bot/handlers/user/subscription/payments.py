@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+
 from aiogram import Router, F, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from typing import Optional, List, Tuple
@@ -19,6 +20,7 @@ from bot.services.crypto_pay_service import CryptoPayService
 from bot.services.stars_service import StarsService
 from bot.middlewares.i18n import JsonI18n
 from db.dal import payment_dal, user_billing_dal
+from bot.utils.menu_renderer import update_menu_message
 
 router = Router(name="user_subscription_payments_router")
 
@@ -50,6 +52,24 @@ def _format_saved_payment_method_title(get_text, network: Optional[str], last4: 
         network_name = network or get_text("payment_network_generic")
         title = get_text("payment_method_generic_title", network=network_name)
     return f"⭐ {title}" if is_default else title
+
+
+async def _update_payment_menu_message(
+    message: types.Message,
+    text: str,
+    *,
+    reply_markup=None,
+    parse_mode: Optional[str] = None,
+    disable_link_preview: bool = True,
+) -> None:
+    await update_menu_message(
+        message,
+        text,
+        "menu_subscribe.png",
+        reply_markup=reply_markup,
+        parse_mode=parse_mode,
+        disable_link_preview=disable_link_preview,
+    )
 
 
 async def _initiate_yk_payment(
@@ -98,14 +118,20 @@ async def _initiate_yk_payment(
             exc_info=True,
         )
         try:
-            await callback.message.edit_text(get_text("error_creating_payment_record"))
+            await _update_payment_menu_message(
+                callback.message,
+                get_text("error_creating_payment_record"),
+            )
         except Exception:
             pass
         return False
 
     if not db_payment_record:
         try:
-            await callback.message.edit_text(get_text("error_creating_payment_record"))
+            await _update_payment_menu_message(
+                callback.message,
+                get_text("error_creating_payment_record"),
+            )
         except Exception:
             pass
         return False
@@ -196,13 +222,17 @@ async def _initiate_yk_payment(
                 exc_info=True,
             )
             try:
-                await callback.message.edit_text(get_text("error_payment_gateway_link_failed"))
+                await _update_payment_menu_message(
+                    callback.message,
+                    get_text("error_payment_gateway_link_failed"),
+                )
             except Exception:
                 pass
             return False
 
         try:
-            await callback.message.edit_text(
+            await _update_payment_menu_message(
+                callback.message,
                 get_text(key="payment_link_message", months=months),
                 reply_markup=get_payment_url_keyboard(
                     payment_response_yk["confirmation_url"],
@@ -211,26 +241,12 @@ async def _initiate_yk_payment(
                     back_callback=back_callback,
                     back_text_key="back_to_payment_methods_button",
                 ),
-                disable_web_page_preview=False,
+                disable_link_preview=False,
             )
         except Exception as e_edit:
             logging.warning(
-                f"Edit message for payment link failed: {e_edit}. Sending new one."
+                f"Edit message for payment link failed: {e_edit}."
             )
-            try:
-                await callback.message.answer(
-                    get_text(key="payment_link_message", months=months),
-                    reply_markup=get_payment_url_keyboard(
-                        payment_response_yk["confirmation_url"],
-                        current_lang,
-                        i18n,
-                        back_callback=back_callback,
-                        back_text_key="back_to_payment_methods_button",
-                    ),
-                    disable_web_page_preview=False,
-                )
-            except Exception:
-                pass
         return True
 
     if payment_response_yk and payment_method_id:
@@ -257,26 +273,23 @@ async def _initiate_yk_payment(
                 exc_info=True,
             )
             try:
-                await callback.message.edit_text(get_text("error_payment_gateway"))
+                await _update_payment_menu_message(
+                    callback.message,
+                    get_text("error_payment_gateway"),
+                )
             except Exception:
                 pass
             return False
 
         message_text = get_text("yookassa_autopay_charge_initiated")
         try:
-            await callback.message.edit_text(
+            await _update_payment_menu_message(
+                callback.message,
                 message_text,
                 reply_markup=get_back_to_main_menu_markup(current_lang, i18n),
             )
         except Exception as e_edit:
             logging.warning(f"Failed to notify about saved-card charge start: {e_edit}")
-            try:
-                await callback.message.answer(
-                    message_text,
-                    reply_markup=get_back_to_main_menu_markup(current_lang, i18n),
-                )
-            except Exception:
-                pass
         return True
 
     try:
@@ -294,7 +307,10 @@ async def _initiate_yk_payment(
         f"Failed to create payment in YooKassa for user {user_id}, payment_db_id {db_payment_record.payment_id}. Response: {payment_response_yk}"
     )
     try:
-        await callback.message.edit_text(get_text("error_payment_gateway"))
+        await _update_payment_menu_message(
+            callback.message,
+            get_text("error_payment_gateway"),
+        )
     except Exception:
         pass
     return False
@@ -350,12 +366,15 @@ async def select_subscription_period_callback_handler(callback: types.CallbackQu
     )
 
     try:
-        await callback.message.edit_text(text_content, reply_markup=reply_markup)
+        await _update_payment_menu_message(
+            callback.message,
+            text_content,
+            reply_markup=reply_markup,
+        )
     except Exception as e_edit:
         logging.warning(
-            f"Edit message for payment method selection failed: {e_edit}. Sending new one."
+            f"Edit message for payment method selection failed: {e_edit}."
         )
-        await callback.message.answer(text_content, reply_markup=reply_markup)
     try:
         await callback.answer()
     except Exception:
@@ -377,8 +396,10 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
 
     if not yookassa_service or not yookassa_service.configured:
         logging.error("YooKassa service is not configured or unavailable.")
-        target_msg_edit = callback.message
-        await target_msg_edit.edit_text(get_text("payment_service_unavailable"))
+        await _update_payment_menu_message(
+            callback.message,
+            get_text("payment_service_unavailable"),
+        )
         try:
             await callback.answer(get_text("payment_service_unavailable_alert"), show_alert=True)
         except Exception:
@@ -420,7 +441,8 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
 
     if autopay_enabled and saved_methods:
         try:
-            await callback.message.edit_text(
+            await _update_payment_menu_message(
+                callback.message,
                 get_text("yookassa_autopay_flow_prompt"),
                 reply_markup=get_yk_autopay_choice_keyboard(
                     months,
@@ -431,20 +453,7 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
                 ),
             )
         except Exception as e_edit:
-            logging.warning(f"Failed to show autopay choice: {e_edit}. Sending new message.")
-            try:
-                await callback.message.answer(
-                    get_text("yookassa_autopay_flow_prompt"),
-                    reply_markup=get_yk_autopay_choice_keyboard(
-                        months,
-                        price_rub,
-                        current_lang,
-                        i18n,
-                        has_saved_cards=True,
-                    ),
-                )
-            except Exception:
-                pass
+            logging.warning(f"Failed to show autopay choice: {e_edit}.")
         try:
             await callback.answer()
         except Exception:
@@ -492,7 +501,10 @@ async def pay_yk_new_card_handler(callback: types.CallbackQuery, settings: Setti
         except Exception:
             pass
         try:
-            await callback.message.edit_text(get_text("payment_service_unavailable"))
+            await _update_payment_menu_message(
+                callback.message,
+                get_text("payment_service_unavailable"),
+            )
         except Exception:
             pass
         return
@@ -605,7 +617,8 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
 
     if not saved_methods:
         try:
-            await callback.message.edit_text(
+            await _update_payment_menu_message(
+                callback.message,
                 get_text("yookassa_autopay_no_saved_cards"),
                 reply_markup=get_yk_autopay_choice_keyboard(
                     months,
@@ -617,19 +630,6 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
             )
         except Exception as e_edit:
             logging.warning(f"Failed to display no-saved-card notice: {e_edit}")
-            try:
-                await callback.message.answer(
-                    get_text("yookassa_autopay_no_saved_cards"),
-                    reply_markup=get_yk_autopay_choice_keyboard(
-                        months,
-                        price_rub,
-                        current_lang,
-                        i18n,
-                        has_saved_cards=False,
-                    ),
-                )
-            except Exception:
-                pass
         try:
             await callback.answer()
         except Exception:
@@ -648,7 +648,8 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
     page = max(0, min(page, max_page))
 
     try:
-        await callback.message.edit_text(
+        await _update_payment_menu_message(
+            callback.message,
             get_text("yookassa_autopay_choose_saved_card"),
             reply_markup=get_yk_saved_cards_keyboard(
                 cards,
@@ -661,20 +662,6 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
         )
     except Exception as e_edit:
         logging.warning(f"Failed to display saved card list: {e_edit}")
-        try:
-            await callback.message.answer(
-                get_text("yookassa_autopay_choose_saved_card"),
-                reply_markup=get_yk_saved_cards_keyboard(
-                    cards,
-                    months,
-                    price_rub,
-                    current_lang,
-                    i18n,
-                    page=page,
-                ),
-            )
-        except Exception:
-            pass
     try:
         await callback.answer()
     except Exception:
@@ -709,7 +696,10 @@ async def pay_yk_use_saved_handler(callback: types.CallbackQuery, settings: Sett
         except Exception:
             pass
         try:
-            await callback.message.edit_text(get_text("payment_service_unavailable"))
+            await _update_payment_menu_message(
+                callback.message,
+                get_text("payment_service_unavailable"),
+            )
         except Exception:
             pass
         return
@@ -824,7 +814,10 @@ async def pay_fk_callback_handler(
         except Exception:
             pass
         try:
-            await callback.message.edit_text(get_text("payment_service_unavailable"))
+            await _update_payment_menu_message(
+                callback.message,
+                get_text("payment_service_unavailable"),
+            )
         except Exception:
             pass
         return
@@ -866,7 +859,10 @@ async def pay_fk_callback_handler(
             exc_info=True,
         )
         try:
-            await callback.message.edit_text(get_text("error_creating_payment_record"))
+            await _update_payment_menu_message(
+                callback.message,
+                get_text("error_creating_payment_record"),
+            )
         except Exception:
             pass
         try:
@@ -918,7 +914,8 @@ async def pay_fk_callback_handler(
                 date=datetime.now().strftime("%Y-%m-%d"),
             )
             try:
-                await callback.message.edit_text(
+                await _update_payment_menu_message(
+                    callback.message,
                     f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
                     reply_markup=get_payment_url_keyboard(
                         location,
@@ -927,24 +924,10 @@ async def pay_fk_callback_handler(
                         back_callback=f"subscribe_period:{months}",
                         back_text_key="back_to_payment_methods_button",
                     ),
-                    disable_web_page_preview=False,
+                    disable_link_preview=False,
                 )
             except Exception as e_edit:
-                logging.warning(f"FreeKassa: failed to display payment link ({e_edit}), sending new message.")
-                try:
-                    await callback.message.answer(
-                        f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
-                        reply_markup=get_payment_url_keyboard(
-                            location,
-                            current_lang,
-                            i18n,
-                            back_callback=f"subscribe_period:{months}",
-                            back_text_key="back_to_payment_methods_button",
-                        ),
-                        disable_web_page_preview=False,
-                    )
-                except Exception:
-                    pass
+                logging.warning(f"FreeKassa: failed to display payment link ({e_edit}).")
             try:
                 await callback.answer()
             except Exception:
@@ -975,7 +958,10 @@ async def pay_fk_callback_handler(
         logging.error(f"FreeKassa: failed to mark payment {payment_record.payment_id} as failed_creation: {e_status}", exc_info=True)
 
     try:
-        await callback.message.edit_text(get_text("error_payment_gateway"))
+        await _update_payment_menu_message(
+            callback.message,
+            get_text("error_payment_gateway"),
+        )
     except Exception:
         pass
     try:
@@ -1035,7 +1021,8 @@ async def pay_crypto_callback_handler(
 
     if invoice_url:
         try:
-            await callback.message.edit_text(
+            await _update_payment_menu_message(
+                callback.message,
                 get_text(key="payment_link_message", months=months),
                 reply_markup=get_payment_url_keyboard(
                     invoice_url,
@@ -1044,23 +1031,10 @@ async def pay_crypto_callback_handler(
                     back_callback=f"subscribe_period:{months}",
                     back_text_key="back_to_payment_methods_button",
                 ),
-                disable_web_page_preview=False,
+                disable_link_preview=False,
             )
         except Exception:
-            try:
-                await callback.message.answer(
-                    get_text(key="payment_link_message", months=months),
-                    reply_markup=get_payment_url_keyboard(
-                        invoice_url,
-                        current_lang,
-                        i18n,
-                        back_callback=f"subscribe_period:{months}",
-                        back_text_key="back_to_payment_methods_button",
-                    ),
-                    disable_web_page_preview=False,
-                )
-            except Exception:
-                pass
+            pass
         try:
             await callback.answer()
         except Exception:
@@ -1124,7 +1098,8 @@ async def pay_stars_callback_handler(
 
     if payment_db_id:
         try:
-            await callback.message.edit_text(
+            await _update_payment_menu_message(
+                callback.message,
                 get_text("payment_invoice_sent_message", months=months),
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(
