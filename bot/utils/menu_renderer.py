@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import FSInputFile, InputMediaPhoto, LinkPreviewOptions
 
@@ -15,7 +16,7 @@ async def update_menu_message(
     text: str,
     image_filename: Optional[str],
     reply_markup=None,
-    parse_mode: Optional[str] = None,
+    parse_mode: Optional[str] = ParseMode.HTML,
     disable_link_preview: bool = True,
 ) -> bool:
     """Update a menu message with an image background when possible.

@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from aiogram import Router, F, types
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,7 +60,7 @@ async def _update_payment_menu_message(
     text: str,
     *,
     reply_markup=None,
-    parse_mode: Optional[str] = None,
+    parse_mode: Optional[str] = ParseMode.HTML,
     disable_link_preview: bool = True,
 ) -> None:
     await update_menu_message(
