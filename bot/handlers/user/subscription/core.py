@@ -1,7 +1,7 @@
 import logging
 from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, LinkPreviewOptions
 from typing import Optional, Union
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -276,14 +276,14 @@ async def my_subscription_command_handler(
             text + tribute_hint,
             "menu_my_subscription.png",
             reply_markup=markup,
-            parse_mode="HTML",
+            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
         )
         try:
             await event.answer()
         except Exception:
             pass
     else:
-        await target.answer(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+        await target.answer(text + tribute_hint, reply_markup=markup, parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
 
 
 @router.callback_query(F.data == "main_action:my_devices")
@@ -387,7 +387,9 @@ async def my_devices_command_handler(
         except Exception:
             pass
         try:
-            await event.message.edit_text(text, reply_markup=markup)
+            await event.message.edit_text(text, reply_markup=markup,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
         except Exception:
             await event.message.answer(text, reply_markup=markup)
     else:
@@ -479,7 +481,9 @@ async def toggle_autorenew_handler(
     confirm_text = get_text("autorenew_confirm_enable") if enable else get_text("autorenew_confirm_disable")
     kb = get_autorenew_confirm_keyboard(enable, sub.subscription_id, current_lang, i18n)
     try:
-        await callback.message.edit_text(confirm_text, reply_markup=kb)
+        await callback.message.edit_text(confirm_text, reply_markup=kb,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception:
         try:
             await callback.message.answer(confirm_text, reply_markup=kb)

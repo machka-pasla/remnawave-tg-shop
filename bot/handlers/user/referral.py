@@ -1,5 +1,6 @@
 import logging
 from aiogram import Router, F, types, Bot
+from aiogram.types import LinkPreviewOptions
 from aiogram.filters import Command
 from typing import Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,8 +30,10 @@ async def referral_command_handler(event: Union[types.Message,
             "Target message is None in referral_command_handler (possibly from callback without message)."
         )
         if isinstance(event, types.CallbackQuery):
-            await event.answer("Error displaying referral info.",
-                               show_alert=True)
+            await event.answer(
+                "Error displaying referral info.",
+                show_alert=True,
+            )
         return
 
     if not i18n or not referral_service:
@@ -50,7 +53,9 @@ async def referral_command_handler(event: Union[types.Message,
                 pass
         else:
             await target_message_obj.answer(
-                "Service error. Please try again later."
+                "Service error. Please try again later.",
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         return
 
@@ -74,7 +79,11 @@ async def referral_command_handler(event: Union[types.Message,
             except Exception:
                 pass
         else:
-            await target_message_obj.answer(_("error_generating_referral_link"))
+            await target_message_obj.answer(
+                _("error_generating_referral_link"),
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
         return
 
     if not bot_username:
@@ -91,7 +100,11 @@ async def referral_command_handler(event: Union[types.Message,
             except Exception:
                 pass
         else:
-            await target_message_obj.answer(_("error_generating_referral_link"))
+            await target_message_obj.answer(
+                _("error_generating_referral_link"),
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
         return
 
     inviter_user_id = event.from_user.id
@@ -134,7 +147,8 @@ async def referral_command_handler(event: Union[types.Message,
         await event.answer(
             text,
             reply_markup=reply_markup_val,
-            disable_web_page_preview=True,
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
         )
     elif isinstance(event, types.CallbackQuery) and event.message:
         await update_menu_message(
@@ -174,7 +188,8 @@ async def referral_action_handler(callback: types.CallbackQuery, settings: Setti
             
             await callback.message.answer(
                 friend_message,
-                disable_web_page_preview=True
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
             
         except Exception as e:

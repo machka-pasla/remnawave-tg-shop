@@ -4,6 +4,7 @@ from aiogram import Router, F, types, Bot
 from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
 
 from aiogram.fsm.context import FSMContext
+from aiogram.types import LinkPreviewOptions
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +47,8 @@ async def broadcast_message_prompt_handler(
             await callback.message.edit_text(
                 prompt_text,
                 reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         except Exception as e:
             logging.warning(
@@ -103,9 +106,8 @@ async def process_broadcast_message_handler(
                 bot, 
                 chat_id=message.chat.id, 
                 content=content,
-                parse_mode="HTML",
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
                 entities=entities,
-                disable_web_page_preview=True,
                 disable_notification=True,
             )
         else:
@@ -113,9 +115,8 @@ async def process_broadcast_message_handler(
                 bot, 
                 chat_id=message.chat.id, 
                 content=content,
-                parse_mode="HTML",
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
                 caption_entities=entities,
-                disable_web_page_preview=True,
                 disable_notification=True,
             )
     except TelegramBadRequest as e:
@@ -171,6 +172,8 @@ async def change_broadcast_target_handler(
             reply_markup=get_broadcast_confirmation_keyboard(
                 current_lang, i18n, target=new_target
             ),
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
         )
     except Exception:
         pass
@@ -196,7 +199,10 @@ async def cancel_broadcast_at_prompt_stage(
 
     try:
         await callback.message.edit_text(
-            _("admin_broadcast_cancelled_nav_back"), reply_markup=None
+            _("admin_broadcast_cancelled_nav_back"),
+            reply_markup=None,
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
         )
     except Exception:
         await callback.message.answer(_("admin_broadcast_cancelled_nav_back"))
@@ -242,14 +248,18 @@ async def confirm_broadcast_callback_handler(
         entities = user_fsm_data.get("broadcast_entities", [])
         
         if not content.text and content.content_type == "text":
-            await callback.message.edit_text(_("admin_broadcast_error_no_message"))
+            await callback.message.edit_text(_("admin_broadcast_error_no_message"),
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
             await state.clear()
             await callback.answer(
                 _("admin_broadcast_error_no_message_alert"), show_alert=True
             )
             return
 
-        await callback.message.edit_text(_("admin_broadcast_sending_started"), reply_markup=None)
+        await callback.message.edit_text(_("admin_broadcast_sending_started"), reply_markup=None,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
         await callback.answer()
 
         target = user_fsm_data.get("broadcast_target", "all")
@@ -270,7 +280,9 @@ async def confirm_broadcast_callback_handler(
         # Get message queue manager
         queue_manager = get_queue_manager()
         if not queue_manager:
-            await callback.message.edit_text("❌ Ошибка: система очередей не инициализирована", reply_markup=None)
+            await callback.message.edit_text("❌ Ошибка: система очередей не инициализирована", reply_markup=None,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
             return
 
         # Queue all messages for sending
@@ -282,18 +294,16 @@ async def confirm_broadcast_callback_handler(
                         queue_manager, 
                         uid, 
                         content,
-                        parse_mode="HTML",
+                        parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
                         entities=entities,
-                        disable_web_page_preview=True,
                     )
                 else:
                     await send_message_via_queue(
                         queue_manager, 
                         uid, 
                         content,
-                        parse_mode="HTML",
+                        parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
                         caption_entities=entities,
-                        disable_web_page_preview=True,
                     )
                 sent_count += 1
                 
@@ -391,6 +401,8 @@ async def confirm_broadcast_callback_handler(
                         await status_message.edit_text(
                             new_text,
                             reply_markup=back_keyboard,
+                            parse_mode="HTML",
+                            link_preview_options=LinkPreviewOptions(is_disabled=True),
                         )
                         last_text = new_text
                     except TelegramBadRequest as e:
@@ -419,6 +431,8 @@ async def confirm_broadcast_callback_handler(
         await callback.message.edit_text(
             _("admin_broadcast_cancelled"),
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
         )
         await callback.answer()
 

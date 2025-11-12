@@ -14,6 +14,7 @@ from db.models import PromoCode, PromoCodeActivation
 from bot.states.admin_states import AdminStates
 from bot.keyboards.inline.admin_keyboards import get_back_to_admin_panel_keyboard, get_admin_panel_keyboard
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
+from aiogram.types import LinkPreviewOptions
 from bot.middlewares.i18n import JsonI18n
 
 router = Router(name="promo_manage_router")
@@ -83,7 +84,7 @@ async def view_promo_codes_handler(callback: types.CallbackQuery, i18n_data: dic
         ]
     )
     
-    await callback.message.edit_text(text, reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n), parse_mode="HTML")
+    await callback.message.edit_text(text, reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n), parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
     await callback.answer()
 
 
@@ -104,7 +105,7 @@ async def promo_management_handler(callback: types.CallbackQuery, i18n_data: dic
     
     promo_models = await promo_code_dal.get_all_promo_codes_with_details(session, limit=page_size, offset=offset)
     if not promo_models and page == 0:
-        await callback.message.edit_text(_("admin_promo_management_empty"), reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n), parse_mode="HTML")
+        await callback.message.edit_text(_("admin_promo_management_empty"), reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n), parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
         await callback.answer()
         return
 
@@ -134,7 +135,7 @@ async def promo_management_handler(callback: types.CallbackQuery, i18n_data: dic
     if total_pages > 1:
         title += f"\n{_('admin_promo_list_page_info', current=page+1, total=total_pages, count=total_count)}"
     
-    await callback.message.edit_text(title, reply_markup=builder.as_markup(), parse_mode="HTML")
+    await callback.message.edit_text(title, reply_markup=builder.as_markup(), parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
     await callback.answer()
 
 
@@ -159,7 +160,7 @@ async def promo_detail_handler(callback: types.CallbackQuery, i18n_data: dict, s
         promo_id = int(callback.data.split(":")[1])
         text, keyboard = await get_promo_detail_text_and_keyboard(promo_id, session, i18n, current_lang)
         if text:
-            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
         else:
             await callback.answer(i18n.gettext(current_lang, "admin_promo_not_found"), show_alert=True)
     except (ValueError, IndexError):
@@ -189,7 +190,7 @@ async def promo_toggle_handler(callback: types.CallbackQuery, i18n_data: dict, s
             
             text, keyboard = await get_promo_detail_text_and_keyboard(promo_id, session, i18n, current_lang)
             if text:
-                await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+                await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
         else:
             await callback.answer(_("error_occurred_try_again"), show_alert=True)
     except (ValueError, IndexError):
@@ -235,7 +236,7 @@ async def promo_activations_handler(callback: types.CallbackQuery, i18n_data: di
         builder.row(InlineKeyboardButton(text=_("admin_promo_export_csv_button"), callback_data=f"promo_export:{promo_id}"))
         builder.row(InlineKeyboardButton(text=_("admin_promo_back_to_detail_button"), callback_data=f"promo_detail:{promo_id}"))
 
-        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
     except (ValueError, IndexError):
         await callback.answer(_("admin_promo_not_found"), show_alert=True)
     await callback.answer()
@@ -381,7 +382,9 @@ async def promo_edit_select_handler(callback: types.CallbackQuery, i18n_data: di
     builder.row(InlineKeyboardButton(text=_("admin_promo_edit_validity"), callback_data=f"promo_edit_field:valid_until:{promo_id}"))
     builder.row(InlineKeyboardButton(text=_("admin_promo_back_to_detail_button"), callback_data=f"promo_detail:{promo_id}"))
     
-    await callback.message.edit_text(_("admin_promo_edit_select_field"), reply_markup=builder.as_markup())
+    await callback.message.edit_text(_("admin_promo_edit_select_field"), reply_markup=builder.as_markup(),
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
     await callback.answer()
 
 
@@ -401,7 +404,9 @@ async def promo_edit_field_handler(callback: types.CallbackQuery, state: FSMCont
         "valid_until": "admin_promo_prompt_validity_days"
     }
     await state.set_state(AdminStates.waiting_for_promo_edit_details)
-    await callback.message.edit_text(_(prompts.get(field, "error_occurred_try_again")))
+    await callback.message.edit_text(_(prompts.get(field, "error_occurred_try_again")),
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
     await callback.answer()
 
 @router.message(StateFilter(AdminStates.waiting_for_promo_edit_details))
@@ -438,7 +443,7 @@ async def process_promo_edit_details(message: types.Message, state: FSMContext, 
             await state.clear()
             text, keyboard = await get_promo_detail_text_and_keyboard(promo_id, session, i18n, current_lang)
             if text:
-                await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
+                await message.answer(text, reply_markup=keyboard, parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
         else:
             await message.answer(_("error_occurred_try_again"))
             await state.clear()

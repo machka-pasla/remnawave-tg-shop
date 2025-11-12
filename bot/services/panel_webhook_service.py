@@ -4,7 +4,7 @@ import hmac
 import hashlib
 from aiohttp import web
 from aiogram import Bot
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, LinkPreviewOptions
 from sqlalchemy.orm import sessionmaker
 from typing import Optional
 from config.settings import Settings
@@ -39,7 +39,11 @@ class PanelWebhookService:
         _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw)
         try:
             await self.bot.send_message(
-                user_id, _(message_key, **kwargs), reply_markup=reply_markup
+                user_id,
+                _(message_key, **kwargs),
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         except Exception as e:
             logging.error(f"Failed to send notification to {user_id}: {e}")
@@ -152,7 +156,8 @@ class PanelWebhookService:
                             user_id,
                             auto_renewal_msg,
                             reply_markup=markup,
-                            parse_mode="HTML"
+                            parse_mode="HTML",
+                            link_preview_options=LinkPreviewOptions(is_disabled=True),
                         )
                         auto_renewed = True
                     except Exception as e:

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List, Tuple
 from aiogram import Bot
+from aiogram.types import LinkPreviewOptions
 from bot.middlewares.i18n import JsonI18n
 
 from db.dal import user_dal, subscription_dal, promo_code_dal, payment_dal, user_billing_dal
@@ -62,7 +63,12 @@ class SubscriptionService:
         msg = _adm("admin_panel_user_creation_failed", user_id=user_id)
         for admin_id in self.settings.ADMIN_IDS:
             try:
-                await self.bot.send_message(admin_id, msg)
+                await self.bot.send_message(
+                    admin_id,
+                    msg,
+                    parse_mode="HTML",
+                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                )
             except Exception as e:
                 logging.error(
                     f"Failed to notify admin {admin_id} about panel user creation failure: {e}"

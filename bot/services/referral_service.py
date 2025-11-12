@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from typing import Optional, Dict, Any
 from aiogram import Bot
+from aiogram.types import LinkPreviewOptions
 from datetime import datetime, timezone, timedelta
 
 from config.settings import Settings
@@ -134,11 +135,15 @@ class ReferralService:
                                     inviter_lang, k, **kw)
                                 await self.bot.send_message(
                                     inviter_user_id,
-                                    _i("referral_bonus_inviter_notification_extended",
-                                       days=inviter_bonus_days,
-                                       referee_name=referee_name_for_msg,
-                                       new_end_date=new_end_date_inviter.
-                                       strftime('%Y-%m-%d')))
+                                    _i(
+                                        "referral_bonus_inviter_notification_extended",
+                                        days=inviter_bonus_days,
+                                        referee_name=referee_name_for_msg,
+                                        new_end_date=new_end_date_inviter.strftime('%Y-%m-%d'),
+                                    ),
+                                    parse_mode="HTML",
+                                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                                )
                             except Exception as e_notify_inviter:
                                 logging.error(
                                     f"Failed to send bonus notification to inviter {inviter_user_id}: {e_notify_inviter}"
@@ -205,12 +210,15 @@ class ReferralService:
                                             inviter_lang, k, **kw)
                                         await self.bot.send_message(
                                             inviter_user_id,
-                                            _i("referral_bonus_inviter_notification_new_sub",
-                                               days=inviter_bonus_days,
-                                               referee_name=
-                                               referee_name_for_msg,
-                                               new_end_date=bonus_end_date.
-                                               strftime('%Y-%m-%d')))
+                                            _i(
+                                                "referral_bonus_inviter_notification_new_sub",
+                                                days=inviter_bonus_days,
+                                                referee_name=referee_name_for_msg,
+                                                new_end_date=bonus_end_date.strftime('%Y-%m-%d'),
+                                            ),
+                                            parse_mode="HTML",
+                                            link_preview_options=LinkPreviewOptions(is_disabled=True),
+                                        )
                                     else:
                                         logging.warning(
                                             f"Failed to update panel for new bonus subscription for inviter {inviter_user_id}. Local bonus sub created (ID: {bonus_sub.subscription_id}) but may not be active on panel."
