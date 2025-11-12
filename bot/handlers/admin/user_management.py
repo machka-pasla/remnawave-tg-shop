@@ -143,17 +143,13 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str,
     # Row 4: Quick links
     builder.button(
         text=_(key="user_card_open_profile_button",
-               default="👤 Открыть профиль"),
+               default="👤 Профиль пользователя"),
         url=f"tg://user?id={user_id}"
     )
     if referrer_id:
         builder.button(
-            text=_(key="user_card_open_referrer_profile_button",
-                   default="👤 Открыть профиль пригласившего"),
-            url=f"tg://user?id={referrer_id}"
-        )
-        builder.button(
-            text="🪪",
+            text=_(key="user_card_open_referrer_card_button",
+                   default="🪪 Карточка пригласившего"),
             callback_data=f"user_action:view_referrer_card:{referrer_id}"
         )
 
@@ -173,7 +169,7 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str,
         callback_data="admin_action:main"
     )
     
-    quick_links_width = 3 if referrer_id else 1
+    quick_links_width = 2 if referrer_id else 1
     builder.adjust(2, 2, 2, quick_links_width, 1, 2)
     return builder
 

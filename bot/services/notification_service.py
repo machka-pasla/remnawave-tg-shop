@@ -60,43 +60,31 @@ class NotificationService:
         user_id: int,
         referrer_id: Optional[int] = None,
         bot_username: Optional[str] = None,
-    ) -> InlineKeyboardMarkup:
-        """Create inline keyboard with links to user (and referrer) profiles."""
-        def build_admin_card_button(target_id: int) -> Optional[InlineKeyboardButton]:
-            if not bot_username:
-                return None
-            deeplink = NotificationService._admin_card_deeplink(bot_username, target_id)
-            return InlineKeyboardButton(text="🪪", url=deeplink)
+    ) -> Optional[InlineKeyboardMarkup]:
+        """Create inline keyboard with admin card deeplinks."""
+        if not bot_username:
+            return None
 
-        user_row = [
+        buttons = [[
             InlineKeyboardButton(
                 text=translate(
-                    "log_open_profile_link",
-                    default="👤 Открыть профиль",
+                    "log_open_user_card_button",
+                    default="🪪 Карточка пользователя",
                 ),
-                url=f"tg://user?id={user_id}",
+                url=NotificationService._admin_card_deeplink(bot_username, user_id),
             )
-        ]
-        user_admin_button = build_admin_card_button(user_id)
-        if user_admin_button:
-            user_row.append(user_admin_button)
-
-        buttons = [user_row]
+        ]]
 
         if referrer_id:
-            ref_row = [
+            buttons.append([
                 InlineKeyboardButton(
                     text=translate(
-                        "log_open_referrer_profile_button",
-                        default="👤 Открыть профиль пригласившего",
+                        "log_open_referrer_card_button",
+                        default="🪪 Карточка пригласившего",
                     ),
-                    url=f"tg://user?id={referrer_id}",
+                    url=NotificationService._admin_card_deeplink(bot_username, referrer_id),
                 )
-            ]
-            ref_admin_button = build_admin_card_button(referrer_id)
-            if ref_admin_button:
-                ref_row.append(ref_admin_button)
-            buttons.append(ref_row)
+            ])
 
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 
