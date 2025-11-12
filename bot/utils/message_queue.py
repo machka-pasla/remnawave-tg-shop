@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from collections import deque
 from aiogram import Bot
 
-from .telegram_defaults import apply_default_formatting
-
 
 @dataclass
 class QueuedMessage:
@@ -133,7 +131,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='send_message',
-            kwargs=apply_default_formatting("text", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
     
@@ -143,7 +141,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='edit_message_text',
-            kwargs=apply_default_formatting("text", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
     
@@ -153,7 +151,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='send_document',
-            kwargs=apply_default_formatting("document", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
     
@@ -163,7 +161,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='send_photo',
-            kwargs=apply_default_formatting("photo", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
 
@@ -173,7 +171,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='send_video',
-            kwargs=apply_default_formatting("video", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
 
@@ -183,7 +181,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='send_animation',
-            kwargs=apply_default_formatting("animation", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
 
@@ -193,7 +191,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='send_audio',
-            kwargs=apply_default_formatting("audio", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
 
@@ -203,7 +201,7 @@ class MessageQueueManager:
         message = QueuedMessage(
             chat_id=chat_id,
             method_name='send_voice',
-            kwargs=apply_default_formatting("voice", kwargs)
+            kwargs=kwargs
         )
         await queue.add_message(message)
 
