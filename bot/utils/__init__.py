@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Any
 from aiogram import types
 
+from .telegram_defaults import apply_default_formatting
+
 
 @dataclass
 class MessageContent:
@@ -15,7 +17,7 @@ class MessageContent:
 
 # Словари поддерживаемых параметров для каждого типа сообщения
 SUPPORTED_PARAMS = {
-    "text": {"parse_mode", "entities", "disable_web_page_preview", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id"},
+    "text": {"parse_mode", "entities", "disable_web_page_preview", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "link_preview_options"},
     "photo": {"caption", "parse_mode", "caption_entities", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
     "video": {"duration", "width", "height", "thumbnail", "caption", "parse_mode", "caption_entities", "supports_streaming", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
     "animation": {"duration", "width", "height", "thumbnail", "caption", "parse_mode", "caption_entities", "disable_notification", "protect_content", "reply_markup", "reply_to_message_id", "allow_sending_without_reply", "message_thread_id", "has_spoiler"},
@@ -76,7 +78,8 @@ async def send_message_by_type(bot, chat_id: int, content: MessageContent, **kwa
     Автоматически фильтрует неподдерживаемые параметры.
     """
     # Фильтруем kwargs для данного типа сообщения
-    filtered_kwargs = filter_kwargs(content.content_type, kwargs)
+    prepared_kwargs = apply_default_formatting(content.content_type, kwargs)
+    filtered_kwargs = filter_kwargs(content.content_type, prepared_kwargs)
     
     match content.content_type:
         case "text":
@@ -141,7 +144,7 @@ async def send_message_by_type(bot, chat_id: int, content: MessageContent, **kwa
             )
         case _:
             # Fallback для неизвестных типов - отправляем как текст
-            text_kwargs = filter_kwargs("text", kwargs)
+            text_kwargs = filter_kwargs("text", apply_default_formatting("text", kwargs))
             await bot.send_message(
                 chat_id=chat_id,
                 text=content.text or "Unknown content type",
@@ -156,7 +159,8 @@ async def send_message_via_queue(queue_manager, uid: int, content: MessageConten
     Автоматически фильтрует неподдерживаемые параметры.
     """
     # Фильтруем kwargs для данного типа сообщения
-    filtered_kwargs = filter_kwargs(content.content_type, kwargs)
+    prepared_kwargs = apply_default_formatting(content.content_type, kwargs)
+    filtered_kwargs = filter_kwargs(content.content_type, prepared_kwargs)
     
     match content.content_type:
         case "text":
@@ -197,7 +201,7 @@ async def send_message_via_queue(queue_manager, uid: int, content: MessageConten
             )
         case _:
             # Fallback для неизвестных типов - отправляем как текст
-            text_kwargs = filter_kwargs("text", kwargs)
+            text_kwargs = filter_kwargs("text", apply_default_formatting("text", kwargs))
             await queue_manager.send_message(
                 chat_id=uid, text=content.text or "Unknown content type", **text_kwargs
             )
