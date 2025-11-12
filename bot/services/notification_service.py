@@ -15,6 +15,7 @@ from bot.utils.text_sanitizer import (
     display_name_or_fallback,
     username_for_display,
 )
+from bot.utils.id_bridge import get_id_bridge, IdBridge, admin_recipient_ids
 
 
 class NotificationService:
@@ -24,58 +25,60 @@ class NotificationService:
         self.bot = bot
         self.settings = settings
         self.i18n = i18n
+        try:
+            self.id_bridge: Optional[IdBridge] = get_id_bridge()
+        except RuntimeError:
+            self.id_bridge = None
 
-    @staticmethod
     def _format_user_display(
-        user_id: int,
+        self,
+        user_id: Union[int, str],
         username: Optional[str] = None,
         first_name: Optional[str] = None,
     ) -> str:
-        base_display = display_name_or_fallback(first_name, f"ID {user_id}")
+        identifier = self._public_identifier(user_id)
+        if self.settings.TELEGRAM_ID_ENCRYPTION:
+            return f"<code>{identifier}</code>"
+        base_display = display_name_or_fallback(first_name, f"ID {identifier}")
         if username:
             base_display = f"{base_display} ({username_for_display(username)})"
         return base_display
 
-    @staticmethod
-    def _build_profile_keyboard(
-        translate: Callable[..., str],
-        user_id: int,
-        referrer_id: Optional[int] = None,
-    ) -> InlineKeyboardMarkup:
-        """Create inline keyboard with links to user (and referrer) profiles."""
-        buttons = [
-            [
-                InlineKeyboardButton(
-                    text=translate(
-                        "log_open_profile_link",
-                        default="👤 Открыть профиль",
-                    ),
-                    url=f"tg://user?id={user_id}",
-                )
-            ]
-        ]
+    def _public_identifier(self, user_ref: Union[int, str]) -> str:
+        if self.id_bridge and self.id_bridge.enabled:
+            if isinstance(user_ref, str):
+                try:
+                    return self.id_bridge.normalize_uid(user_ref)
+                except ValueError:
+                    pass
+            try:
+                return self.id_bridge.tid_to_uid(int(user_ref))
+            except (ValueError, TypeError):
+                return str(user_ref)
+        return str(user_ref)
 
-        if referrer_id:
-            buttons.append([
-                InlineKeyboardButton(
-                    text=translate(
-                        "log_open_referrer_profile_button",
-                        default="👤 Открыть профиль пригласившего",
-                    ),
-                    url=f"tg://user?id={referrer_id}",
-                )
-            ])
+    def _admin_recipient_ids(self) -> List[int]:
+        return admin_recipient_ids(self.settings)
 
-        return InlineKeyboardMarkup(inline_keyboard=buttons)
-    
-    async def _send_to_log_channel(
-        self,
-        message: str,
-        thread_id: Optional[int] = None,
-        reply_markup: Optional[InlineKeyboardMarkup] = None,
-    ):
-        """Send message to configured log channel/group using message queue"""
+    def _resolve_log_chat_id(self) -> Optional[int]:
         if not self.settings.LOG_CHAT_ID:
+            return None
+        if self.id_bridge and self.id_bridge.enabled:
+            try:
+                return self.id_bridge.resolve_chat_reference(self.settings.LOG_CHAT_ID)
+            except ValueError as exc:
+                logging.error(f"Invalid LOG_CHAT_ID reference: {exc}")
+                return None
+        try:
+            return int(self.settings.LOG_CHAT_ID)
+        except (TypeError, ValueError):
+            logging.error(f"Invalid LOG_CHAT_ID value: {self.settings.LOG_CHAT_ID}")
+            return None
+    
+    async def _send_to_log_channel(self, message: str, thread_id: Optional[int] = None):
+        """Send message to configured log channel/group using message queue"""
+        chat_id = self._resolve_log_chat_id()
+        if not chat_id:
             return
         
         queue_manager = get_queue_manager()
@@ -83,11 +86,10 @@ class NotificationService:
             logging.warning("Message queue manager not available, falling back to direct send")
             try:
                 await self.bot.send_message(
-                    chat_id=self.settings.LOG_CHAT_ID,
+                    chat_id=chat_id,
                     text=message,
                     parse_mode="HTML",
                     disable_web_page_preview=True,
-                    reply_markup=reply_markup,
                     message_thread_id=thread_id or self.settings.LOG_THREAD_ID
                 )
             except Exception as e:
@@ -111,20 +113,21 @@ class NotificationService:
                 kwargs["message_thread_id"] = final_thread_id
             
             # Queue message for sending (groups are rate limited to 15/minute)
-            await queue_manager.send_message(self.settings.LOG_CHAT_ID, **kwargs)
+            await queue_manager.send_message(chat_id, **kwargs)
             
         except Exception as e:
-            logging.error(f"Failed to queue notification to log channel {self.settings.LOG_CHAT_ID}: {e}")
+            logging.error(f"Failed to queue notification to log channel {chat_id}: {e}")
     
     async def _send_to_admins(self, message: str):
         """Send message to all admin users using message queue"""
-        if not self.settings.ADMIN_IDS:
+        admin_targets = self._admin_recipient_ids()
+        if not admin_targets:
             return
         
         queue_manager = get_queue_manager()
         if not queue_manager:
             logging.warning("Message queue manager not available, falling back to direct send")
-            for admin_id in self.settings.ADMIN_IDS:
+            for admin_id in admin_targets:
                 try:
                     await self.bot.send_message(
                         chat_id=admin_id,
@@ -136,7 +139,7 @@ class NotificationService:
                     logging.error(f"Failed to send notification to admin {admin_id}: {e}")
             return
         
-        for admin_id in self.settings.ADMIN_IDS:
+        for admin_id in admin_targets:
             try:
                 await queue_manager.send_message(
                     chat_id=admin_id,
@@ -325,7 +328,7 @@ class NotificationService:
             details=details
         )
         
-        # Send to log channel
+        # Send to log channel 
         await self._send_to_log_channel(message)
 
     async def notify_suspicious_promo_attempt(

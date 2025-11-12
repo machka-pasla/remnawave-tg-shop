@@ -8,6 +8,7 @@ from config.settings import Settings
 from db.dal import user_dal, payment_dal
 from bot.services.referral_service import ReferralService
 from bot.middlewares.i18n import JsonI18n
+from bot.utils.id_bridge import get_id_bridge
 
 router = Router(name="inline_mode_router")
 
@@ -26,13 +27,23 @@ async def inline_query_handler(inline_query: InlineQuery,
         return
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
-    user_id = inline_query.from_user.id
+    user_tid = inline_query.from_user.id
+    try:
+        id_bridge = get_id_bridge()
+    except RuntimeError:
+        id_bridge = None
     query = inline_query.query.lower().strip()
     
     results: List[InlineQueryResultArticle] = []
     
     # Check if user is admin
-    is_admin = user_id in settings.ADMIN_IDS if settings.ADMIN_IDS else False
+    if settings.ADMIN_IDS:
+        if id_bridge:
+            is_admin = id_bridge.is_admin(user_tid, settings.ADMIN_IDS)
+        else:
+            is_admin = user_tid in settings.ADMIN_IDS
+    else:
+        is_admin = False
     
     try:
         # For all users: referral functionality
@@ -62,7 +73,10 @@ async def inline_query_handler(inline_query: InlineQuery,
         )
         
     except Exception as e:
-        logging.error(f"Error handling inline query from user {user_id}: {e}")
+        user_ref = None
+        if id_bridge:
+            user_ref = id_bridge.build_identity(user_tid).uid
+        logging.error(f"Error handling inline query from user {user_ref or user_tid}: {e}")
         # Send empty results in case of error
         await inline_query.answer(results=[], cache_time=10)
 
@@ -357,5 +371,3 @@ async def create_system_stats_result(session: AsyncSession, i18n_instance, lang:
             thumbnail_url=settings.INLINE_SYSTEM_STATS_THUMBNAIL_URL
         )
         return None
-
-

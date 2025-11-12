@@ -8,6 +8,7 @@ from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError, Telegra
 
 from config.settings import Settings
 from db.dal import user_dal
+from bot.utils.id_bridge import get_id_bridge
 
 from .i18n import JsonI18n
 from ..keyboards.inline.user_keyboards import get_user_banned_keyboard
@@ -30,7 +31,15 @@ class BanCheckMiddleware(BaseMiddleware):
         if not event_user:
             return await handler(event, data)
 
-        if event_user.id in self.settings.ADMIN_IDS:
+        try:
+            id_bridge = get_id_bridge()
+        except RuntimeError:
+            id_bridge = None
+
+        if id_bridge:
+            if id_bridge.is_admin(event_user.id, self.settings.ADMIN_IDS):
+                return await handler(event, data)
+        elif event_user.id in self.settings.ADMIN_IDS:
             return await handler(event, data)
 
         try:
@@ -43,8 +52,12 @@ class BanCheckMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         if db_user_model and db_user_model.is_banned:
+            user_identity = (
+                id_bridge.build_identity(event_user.id)
+                if id_bridge else None
+            )
             logging.info(
-                f"User {event_user.id} ({event_user.username or 'NoUsername'}) is banned. Blocking access."
+                f"User {user_identity.uid if user_identity else event_user.id} is banned. Blocking access."
             )
 
             i18n_data_from_event = data.get("i18n_data", {})
@@ -97,7 +110,8 @@ class BanCheckMiddleware(BaseMiddleware):
                     await bot_instance.send_message(event_user.id,
                                                     ban_message_text,
                                                     reply_markup=keyboard)
-                logging.info(f"Ban notification sent to user {event_user.id}.")
+                logging.info(
+                    f"Ban notification sent to user {user_identity.uid if user_identity else event_user.id}.")
             except TelegramForbiddenError:
                 logging.warning(
                     f"BanCheck: Bot is blocked by user {event_user.id}.")

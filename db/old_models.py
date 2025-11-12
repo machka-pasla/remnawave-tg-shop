@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, ForeignKey, UniqueConstraint, Text, BigInteger, SmallInteger
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, ForeignKey, UniqueConstraint, Text, BigInteger
 from sqlalchemy.orm import relationship, DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.sql import func
@@ -13,7 +13,6 @@ class User(Base):
     __tablename__ = "users"
 
     user_id = Column(BigInteger, primary_key=True, index=True)
-    uid = Column(String(14), unique=True, nullable=True, index=True)
     username = Column(String, nullable=True, index=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
@@ -25,10 +24,6 @@ class User(Base):
     referred_by_id = Column(BigInteger,
                             ForeignKey("users.user_id"),
                             nullable=True)
-    channel_subscription_verified = Column(Boolean, nullable=True)
-    channel_subscription_checked_at = Column(DateTime(timezone=True),
-                                             nullable=True)
-    channel_subscription_verified_for = Column(BigInteger, nullable=True)
 
     referrer = relationship("User", remote_side=[user_id], backref="referrals")
     subscriptions = relationship("Subscription",
@@ -51,7 +46,7 @@ class User(Base):
         cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<User(user_id={self.user_id}, uid='{self.uid}', username='{self.username}')>"
+        return f"<User(user_id={self.user_id}, username='{self.username}')>"
 
 
 class Subscription(Base):
@@ -264,14 +259,6 @@ class AdAttribution(Base):
 
     user = relationship("User")
     campaign = relationship("AdCampaign", back_populates="attributions")
-
-
-class UidRotationJournal(Base):
-    __tablename__ = "uid_rotation_journal"
-
-    uid = Column(String(14), primary_key=True)
-    version = Column(SmallInteger, nullable=False, default=1)
-    rotated_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 # === Referral tables (final spec) ===

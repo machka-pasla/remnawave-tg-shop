@@ -14,6 +14,7 @@ from bot.middlewares.ban_check_middleware import BanCheckMiddleware
 from bot.middlewares.action_logger_middleware import ActionLoggerMiddleware
 from bot.middlewares.profile_sync import ProfileSyncMiddleware
 from bot.middlewares.channel_subscription import ChannelSubscriptionMiddleware
+from bot.utils.id_bridge import get_id_bridge
 
 
 def build_dispatcher(settings: Settings, async_session_factory: sessionmaker) -> tuple[Dispatcher, Bot, Dict]:
@@ -27,6 +28,10 @@ def build_dispatcher(settings: Settings, async_session_factory: sessionmaker) ->
 
     dp["i18n_instance"] = i18n_instance
     dp["async_session_factory"] = async_session_factory
+    try:
+        dp["id_bridge"] = get_id_bridge()
+    except RuntimeError:
+        dp["id_bridge"] = None
 
     dp.update.outer_middleware(DBSessionMiddleware(async_session_factory))
     dp.update.outer_middleware(I18nMiddleware(i18n=i18n_instance, settings=settings))

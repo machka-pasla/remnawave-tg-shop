@@ -5,6 +5,7 @@ from bot.handlers import inline_mode
 from bot.handlers.admin import admin_router_aggregate
 from bot.filters.admin_filter import AdminFilter
 from config.settings import Settings
+from bot.utils.id_bridge import get_id_bridge
 
 
 def build_root_router(settings: Settings) -> Router:
@@ -20,11 +21,14 @@ def build_root_router(settings: Settings) -> Router:
 
     # Admin routers behind filter
     admin_main_router = Router(name="admin_main_filtered_router")
-    admin_filter_instance = AdminFilter(admin_ids=settings.ADMIN_IDS)
+    try:
+        id_bridge = get_id_bridge()
+    except RuntimeError:
+        id_bridge = None
+    admin_filter_instance = AdminFilter(admin_ids=settings.ADMIN_IDS, id_bridge=id_bridge)
     admin_main_router.message.filter(admin_filter_instance)
     admin_main_router.callback_query.filter(admin_filter_instance)
     admin_main_router.include_router(admin_router_aggregate)
     root.include_router(admin_main_router)
 
     return root
-
