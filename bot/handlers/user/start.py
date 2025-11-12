@@ -2,6 +2,7 @@ import logging
 import re
 from pathlib import Path
 from aiogram import Router, F, types, Bot
+from aiogram.enums import ParseMode
 from aiogram.types import FSInputFile, LinkPreviewOptions
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
@@ -109,6 +110,7 @@ async def send_main_menu(target_event: Union[types.Message,
                 text,
                 "main_menu.png" if image_exists else None,
                 reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
             )
         elif target_message_obj and hasattr(target_message_obj, "bot"):
             if image_exists:
@@ -118,6 +120,7 @@ async def send_main_menu(target_event: Union[types.Message,
                         photo=FSInputFile(menu_image_path),
                         caption=text,
                         reply_markup=reply_markup,
+                        parse_mode=ParseMode.HTML,
                     )
                 except TelegramBadRequest as send_photo_error:
                     logging.warning(
@@ -130,6 +133,7 @@ async def send_main_menu(target_event: Union[types.Message,
                         text=text,
                         reply_markup=reply_markup,
                         link_preview_options=link_preview_disabled,
+                        parse_mode=ParseMode.HTML,
                     )
             else:
                 await target_message_obj.bot.send_message(
@@ -137,6 +141,7 @@ async def send_main_menu(target_event: Union[types.Message,
                     text=text,
                     reply_markup=reply_markup,
                     link_preview_options=link_preview_disabled,
+                    parse_mode=ParseMode.HTML,
                 )
 
         if isinstance(target_event, types.CallbackQuery):
@@ -594,21 +599,26 @@ async def language_command_handler(
             text_to_send,
             "menu_language_settings.png" if image_exists else None,
             reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
         )
         await event.answer()
     elif target_message_obj and hasattr(target_message_obj, "bot"):
+        link_preview_disabled = LinkPreviewOptions(is_disabled=True)
         if image_exists:
             await target_message_obj.bot.send_photo(
                 chat_id=target_message_obj.chat.id,
                 photo=FSInputFile(language_image_path),
                 caption=text_to_send,
                 reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
             )
         else:
             await target_message_obj.bot.send_message(
                 chat_id=target_message_obj.chat.id,
                 text=text_to_send,
                 reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+                link_preview_options=link_preview_disabled,
             )
 
 
