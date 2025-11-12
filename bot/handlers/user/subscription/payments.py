@@ -34,6 +34,23 @@ def _parse_months_and_price(payload: str) -> Optional[Tuple[int, float]]:
         return None
 
 
+def _format_price_display(amount: float) -> str:
+    try:
+        value = float(amount)
+    except (TypeError, ValueError):
+        return ""
+    if value.is_integer():
+        return str(int(value))
+    return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def _get_currency_symbol(settings: Settings, *, fallback: Optional[str] = None) -> str:
+    symbol = getattr(settings, "DEFAULT_CURRENCY_SYMBOL", None)
+    if symbol:
+        return symbol
+    return fallback or ""
+
+
 def _format_saved_payment_method_title(get_text, network: Optional[str], last4: Optional[str], is_default: bool) -> str:
     def _is_yoomoney_network(name: Optional[str]) -> bool:
         s = (name or "").lower()
@@ -96,6 +113,10 @@ async def _initiate_yk_payment(
         return False
 
     payment_description = get_text("payment_description_subscription", months=months)
+    price_display = _format_price_display(price_rub)
+    currency_symbol_display = _get_currency_symbol(
+        settings, fallback=currency_code_for_yk
+    )
     payment_record_data = {
         "user_id": user_id,
         "amount": price_rub,
@@ -234,7 +255,12 @@ async def _initiate_yk_payment(
         try:
             await _update_payment_menu_message(
                 callback.message,
-                get_text(key="payment_link_message", months=months),
+                get_text(
+                    key="payment_link_message",
+                    months=months,
+                    price=price_display,
+                    currency_symbol=currency_symbol_display,
+                ),
                 reply_markup=get_payment_url_keyboard(
                     payment_response_yk["confirmation_url"],
                     current_lang,
@@ -838,7 +864,15 @@ async def pay_fk_callback_handler(
 
     user_id = callback.from_user.id
     payment_description = get_text("payment_description_subscription", months=months)
-    currency_code = getattr(freekassa_service, "default_currency", None) or settings.DEFAULT_CURRENCY_SYMBOL or "RUB"
+    price_display = _format_price_display(price_rub)
+    currency_symbol_display = _get_currency_symbol(
+        settings, fallback=freekassa_service.default_currency
+    )
+    currency_code = (
+        getattr(freekassa_service, "default_currency", None)
+        or settings.DEFAULT_CURRENCY_SYMBOL
+        or "RUB"
+    )
 
     payment_record_payload = {
         "user_id": user_id,
@@ -917,7 +951,13 @@ async def pay_fk_callback_handler(
             try:
                 await _update_payment_menu_message(
                     callback.message,
-                    f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
+                    f"{order_info_text}\n\n"
+                    + get_text(
+                        key="payment_link_message",
+                        months=months,
+                        price=price_display,
+                        currency_symbol=currency_symbol_display,
+                    ),
                     reply_markup=get_payment_url_keyboard(
                         location,
                         current_lang,
@@ -1011,6 +1051,10 @@ async def pay_crypto_callback_handler(
 
     user_id = callback.from_user.id
     payment_description = get_text("payment_description_subscription", months=months)
+    price_display = _format_price_display(price_amount)
+    currency_symbol_display = _get_currency_symbol(
+        settings, fallback=getattr(settings, "CRYPTOPAY_ASSET", None)
+    )
 
     invoice_url = await cryptopay_service.create_invoice(
         session=session,
@@ -1024,7 +1068,12 @@ async def pay_crypto_callback_handler(
         try:
             await _update_payment_menu_message(
                 callback.message,
-                get_text(key="payment_link_message", months=months),
+                get_text(
+                    key="payment_link_message",
+                    months=months,
+                    price=price_display,
+                    currency_symbol=currency_symbol_display,
+                ),
                 reply_markup=get_payment_url_keyboard(
                     invoice_url,
                     current_lang,
