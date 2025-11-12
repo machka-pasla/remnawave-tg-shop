@@ -1,7 +1,7 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, ValidationError, computed_field, field_validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 
 
 class Settings(BaseSettings):
@@ -10,6 +10,11 @@ class Settings(BaseSettings):
         default="",
         alias="ADMIN_IDS",
         description="Comma-separated list of admin Telegram User IDs")
+    TELEGRAM_ID_ENCRYPTION: bool = Field(default=False)
+    ECDC_SECRET: Optional[str] = Field(default=None)
+    ECDC_TWEAK: Optional[str] = Field(default=None)
+    ECDC_ITER: int = Field(default=200_000)
+    ECDC_KDF: str = Field(default="sha256")
 
     POSTGRES_USER: str = Field(default="user")
     POSTGRES_PASSWORD: str = Field(default="password")
@@ -23,9 +28,9 @@ class Settings(BaseSettings):
     SUPPORT_LINK: Optional[str] = Field(default=None)
     SERVER_STATUS_URL: Optional[str] = Field(default=None)
     TERMS_OF_SERVICE_URL: Optional[str] = Field(default=None)
-    REQUIRED_CHANNEL_ID: Optional[int] = Field(
+    REQUIRED_CHANNEL_ID: Optional[str] = Field(
         default=None,
-        description="Telegram channel ID the user must join to access the bot")
+        description="Telegram channel reference for the required subscription check (TGID or UGID)")
     REQUIRED_CHANNEL_LINK: Optional[str] = Field(
         default=None,
         description="Public username or invite link to the required channel for join button")
@@ -161,20 +166,28 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def ADMIN_IDS(self) -> List[int]:
-        if self.ADMIN_IDS_STR:
-            try:
-                return [
-                    int(admin_id.strip())
-                    for admin_id in self.ADMIN_IDS_STR.split(',')
-                    if admin_id.strip().isdigit()
-                ]
-            except ValueError:
-                logging.error(
-                    f"Invalid ADMIN_IDS_STR format: '{self.ADMIN_IDS_STR}'. Expected comma-separated integers."
-                )
-                return []
-        return []
+    def ADMIN_IDS(self) -> List[Union[int, str]]:
+        if not self.ADMIN_IDS_STR:
+            return []
+
+        parsed: List[Union[int, str]] = []
+        for raw in self.ADMIN_IDS_STR.split(','):
+            token = raw.strip()
+            if not token:
+                continue
+            if self.TELEGRAM_ID_ENCRYPTION:
+                parsed.append(token)
+                continue
+            if token.lstrip('-').isdigit():
+                try:
+                    parsed.append(int(token))
+                except ValueError:
+                    logging.error(
+                        f"Invalid ADMIN_IDS entry '{token}'. Expected integer when encryption is disabled.")
+            else:
+                logging.warning(
+                    f"Skipping ADMIN_IDS entry '{token}' because it is not numeric and encryption is disabled.")
+        return parsed
 
     @computed_field
     @property
@@ -358,13 +371,23 @@ class Settings(BaseSettings):
         return bonuses
     
     # Logging Configuration
-    LOG_CHAT_ID: Optional[int] = Field(default=None, description="Telegram chat/group ID for sending notifications")
+    LOG_CHAT_ID: Optional[str] = Field(
+        default=None, description="Telegram chat/group reference for sending notifications")
     LOG_THREAD_ID: Optional[int] = Field(default=None, description="Thread ID for supergroup messages (optional)")
     
-    @field_validator('LOG_CHAT_ID', 'LOG_THREAD_ID', mode='before')
+    @field_validator('LOG_CHAT_ID', mode='before')
+    @classmethod
+    def validate_log_chat(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip()
+            return v or None
+        return str(v)
+
+    @field_validator('LOG_THREAD_ID', mode='before')
     @classmethod
     def validate_optional_int_fields(cls, v):
-        """Convert empty strings to None for optional integer fields"""
         if isinstance(v, str) and v.strip() == '':
             return None
         return v
@@ -375,6 +398,16 @@ class Settings(BaseSettings):
         if isinstance(v, str) and not v.strip():
             return None
         return v
+
+    @field_validator('REQUIRED_CHANNEL_ID', mode='before')
+    @classmethod
+    def sanitize_required_channel(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip()
+            return v or None
+        return str(v)
     
     @field_validator('USER_HWID_DEVICE_LIMIT', mode='before')
     @classmethod
@@ -408,8 +441,19 @@ def get_settings() -> Settings:
             _settings_instance = Settings()
             if not _settings_instance.ADMIN_IDS:
                 logging.warning(
-                    "CRITICAL: ADMIN_IDS not set or contains no valid integer IDs in .env. "
+                    "CRITICAL: ADMIN_IDS not set or contains no valid identifiers in .env. "
                     "Admin functionality will be restricted.")
+
+            if _settings_instance.TELEGRAM_ID_ENCRYPTION:
+                missing_params = []
+                if not _settings_instance.ECDC_SECRET:
+                    missing_params.append("ECDC_SECRET")
+                if not _settings_instance.ECDC_TWEAK:
+                    missing_params.append("ECDC_TWEAK")
+                if missing_params:
+                    raise RuntimeError(
+                        f"TELEGRAM_ID_ENCRYPTION is enabled but required parameters are missing: {', '.join(missing_params)}"
+                    )
 
             if not _settings_instance.PANEL_API_URL:
                 logging.warning(

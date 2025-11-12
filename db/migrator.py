@@ -48,11 +48,47 @@ def _migration_0001_add_channel_subscription_fields(connection: Connection) -> N
         connection.execute(text(stmt))
 
 
+def _migration_0002_add_uid_columns(connection: Connection) -> None:
+    inspector = inspect(connection)
+    columns: Set[str] = {col["name"] for col in inspector.get_columns("users")}
+
+    if "uid" not in columns:
+        connection.execute(text("ALTER TABLE users ADD COLUMN uid VARCHAR(14)"))
+
+    # Add partial unique index to keep UID unique when filled.
+    indexes: Set[str] = {index["name"] for index in inspector.get_indexes("users")}
+    if "uq_users_uid" not in indexes:
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX uq_users_uid ON users (uid) WHERE uid IS NOT NULL"
+            )
+        )
+
+    tables = inspector.get_table_names()
+    if "uid_rotation_journal" not in tables:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE uid_rotation_journal (
+                    uid VARCHAR(14) PRIMARY KEY,
+                    version SMALLINT NOT NULL DEFAULT 1,
+                    rotated_at TIMESTAMPTZ DEFAULT NOW()
+                )
+                """
+            )
+        )
+
+
 MIGRATIONS: List[Migration] = [
     Migration(
         id="0001_add_channel_subscription_fields",
         description="Add columns to track required channel subscription verification",
         upgrade=_migration_0001_add_channel_subscription_fields,
+    ),
+    Migration(
+        id="0002_add_uid_columns",
+        description="Add uid storage and rotation journal scaffolding",
+        upgrade=_migration_0002_add_uid_columns,
     ),
 ]
 

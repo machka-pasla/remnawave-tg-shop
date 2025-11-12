@@ -18,6 +18,7 @@ from bot.services.panel_api_service import PanelApiService
 from bot.services.referral_service import ReferralService
 from bot.middlewares.i18n import JsonI18n
 from bot.utils import get_message_content, send_direct_message
+from bot.utils.id_bridge import is_admin_user
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 from bot.utils.text_sanitizer import (
     sanitize_display_name,
@@ -611,7 +612,7 @@ async def handle_delete_user_prompt(callback: types.CallbackQuery, state: FSMCon
 
     admin = callback.from_user
     admin_id = admin.id if admin else None
-    if not admin_id or admin_id not in settings.ADMIN_IDS:
+    if not admin_id or not is_admin_user(admin_id, settings):
         logging.warning(
             f"Unauthorized delete attempt by user {admin_id} targeting {user.user_id}."
         )
@@ -700,7 +701,7 @@ async def process_delete_user_confirmation_handler(message: types.Message,
 
     admin = message.from_user
     admin_id = admin.id if admin else None
-    if not admin_id or admin_id not in settings.ADMIN_IDS:
+    if not admin_id or not is_admin_user(admin_id, settings):
         logging.warning(
             f"Unauthorized delete confirmation attempt by user {admin_id}."
         )

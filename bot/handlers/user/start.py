@@ -24,6 +24,7 @@ from bot.services.promo_code_service import PromoCodeService
 from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
 from bot.utils.text_sanitizer import sanitize_username, sanitize_display_name
+from bot.utils.id_bridge import get_id_bridge, is_admin_user
 
 router = Router(name="user_start_router")
 
@@ -155,7 +156,7 @@ async def ensure_required_channel_subscription(
         )
         return False
 
-    if user_id in settings.ADMIN_IDS:
+    if is_admin_user(user_id, settings):
         return True
 
     if db_user is None:

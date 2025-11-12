@@ -7,11 +7,13 @@ from dotenv import load_dotenv
 from bot.main_bot import run_bot
 from config.settings import get_settings, Settings
 from db.database_setup import init_db, init_db_connection
+from bot.utils.id_bridge import init_id_bridge
 
 
 async def main():
     load_dotenv()
     settings = get_settings()
+    init_id_bridge(settings)
 
     session_factory = init_db_connection(settings)
     if not session_factory:

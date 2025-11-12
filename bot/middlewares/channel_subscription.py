@@ -13,6 +13,7 @@ from config.settings import Settings
 from db.dal import user_dal
 from bot.middlewares.i18n import JsonI18n
 from bot.keyboards.inline.user_keyboards import get_channel_subscription_keyboard
+from bot.utils.id_bridge import get_id_bridge
 
 
 class ChannelSubscriptionMiddleware(BaseMiddleware):
@@ -32,12 +33,31 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
         event: Update,
         data: Dict[str, Any],
     ) -> Any:
-        required_channel_id = self.settings.REQUIRED_CHANNEL_ID
-        if not required_channel_id:
+        try:
+            id_bridge = get_id_bridge()
+        except RuntimeError:
+            id_bridge = None
+
+        required_channel_ref = self.settings.REQUIRED_CHANNEL_ID
+        required_channel_tid: Optional[int] = None
+        if required_channel_ref:
+            if id_bridge:
+                required_channel_tid = id_bridge.resolve_chat_reference(
+                    required_channel_ref)
+            else:
+                required_channel_tid = int(required_channel_ref)
+
+        if not required_channel_tid:
             return await handler(event, data)
 
         event_user = data.get("event_from_user")
-        if not event_user or event_user.id in self.settings.ADMIN_IDS:
+        if not event_user:
+            return await handler(event, data)
+
+        if id_bridge:
+            if id_bridge.is_admin(event_user.id, self.settings.ADMIN_IDS):
+                return await handler(event, data)
+        elif event_user.id in self.settings.ADMIN_IDS:
             return await handler(event, data)
 
         callback_query = event.callback_query
@@ -74,7 +94,7 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
 
         if (
             db_user.channel_subscription_verified
-            and db_user.channel_subscription_verified_for == required_channel_id
+            and db_user.channel_subscription_verified_for == required_channel_tid
         ):
             return await handler(event, data)
 

@@ -25,6 +25,12 @@ async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
     return result.scalar_one_or_none()
 
 
+async def get_user_by_uid(session: AsyncSession, uid: str) -> Optional[User]:
+    stmt = select(User).where(User.uid == uid)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def get_user_by_username(session: AsyncSession, username: str) -> Optional[User]:
     clean_username = username.lstrip("@").lower()
     stmt = select(User).where(func.lower(User.username) == clean_username)
@@ -51,6 +57,8 @@ async def create_user(session: AsyncSession, user_data: Dict[str, Any]) -> Tuple
 
     if "registration_date" not in user_data:
         user_data["registration_date"] = datetime.now(timezone.utc)
+    if "uid" not in user_data:
+        user_data["uid"] = None
 
     # Use PostgreSQL upsert to avoid IntegrityError on concurrent inserts
     stmt = (

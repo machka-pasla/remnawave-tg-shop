@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.dal import message_log_dal, user_dal
 from config.settings import Settings
+from bot.utils.id_bridge import get_id_bridge
 
 
 class ActionLoggerMiddleware(BaseMiddleware):
@@ -32,12 +33,30 @@ class ActionLoggerMiddleware(BaseMiddleware):
         is_admin_event_flag: bool = False
         target_user_id_for_log: Optional[int] = None
 
+        id_bridge = None
+        try:
+            id_bridge = get_id_bridge()
+        except RuntimeError:
+            id_bridge = None
+
         if event_user:
             user_id = event_user.id
-            telegram_username = event_user.username
-            telegram_first_name = event_user.first_name
-            if user_id in self.settings.ADMIN_IDS:
-                is_admin_event_flag = True
+            if id_bridge:
+                is_admin_event_flag = id_bridge.is_admin(
+                    event_user.id, self.settings.ADMIN_IDS)
+            else:
+                is_admin_event_flag = event_user.id in self.settings.ADMIN_IDS
+
+            if not self.settings.TELEGRAM_ID_ENCRYPTION:
+                telegram_username = event_user.username
+                telegram_first_name = event_user.first_name
+        user_reference: Optional[str] = None
+        if event_user:
+            if id_bridge:
+                identity = id_bridge.build_identity(event_user.id)
+                user_reference = identity.uid
+            else:
+                user_reference = str(event_user.id)
 
         raw_update_snippet = None
         try:
@@ -74,7 +93,7 @@ class ActionLoggerMiddleware(BaseMiddleware):
                 user_exists = await user_dal.get_user_by_id(session, user_id)
                 if not user_exists:
                     logging.warning(
-                        f"ActionLoggerMiddleware: User {user_id} not found in DB. Logging action with user_id=NULL."
+                        f"ActionLoggerMiddleware: User {user_reference or user_id} not found in DB. Logging action with user_id=NULL."
                     )
                     log_user_id_for_db = None
 
@@ -95,7 +114,7 @@ class ActionLoggerMiddleware(BaseMiddleware):
                     session, log_payload)
             except Exception as e_log:
                 logging.error(
-                    f"ActionLoggerMiddleware: Failed to add log to session for user {user_id}, type {current_event_type}: {e_log}",
+                    f"ActionLoggerMiddleware: Failed to add log to session for user {user_reference or user_id}, type {current_event_type}: {e_log}",
                     exc_info=True)
 
         return result

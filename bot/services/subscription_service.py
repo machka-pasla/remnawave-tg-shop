@@ -11,6 +11,7 @@ from db.models import User, Subscription
 
 from config.settings import Settings
 from .panel_api_service import PanelApiService
+from bot.utils.id_bridge import admin_recipient_ids, get_id_bridge
 
 
 class SubscriptionService:
@@ -55,12 +56,20 @@ class SubscriptionService:
             return False
 
     async def _notify_admin_panel_user_creation_failed(self, user_id: int):
-        if not self.bot or not self.i18n or not self.settings.ADMIN_IDS:
+        admin_targets = admin_recipient_ids(self.settings)
+        if not self.bot or not self.i18n or not admin_targets:
             return
+        user_ref = str(user_id)
+        try:
+            bridge = get_id_bridge()
+        except RuntimeError:
+            bridge = None
+        if bridge and bridge.enabled:
+            user_ref = bridge.tid_to_uid(user_id)
         admin_lang = self.settings.DEFAULT_LANGUAGE
         _adm = lambda k, **kw: self.i18n.gettext(admin_lang, k, **kw)
-        msg = _adm("admin_panel_user_creation_failed", user_id=user_id)
-        for admin_id in self.settings.ADMIN_IDS:
+        msg = _adm("admin_panel_user_creation_failed", user_id=user_ref)
+        for admin_id in admin_targets:
             try:
                 await self.bot.send_message(admin_id, msg)
             except Exception as e:
