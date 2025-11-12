@@ -19,6 +19,7 @@ from bot.services.referral_service import ReferralService
 from bot.middlewares.i18n import JsonI18n
 from bot.utils import get_message_content, send_direct_message
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
+from aiogram.types import LinkPreviewOptions
 from bot.utils.text_sanitizer import (
     sanitize_display_name,
     sanitize_username,
@@ -63,7 +64,7 @@ async def users_list_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             header_text,
             reply_markup=keyboard,
-            parse_mode="HTML"
+            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
         )
         await callback.answer()
         
@@ -92,7 +93,9 @@ async def user_search_prompt_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n)
-        )
+        ,
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logging.warning(f"Could not edit message for user management: {e}. Sending new.")
         await callback.message.answer(
@@ -320,7 +323,7 @@ async def process_user_search_handler(message: types.Message, state: FSMContext,
         await message.answer(
             user_card_text,
             reply_markup=keyboard.as_markup(),
-            parse_mode="HTML"
+            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
         )
     except Exception as e:
         logging.error(f"Error displaying user card for {user_model.user_id}: {e}")
@@ -424,7 +427,9 @@ async def handle_add_subscription_prompt(callback: types.CallbackQuery, state: F
     )
     
     try:
-        await callback.message.edit_text(prompt_text)
+        await callback.message.edit_text(prompt_text,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception:
         await callback.message.answer(prompt_text)
     
@@ -490,7 +495,9 @@ async def handle_send_message_prompt(callback: types.CallbackQuery, state: FSMCo
     )
     
     try:
-        await callback.message.edit_text(prompt_text)
+        await callback.message.edit_text(prompt_text,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception:
         await callback.message.answer(prompt_text)
     
@@ -546,13 +553,13 @@ async def handle_view_user_logs(callback: types.CallbackQuery, user: User,
             await callback.message.edit_text(
                 logs_text,
                 reply_markup=builder.as_markup(),
-                parse_mode="HTML"
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
         except Exception:
             await callback.message.answer(
                 logs_text,
                 reply_markup=builder.as_markup(),
-                parse_mode="HTML"
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
         
         await callback.answer()
@@ -586,13 +593,13 @@ async def handle_refresh_user_card(callback: types.CallbackQuery, user: User,
             await callback.message.edit_text(
                 user_card_text,
                 reply_markup=keyboard.as_markup(),
-                parse_mode="HTML"
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
         except Exception:
             await callback.message.answer(
                 user_card_text,
                 reply_markup=keyboard.as_markup(),
-                parse_mode="HTML"
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
         
         await callback.answer()
@@ -641,12 +648,12 @@ async def handle_delete_user_prompt(callback: types.CallbackQuery, state: FSMCon
     )
 
     try:
-        await callback.message.answer(prompt_text, parse_mode="HTML")
+        await callback.message.answer(prompt_text, parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logging.error(
             f"Failed to send delete confirmation prompt for user {user.user_id}: {e}"
         )
-        await callback.message.reply(prompt_text, parse_mode="HTML")
+        await callback.message.reply(prompt_text, parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
 
     await callback.answer()
 
@@ -798,7 +805,7 @@ async def process_delete_user_confirmation_handler(message: types.Message,
                 default="✅ Пользователь {user_id} удален из бота и панели.",
                 user_id=hcode(str(target_user_id)),
             ),
-            parse_mode="HTML",
+            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
         )
     except Exception as e:
         logging.error(f"Error deleting user {target_user_id}: {e}", exc_info=True)
@@ -869,7 +876,7 @@ async def process_subscription_days_handler(message: types.Message, state: FSMCo
                 await message.answer(
                     user_card_text,
                     reply_markup=keyboard.as_markup(),
-                    parse_mode="HTML"
+                    parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
                 )
         else:
             await session.rollback()
@@ -949,8 +956,7 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
                 target_user_id, 
                 content,
                 extra_text=admin_signature,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         except TelegramBadRequest as e:
             await message.answer(_(
@@ -978,7 +984,7 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
             await message.answer(
                 user_card_text,
                 reply_markup=keyboard.as_markup(),
-                parse_mode="HTML"
+                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
         
     except Exception as e:
@@ -1011,7 +1017,9 @@ async def ban_user_prompt_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n)
-        )
+        ,
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logging.warning(f"Could not edit message for ban prompt: {e}. Sending new.")
         await callback.message.answer(
@@ -1043,7 +1051,9 @@ async def unban_user_prompt_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n)
-        )
+        ,
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logging.warning(f"Could not edit message for unban prompt: {e}. Sending new.")
         await callback.message.answer(
@@ -1093,7 +1103,9 @@ async def view_banned_users_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             message_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n)
-        )
+        ,
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True))
         
     except Exception as e:
         logging.error(f"Error displaying banned users: {e}")
@@ -1288,7 +1300,7 @@ async def user_card_from_list_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             user_card_text,
             reply_markup=keyboard.as_markup(),
-            parse_mode="HTML"
+            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
         )
         await callback.answer()
         

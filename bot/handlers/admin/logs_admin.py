@@ -6,6 +6,7 @@ import io
 from datetime import datetime
 from aiogram import Router, F, types, Bot
 from aiogram.fsm.context import FSMContext
+from aiogram.types import LinkPreviewOptions
 from typing import Optional, List, Dict, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +39,9 @@ async def display_logs_menu(callback: types.CallbackQuery, i18n_data: dict,
     try:
         await callback.message.edit_text(text=_(key="admin_logs_menu_title"),
                                          reply_markup=get_logs_menu_keyboard(
-                                             i18n, current_lang))
+                                             i18n, current_lang),
+                                                 parse_mode="HTML",
+                                                 link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logging.warning(
             f"Failed to edit message for logs menu: {e}. Sending new.")
@@ -126,8 +129,7 @@ async def _display_formatted_logs(target_message: types.Message,
     try:
         await target_message.edit_text(text,
                                        reply_markup=reply_markup,
-                                       parse_mode="HTML",
-                                       disable_web_page_preview=True)
+                                       parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logging.warning(
             f"Failed to edit message for logs display (len: {len(text)}): {e}. Sending new message(s)."
@@ -141,8 +143,7 @@ async def _display_formatted_logs(target_message: types.Message,
                 await target_message.answer(
                     chunk,
                     reply_markup=reply_markup if is_last_chunk else None,
-                    parse_mode="HTML",
-                    disable_web_page_preview=True)
+                    parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
             except Exception as e_chunk:
                 logging.error(f"Failed to send log chunk: {e_chunk}")
 
@@ -203,7 +204,9 @@ async def prompt_user_for_logs_handler(callback: types.CallbackQuery,
 
     await callback.message.edit_text(
         text=_("admin_prompt_for_user_id_or_username_logs"),
-        reply_markup=get_logs_menu_keyboard(i18n, current_lang))
+        reply_markup=get_logs_menu_keyboard(i18n, current_lang),
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True))
     await state.set_state(AdminStates.waiting_for_user_id_for_logs)
     await callback.answer()
 
@@ -286,7 +289,9 @@ async def view_user_logs_paginated_handler(callback: types.CallbackQuery,
     user_model_for_logs = await user_dal.get_user_by_id(
         session, target_user_id)
     if not user_model_for_logs:
-        await callback.message.edit_text("User not found for logs.")
+        await callback.message.edit_text("User not found for logs.",
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
         await callback.answer()
         return
 

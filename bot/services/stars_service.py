@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from aiogram import Bot, types
-from aiogram.types import LabeledPrice
+from aiogram.types import LabeledPrice, LinkPreviewOptions
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
@@ -156,7 +156,7 @@ class StarsService:
                 success_msg,
                 reply_markup=markup,
                 parse_mode="HTML",
-                disable_web_page_preview=True,
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         except Exception as e_send:
             logging.error(

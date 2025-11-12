@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.utils.markdown import hcode
+from aiogram.types import LinkPreviewOptions
 
 from config.settings import Settings
 from bot.states.user_states import UserPromoStates
@@ -154,7 +155,7 @@ async def process_promo_code_input(message: types.Message, state: FSMContext,
     await message.answer(
         response_to_user_text,
         reply_markup=reply_markup,
-        parse_mode="HTML",
+        parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True),
     )
     await state.clear()
     logging.info(

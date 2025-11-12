@@ -6,6 +6,7 @@ from aiogram.types import (
     CallbackQuery,
     Message,
     Update,
+    LinkPreviewOptions,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -105,13 +106,20 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
             return
 
         if message_object:
-            await message_object.answer(prompt_text, reply_markup=keyboard)
+            await message_object.answer(
+                prompt_text,
+                reply_markup=keyboard,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
         else:
             bot_instance = data["bot"]
             await bot_instance.send_message(
                 chat_id=event_user.id,
                 text=prompt_text,
                 reply_markup=keyboard,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         return
 
@@ -129,7 +137,12 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
 
         if callback.message:
             try:
-                await callback.message.answer(prompt_text, reply_markup=keyboard)
+                await callback.message.answer(
+                    prompt_text,
+                    reply_markup=keyboard,
+                    parse_mode="HTML",
+                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                )
             except Exception as send_error:
                 logging.error(
                     "ChannelSubscriptionMiddleware: failed to send prompt for callback in chat %s: %s",
@@ -143,4 +156,6 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
                 chat_id=callback.from_user.id,
                 text=prompt_text,
                 reply_markup=keyboard,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )

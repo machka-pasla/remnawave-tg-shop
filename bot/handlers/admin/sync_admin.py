@@ -1,6 +1,7 @@
 import logging
 from aiogram import Router, types, Bot
 from aiogram.filters import Command
+from aiogram.types import LinkPreviewOptions
 from typing import Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
@@ -372,11 +373,26 @@ async def sync_command_handler(
         
         # Simple confirmation message to admin
         if status == "failed":
-            await bot.send_message(target_chat_id, _("sync_failed_simple"))
+            await bot.send_message(
+                target_chat_id,
+                _("sync_failed_simple"),
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
         elif status == "completed_with_errors":
-            await bot.send_message(target_chat_id, _("sync_errors_simple", errors_count=len(errors)))
+            await bot.send_message(
+                target_chat_id,
+                _("sync_errors_simple", errors_count=len(errors)),
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
         else:
-            await bot.send_message(target_chat_id, _("sync_success_simple"))
+            await bot.send_message(
+                target_chat_id,
+                _("sync_success_simple"),
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
         
         # Send notification to log channel with proper thread handling
         try:
@@ -391,7 +407,12 @@ async def sync_command_handler(
             
     except Exception as e_sync_global:
         logging.error(f"Global error during /sync command: {e_sync_global}", exc_info=True)
-        await bot.send_message(target_chat_id, _("sync_critical_error"))
+        await bot.send_message(
+            target_chat_id,
+            _("sync_critical_error"),
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
+        )
         
         # Send notification to log channel about failure
         try:
@@ -436,4 +457,4 @@ async def sync_status_command_handler(
     else:
         response_text = _("admin_sync_status_never_run")
 
-    await message.answer(response_text, parse_mode="HTML")
+    await message.answer(response_text, parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))

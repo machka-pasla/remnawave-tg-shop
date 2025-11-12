@@ -2,7 +2,14 @@ import logging
 from typing import Callable, Dict, Any, Awaitable, Optional, Union
 
 from aiogram import BaseMiddleware, Bot
-from aiogram.types import Message, CallbackQuery, User, Update, InlineKeyboardMarkup
+from aiogram.types import (
+    Message,
+    CallbackQuery,
+    User,
+    Update,
+    InlineKeyboardMarkup,
+    LinkPreviewOptions,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError, TelegramBadRequest, AiogramError
 
@@ -74,29 +81,45 @@ class BanCheckMiddleware(BaseMiddleware):
 
             try:
                 if isinstance(actual_event_object, Message):
-                    await actual_event_object.answer(ban_message_text,
-                                                     reply_markup=keyboard)
+                    await actual_event_object.answer(
+                        ban_message_text,
+                        reply_markup=keyboard,
+                        parse_mode="HTML",
+                        link_preview_options=LinkPreviewOptions(is_disabled=True),
+                    )
                 elif isinstance(actual_event_object, CallbackQuery):
                     await actual_event_object.answer(ban_message_text,
                                                      show_alert=True)
                     if actual_event_object.message:
                         try:
                             await actual_event_object.message.edit_text(
-                                ban_message_text, reply_markup=keyboard)
+                                ban_message_text,
+                                reply_markup=keyboard,
+                                parse_mode="HTML",
+                                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                            )
                         except (TelegramAPIError, AiogramError):
                             await bot_instance.send_message(
                                 actual_event_object.from_user.id,
                                 ban_message_text,
-                                reply_markup=keyboard)
+                                reply_markup=keyboard,
+                                parse_mode="HTML",
+                                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                            )
                     else:
                         await bot_instance.send_message(
                             actual_event_object.from_user.id,
                             ban_message_text,
-                            reply_markup=keyboard)
+                            reply_markup=keyboard,
+                            parse_mode="HTML",
+                            link_preview_options=LinkPreviewOptions(is_disabled=True),
+                        )
                 else:
                     await bot_instance.send_message(event_user.id,
                                                     ban_message_text,
-                                                    reply_markup=keyboard)
+                                                    reply_markup=keyboard,
+                                                    parse_mode="HTML",
+                                                    link_preview_options=LinkPreviewOptions(is_disabled=True))
                 logging.info(f"Ban notification sent to user {event_user.id}.")
             except TelegramForbiddenError:
                 logging.warning(

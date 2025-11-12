@@ -118,6 +118,8 @@ async def send_main_menu(target_event: Union[types.Message,
                         photo=FSInputFile(menu_image_path),
                         caption=text,
                         reply_markup=reply_markup,
+                        parse_mode="HTML",
+                        link_preview_options=link_preview_disabled,
                     )
                 except TelegramBadRequest as send_photo_error:
                     logging.warning(
@@ -129,6 +131,7 @@ async def send_main_menu(target_event: Union[types.Message,
                         chat_id=target_message_obj.chat.id,
                         text=text,
                         reply_markup=reply_markup,
+                        parse_mode="HTML",
                         link_preview_options=link_preview_disabled,
                     )
             else:
@@ -136,6 +139,7 @@ async def send_main_menu(target_event: Union[types.Message,
                     chat_id=target_message_obj.chat.id,
                     text=text,
                     reply_markup=reply_markup,
+                    parse_mode="HTML",
                     link_preview_options=link_preview_disabled,
                 )
 
@@ -312,7 +316,9 @@ async def ensure_required_channel_subscription(
     if isinstance(event, types.CallbackQuery):
         if keyboard and event.message:
             try:
-                await event.message.edit_text(prompt_text, reply_markup=keyboard)
+                await event.message.edit_text(prompt_text, reply_markup=keyboard,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True))
             except Exception as edit_error:
                 logging.debug(
                     "Failed to edit prompt message for user %s: %s",
@@ -499,7 +505,7 @@ async def start_command_handler(message: types.Message,
                 await message.answer(
                     promo_success_text,
                     reply_markup=get_connect_and_main_keyboard(current_lang, i18n, settings, config_link),
-                    parse_mode="HTML"
+                    parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
                 )
 
                 # Don't show main menu if promo was successfully applied
@@ -603,12 +609,16 @@ async def language_command_handler(
                 photo=FSInputFile(language_image_path),
                 caption=text_to_send,
                 reply_markup=reply_markup,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         else:
             await target_message_obj.bot.send_message(
                 chat_id=target_message_obj.chat.id,
                 text=text_to_send,
                 reply_markup=reply_markup,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
 
 

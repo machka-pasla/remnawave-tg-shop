@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from aiogram import Bot
+from aiogram.types import LinkPreviewOptions
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.exceptions import TelegramRetryAfter
 from datetime import datetime, timezone
@@ -48,7 +49,7 @@ class NotificationService:
                     chat_id=self.settings.LOG_CHAT_ID,
                     text=message,
                     parse_mode="HTML",
-                    disable_web_page_preview=True,
+                    link_preview_options=LinkPreviewOptions(is_disabled=True),
                     message_thread_id=thread_id or self.settings.LOG_THREAD_ID
                 )
             except Exception as e:
@@ -62,7 +63,7 @@ class NotificationService:
             kwargs = {
                 "text": message,
                 "parse_mode": "HTML",
-                "disable_web_page_preview": True
+                "link_preview_options": LinkPreviewOptions(is_disabled=True),
             }
             
             # Add thread ID for supergroups if specified
@@ -89,7 +90,7 @@ class NotificationService:
                         chat_id=admin_id,
                         text=message,
                         parse_mode="HTML",
-                        disable_web_page_preview=True
+                        link_preview_options=LinkPreviewOptions(is_disabled=True)
                     )
                 except Exception as e:
                     logging.error(f"Failed to send notification to admin {admin_id}: {e}")
@@ -101,7 +102,7 @@ class NotificationService:
                     chat_id=admin_id,
                     text=message,
                     parse_mode="HTML",
-                    disable_web_page_preview=True
+                    link_preview_options=LinkPreviewOptions(is_disabled=True)
                 )
             except Exception as e:
                 logging.error(f"Failed to queue notification to admin {admin_id}: {e}")
