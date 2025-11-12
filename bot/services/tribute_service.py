@@ -6,7 +6,6 @@ from typing import Optional
 
 from aiohttp import web
 from aiogram import Bot
-from aiogram.types import LinkPreviewOptions
 from sqlalchemy.orm import sessionmaker
 
 from config.settings import Settings
@@ -223,7 +222,7 @@ class TributeService:
                             success_msg,
                             reply_markup=markup,
                             parse_mode="HTML",
-                            link_preview_options=LinkPreviewOptions(is_disabled=True),
+                            disable_web_page_preview=True,
                         )
                     except Exception as e:
                         logging.error(
@@ -316,8 +315,7 @@ class TributeService:
                         int(user_id),
                         cancellation_msg,
                         reply_markup=markup,
-                        parse_mode="HTML",
-                        link_preview_options=LinkPreviewOptions(is_disabled=True),
+                        parse_mode="HTML"
                     )
                 except Exception as e:
                     logging.error(f"Failed to send tribute cancellation notification to user {user_id}: {e}")

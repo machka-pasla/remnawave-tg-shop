@@ -86,7 +86,7 @@ async def view_payments_handler(callback: types.CallbackQuery, i18n_data: dict,
         await callback.message.edit_text(
             _("admin_no_payments_found", default="Платежи не найдены."),
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode="HTML"
         )
         await callback.answer()
         return
@@ -140,7 +140,7 @@ async def view_payments_handler(callback: types.CallbackQuery, i18n_data: dict,
     await callback.message.edit_text(
         "\n".join(text_parts),
         reply_markup=builder.as_markup(),
-        parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+        parse_mode="HTML"
     )
     await callback.answer()
 
@@ -224,7 +224,7 @@ async def export_payments_csv_handler(callback: types.CallbackQuery, i18n_data: 
         filename = f"payments_export_{current_time}.csv"
         
         # Send file
-        from aiogram.types import BufferedInputFile, LinkPreviewOptions
+        from aiogram.types import BufferedInputFile
         file = BufferedInputFile(csv_content, filename=filename)
         
         await callback.message.reply_document(

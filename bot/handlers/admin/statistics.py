@@ -1,6 +1,5 @@
 import logging
 from aiogram import Router, F, types
-from aiogram.types import LinkPreviewOptions
 from typing import Optional, Dict, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -220,7 +219,7 @@ async def show_statistics_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             final_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
+            parse_mode="HTML")
     except Exception as e_edit:
         logging.error(f"Error editing message for statistics: {e_edit}",
                       exc_info=True)
@@ -234,7 +233,7 @@ async def show_statistics_handler(callback: types.CallbackQuery,
                     chunk,
                     reply_markup=get_back_to_admin_panel_keyboard(
                         current_lang, i18n) if is_last_chunk else None,
-                    parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
+                    parse_mode="HTML")
             except Exception as e_chunk:
                 logging.error(f"Failed to send statistics chunk: {e_chunk}")
                 if i == 0:

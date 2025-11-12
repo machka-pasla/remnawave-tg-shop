@@ -11,7 +11,6 @@ from db.dal import promo_code_dal
 from bot.states.admin_states import AdminStates
 from bot.keyboards.inline.admin_keyboards import get_back_to_admin_panel_keyboard, get_admin_panel_keyboard
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
-from aiogram.types import LinkPreviewOptions
 from bot.middlewares.i18n import JsonI18n
 
 router = Router(name="promo_create_router")
@@ -39,14 +38,14 @@ async def create_promo_prompt_handler(callback: types.CallbackQuery,
         await callback.message.edit_text(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
+            parse_mode="HTML")
     except Exception as e:
         logging.warning(
             f"Could not edit message for promo prompt: {e}. Sending new.")
         await callback.message.answer(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True))
+            parse_mode="HTML")
     await callback.answer()
     await state.set_state(AdminStates.waiting_for_promo_code)
 
@@ -95,7 +94,7 @@ async def process_promo_code_handler(message: types.Message,
         await message.answer(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode="HTML"
         )
         await state.set_state(AdminStates.waiting_for_promo_bonus_days)
         
@@ -140,7 +139,7 @@ async def process_promo_bonus_days_handler(message: types.Message,
         await message.answer(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode="HTML"
         )
         await state.set_state(AdminStates.waiting_for_promo_max_activations)
         
@@ -212,7 +211,7 @@ async def process_promo_max_activations_handler(message: types.Message,
         await message.answer(
             prompt_text,
             reply_markup=builder.as_markup(),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode="HTML"
         )
         await state.set_state(AdminStates.waiting_for_promo_validity_days)
         
@@ -263,13 +262,13 @@ async def process_promo_set_validity(callback: types.CallbackQuery,
         await callback.message.edit_text(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode="HTML"
         )
     except Exception:
         await callback.message.answer(
             prompt_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode="HTML"
         )
     await callback.answer()
 
@@ -369,20 +368,20 @@ async def create_promo_code_final(callback_or_message,
                 await callback_or_message.message.edit_text(
                     success_text,
                     reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-                    parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+                    parse_mode="HTML"
                 )
             except Exception:
                 await callback_or_message.message.answer(
                     success_text,
                     reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-                    parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+                    parse_mode="HTML"
                 )
             await callback_or_message.answer()
         else:  # Message
             await callback_or_message.answer(
                 success_text,
                 reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-                parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+                parse_mode="HTML"
             )
         
         await state.clear()
@@ -426,9 +425,7 @@ async def cancel_promo_creation_state_to_menu(callback: types.CallbackQuery,
         await callback.message.edit_text(
             _(key="admin_panel_title"),
             reply_markup=get_admin_panel_keyboard(i18n, current_lang, settings)
-        ,
-            parse_mode="HTML",
-            link_preview_options=LinkPreviewOptions(is_disabled=True))
+        )
     except Exception:
         await callback.message.answer(
             _(key="admin_panel_title"),

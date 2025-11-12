@@ -10,7 +10,6 @@ from typing import Optional, Dict, Any, Tuple
 
 from aiohttp import ClientSession, ClientTimeout, web
 from aiogram import Bot
-from aiogram.types import LinkPreviewOptions
 from sqlalchemy.orm import sessionmaker
 
 from config.settings import Settings
@@ -382,7 +381,7 @@ class FreeKassaService:
                     text,
                     reply_markup=markup,
                     parse_mode="HTML",
-                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                    disable_web_page_preview=True,
                 )
             except Exception as e:
                 logging.error(f"FreeKassa notification: failed to send message to user {payment.user_id}: {e}")

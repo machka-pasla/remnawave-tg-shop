@@ -2,7 +2,6 @@ import logging
 from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import LinkPreviewOptions
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -153,9 +152,7 @@ async def admin_panel_actions_callback_handler(
             await callback.message.edit_text(
                 _(key="admin_panel_title"),
                 reply_markup=get_admin_panel_keyboard(i18n, current_lang,
-                                                      settings),
-                                                          parse_mode="HTML",
-                                                          link_preview_options=LinkPreviewOptions(is_disabled=True))
+                                                      settings))
         except Exception:
             await callback.message.answer(
                 _(key="admin_panel_title"),
@@ -189,37 +186,27 @@ async def admin_section_handler(callback: types.CallbackQuery, state: FSMContext
             await callback.message.edit_text(
                 _("admin_stats_and_monitoring_section"),
                 reply_markup=get_stats_monitoring_keyboard(i18n, current_lang)
-            ,
-                parse_mode="HTML",
-                link_preview_options=LinkPreviewOptions(is_disabled=True))
+            )
         elif section == "user_management":
             await callback.message.edit_text(
                 _("admin_user_management_section"),
                 reply_markup=get_user_management_keyboard(i18n, current_lang)
-            ,
-                parse_mode="HTML",
-                link_preview_options=LinkPreviewOptions(is_disabled=True))
+            )
         elif section == "ban_management":
             await callback.message.edit_text(
                 _("admin_ban_management_section"),
                 reply_markup=get_ban_management_keyboard(i18n, current_lang)
-            ,
-                parse_mode="HTML",
-                link_preview_options=LinkPreviewOptions(is_disabled=True))
+            )
         elif section == "promo_marketing":
             await callback.message.edit_text(
                 _("admin_promo_marketing_section"),
                 reply_markup=get_promo_marketing_keyboard(i18n, current_lang)
-            ,
-                parse_mode="HTML",
-                link_preview_options=LinkPreviewOptions(is_disabled=True))
+            )
         elif section == "system_functions":
             await callback.message.edit_text(
                 _("admin_system_functions_section"),
                 reply_markup=get_system_functions_keyboard(i18n, current_lang)
-            ,
-                parse_mode="HTML",
-                link_preview_options=LinkPreviewOptions(is_disabled=True))
+            )
         else:
             await callback.answer(_("admin_unknown_action"), show_alert=True)
             return
@@ -252,9 +239,7 @@ async def show_queue_status_handler(callback: types.CallbackQuery, i18n_data: di
                 text=_("back_to_admin_panel_button"),
                 callback_data="admin_action:main"
             ).as_markup()
-        ,
-            parse_mode="HTML",
-            link_preview_options=LinkPreviewOptions(is_disabled=True))
+        )
         await callback.answer()
         return
 
@@ -276,7 +261,7 @@ async def show_queue_status_handler(callback: types.CallbackQuery, i18n_data: di
         await callback.message.edit_text(
             message_text,
             reply_markup=get_back_to_admin_panel_keyboard(current_lang, i18n),
-            parse_mode="HTML", link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode="HTML"
         )
         await callback.answer()
         
