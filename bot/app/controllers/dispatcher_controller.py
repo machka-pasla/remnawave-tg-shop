@@ -4,6 +4,7 @@ from typing import Dict
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.types import LinkPreviewOptions
 from aiogram.fsm.storage.memory import MemoryStorage
 from sqlalchemy.orm import sessionmaker
 
@@ -18,7 +19,10 @@ from bot.middlewares.channel_subscription import ChannelSubscriptionMiddleware
 
 def build_dispatcher(settings: Settings, async_session_factory: sessionmaker) -> tuple[Dispatcher, Bot, Dict]:
     storage = MemoryStorage()
-    default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
+    default_props = DefaultBotProperties(
+        parse_mode=ParseMode.HTML,
+        link_preview_options=LinkPreviewOptions(is_disabled=True),
+    )
     bot = Bot(token=settings.BOT_TOKEN, default=default_props)
 
     dp = Dispatcher(storage=storage, settings=settings, bot_instance=bot)
