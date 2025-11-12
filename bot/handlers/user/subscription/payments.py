@@ -202,17 +202,33 @@ async def _initiate_yk_payment(
             return False
 
         try:
-            await callback.message.edit_text(
-                get_text(key="payment_link_message", months=months),
-                reply_markup=get_payment_url_keyboard(
-                    payment_response_yk["confirmation_url"],
-                    current_lang,
-                    i18n,
-                    back_callback=back_callback,
-                    back_text_key="back_to_payment_methods_button",
-                ),
-                disable_web_page_preview=False,
-            )
+            if settings.PHOTO_ID_PAY_CREATED:
+                await callback.message.edit_media(
+                    media=InputMediaPhoto(
+                        media=settings.PHOTO_ID_PAY_CREATED,
+                        caption=get_text(key="payment_link_message", months=months),
+                    ),
+                    reply_markup=get_payment_url_keyboard(
+                        payment_response_yk["confirmation_url"],
+                        current_lang,
+                        i18n,
+                        back_callback=back_callback,
+                        back_text_key="back_to_payment_methods_button",
+                    ),
+                    disable_web_page_preview=False,
+                )
+            else:
+                await callback.message.edit_text(
+                    get_text(key="payment_link_message", months=months),
+                    reply_markup=get_payment_url_keyboard(
+                        payment_response_yk["confirmation_url"],
+                        current_lang,
+                        i18n,
+                        back_callback=back_callback,
+                        back_text_key="back_to_payment_methods_button",
+                    ),
+                    disable_web_page_preview=False,
+                )
         except Exception as e_edit:
             logging.warning(
                 f"Edit message for payment link failed: {e_edit}. Sending new one."
@@ -229,6 +245,7 @@ async def _initiate_yk_payment(
                     ),
                     disable_web_page_preview=False,
                 )
+                await callback.message.delete()
             except Exception:
                 pass
         return True
@@ -426,16 +443,31 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
 
     if autopay_enabled and saved_methods:
         try:
-            await callback.message.edit_text(
-                get_text("yookassa_autopay_flow_prompt"),
-                reply_markup=get_yk_autopay_choice_keyboard(
-                    months,
-                    price_rub,
-                    current_lang,
-                    i18n,
-                    has_saved_cards=True,
-                ),
-            )
+            if settings.PHOTO_ID_PAY_METHOD:
+                await callback.message.edit_media(
+                    media=InputMediaPhoto(
+                        media=settings.PHOTO_ID_PAY_METHOD,
+                        caption=get_text("yookassa_autopay_flow_prompt")
+                    ),
+                    reply_markup=get_yk_autopay_choice_keyboard(
+                        months,
+                        price_rub,
+                        current_lang,
+                        i18n,
+                        has_saved_cards=True,
+                    ),
+                )
+            else:
+                await callback.message.edit_text(
+                    get_text("yookassa_autopay_flow_prompt"),
+                    reply_markup=get_yk_autopay_choice_keyboard(
+                        months,
+                        price_rub,
+                        current_lang,
+                        i18n,
+                        has_saved_cards=True,
+                    ),
+                )
         except Exception as e_edit:
             logging.warning(f"Failed to show autopay choice: {e_edit}. Sending new message.")
             try:
@@ -927,17 +959,33 @@ async def pay_fk_callback_handler(
                 date=datetime.now().strftime("%Y-%m-%d"),
             )
             try:
-                await callback.message.edit_text(
-                    f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
-                    reply_markup=get_payment_url_keyboard(
-                        location,
-                        current_lang,
-                        i18n,
-                        back_callback=f"subscribe_period:{months}",
-                        back_text_key="back_to_payment_methods_button",
-                    ),
-                    disable_web_page_preview=False,
-                )
+                if settings.PHOTO_ID_PAY_CREATED:
+                    await callback.message.edit_media(
+                        media=InputMediaPhoto(
+                            media=settings.PHOTO_ID_PAY_CREATED,
+                            caption=f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
+                        ),
+                        reply_markup=get_payment_url_keyboard(
+                            location,
+                            current_lang,
+                            i18n,
+                            back_callback=f"subscribe_period:{months}",
+                            back_text_key="back_to_payment_methods_button",
+                        ),
+                        disable_web_page_preview=False,
+                    )
+                else:
+                    await callback.message.edit_text(
+                        f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
+                        reply_markup=get_payment_url_keyboard(
+                            location,
+                            current_lang,
+                            i18n,
+                            back_callback=f"subscribe_period:{months}",
+                            back_text_key="back_to_payment_methods_button",
+                        ),
+                        disable_web_page_preview=False,
+                    )
             except Exception as e_edit:
                 logging.warning(f"FreeKassa: failed to display payment link ({e_edit}), sending new message.")
                 try:
@@ -952,6 +1000,7 @@ async def pay_fk_callback_handler(
                         ),
                         disable_web_page_preview=False,
                     )
+                    await callback.message.delete()
                 except Exception:
                     pass
             try:
@@ -1044,17 +1093,33 @@ async def pay_crypto_callback_handler(
 
     if invoice_url:
         try:
-            await callback.message.edit_text(
-                get_text(key="payment_link_message", months=months),
-                reply_markup=get_payment_url_keyboard(
-                    invoice_url,
-                    current_lang,
-                    i18n,
-                    back_callback=f"subscribe_period:{months}",
-                    back_text_key="back_to_payment_methods_button",
-                ),
-                disable_web_page_preview=False,
-            )
+            if settings.PHOTO_ID_PAY_CREATED:
+                await callback.message.edit_media(
+                    media=InputMediaPhoto(
+                        media=settings.PHOTO_ID_PAY_CREATED,
+                        caption=get_text(key="payment_link_message", months=months),
+                    ),
+                    reply_markup=get_payment_url_keyboard(
+                        invoice_url,
+                        current_lang,
+                        i18n,
+                        back_callback=f"subscribe_period:{months}",
+                        back_text_key="back_to_payment_methods_button",
+                    ),
+                    disable_web_page_preview=False,
+                )
+            else:
+                await callback.message.edit_text(
+                    get_text(key="payment_link_message", months=months),
+                    reply_markup=get_payment_url_keyboard(
+                        invoice_url,
+                        current_lang,
+                        i18n,
+                        back_callback=f"subscribe_period:{months}",
+                        back_text_key="back_to_payment_methods_button",
+                    ),
+                    disable_web_page_preview=False,
+                )
         except Exception:
             try:
                 await callback.message.answer(
@@ -1068,6 +1133,7 @@ async def pay_crypto_callback_handler(
                     ),
                     disable_web_page_preview=False,
                 )
+                await callback.message.delete()
             except Exception:
                 pass
         try:

@@ -154,7 +154,7 @@ async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_d
         username = '-'
 
 
-    text = get_text(key="main_menu_greeting", username=username)
+    text = get_text(key="main_own_menu", username=username)
     reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings)
 
     target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
