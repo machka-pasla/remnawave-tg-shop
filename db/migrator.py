@@ -48,11 +48,85 @@ def _migration_0001_add_channel_subscription_fields(connection: Connection) -> N
         connection.execute(text(stmt))
 
 
+def _migration_0002_add_referral_code(connection: Connection) -> None:
+    inspector = inspect(connection)
+    columns: Set[str] = {col["name"] for col in inspector.get_columns("users")}
+
+    if "referral_code" not in columns:
+        connection.execute(
+            text("ALTER TABLE users ADD COLUMN referral_code VARCHAR(16)")
+        )
+
+    connection.execute(
+        text(
+            """
+            WITH generated_codes AS (
+                SELECT
+                    user_id,
+                    UPPER(
+                        SUBSTRING(
+                            md5(
+                                user_id::text
+                                || clock_timestamp()::text
+                                || random()::text
+                            )
+                            FROM 1 FOR 9
+                        )
+                    ) AS referral_code
+                FROM users
+                WHERE referral_code IS NULL OR referral_code = ''
+            )
+            UPDATE users AS u
+            SET referral_code = g.referral_code
+            FROM generated_codes AS g
+            WHERE u.user_id = g.user_id
+            """
+        )
+    )
+
+    connection.execute(
+        text(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_users_referral_code
+            ON users (referral_code)
+            WHERE referral_code IS NOT NULL
+            """
+        )
+    )
+
+
+def _migration_0003_normalize_referral_codes(connection: Connection) -> None:
+    inspector = inspect(connection)
+    columns: Set[str] = {col["name"] for col in inspector.get_columns("users")}
+    if "referral_code" not in columns:
+        return
+
+    connection.execute(
+        text(
+            """
+            UPDATE users
+            SET referral_code = UPPER(referral_code)
+            WHERE referral_code IS NOT NULL
+              AND referral_code <> UPPER(referral_code)
+            """
+        )
+    )
+
 MIGRATIONS: List[Migration] = [
     Migration(
         id="0001_add_channel_subscription_fields",
         description="Add columns to track required channel subscription verification",
         upgrade=_migration_0001_add_channel_subscription_fields,
+    ),
+    Migration(
+        id="0002_add_referral_code",
+        description="Store short referral codes for users and backfill existing rows",
+        upgrade=_migration_0002_add_referral_code,
+    ),
+    Migration(
+        id="0003_normalize_referral_codes",
+        description="Normalize referral codes to uppercase for consistent lookups",
+        upgrade=_migration_0003_normalize_referral_codes,
     ),
 ]
 
