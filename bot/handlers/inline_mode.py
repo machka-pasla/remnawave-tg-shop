@@ -38,7 +38,13 @@ async def inline_query_handler(inline_query: InlineQuery,
         # For all users: referral functionality
         if not query or "реф" in query or "ref" in query or "друг" in query or "friend" in query:
             referral_result = await create_referral_result(
-                inline_query, bot, referral_service, i18n, current_lang, settings
+                inline_query,
+                bot,
+                referral_service,
+                i18n,
+                current_lang,
+                settings,
+                session,
             )
             if referral_result:
                 results.append(referral_result)
@@ -67,9 +73,15 @@ async def inline_query_handler(inline_query: InlineQuery,
         await inline_query.answer(results=[], cache_time=10)
 
 
-async def create_referral_result(inline_query: InlineQuery, bot: Bot,
-                                referral_service: ReferralService,
-                                i18n_instance, lang: str, settings: Settings) -> Optional[InlineQueryResultArticle]:
+async def create_referral_result(
+    inline_query: InlineQuery,
+    bot: Bot,
+    referral_service: ReferralService,
+    i18n_instance,
+    lang: str,
+    settings: Settings,
+    session: AsyncSession,
+) -> Optional[InlineQueryResultArticle]:
     """Create referral link result for inline query"""
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     
@@ -80,7 +92,13 @@ async def create_referral_result(inline_query: InlineQuery, bot: Bot,
             return None
         
         user_id = inline_query.from_user.id
-        referral_link = referral_service.generate_referral_link(bot_username, user_id)
+        referral_link = await referral_service.generate_referral_link(
+            session, bot_username, user_id
+        )
+
+        if not referral_link:
+            logging.warning("Could not produce referral link for inline user %s", user_id)
+            return None
         
         # Create message content (use same text as friend message)
         message_text = _(

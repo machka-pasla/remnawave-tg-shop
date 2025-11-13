@@ -60,8 +60,18 @@ async def referral_command_handler(event: Union[types.Message,
         return
 
     inviter_user_id = event.from_user.id
-    referral_link = referral_service.generate_referral_link(
-        bot_username, inviter_user_id)
+    referral_link = await referral_service.generate_referral_link(
+        session, bot_username, inviter_user_id)
+
+    if not referral_link:
+        logging.error(
+            "Failed to generate referral link for user %s (probably missing DB record).",
+            inviter_user_id,
+        )
+        await target_message_obj.answer(_("error_generating_referral_link"))
+        if isinstance(event, types.CallbackQuery):
+            await event.answer()
+        return
 
     bonus_info_parts = []
     if settings.subscription_options:
@@ -132,7 +142,16 @@ async def referral_action_handler(callback: types.CallbackQuery, settings: Setti
                 return
 
             inviter_user_id = callback.from_user.id
-            referral_link = referral_service.generate_referral_link(bot_username, inviter_user_id)
+            referral_link = await referral_service.generate_referral_link(
+                session, bot_username, inviter_user_id)
+
+            if not referral_link:
+                logging.error(
+                    "Failed to generate referral link for user %s via inline button.",
+                    inviter_user_id,
+                )
+                await callback.answer(_("error_generating_referral_link"), show_alert=True)
+                return
             
             friend_message = _("referral_friend_message", referral_link=referral_link)
             
