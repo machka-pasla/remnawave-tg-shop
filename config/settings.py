@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     YOOKASSA_PAYMENT_SUBJECT: str = Field(default="service")
     # Single toggle to enable recurring payments (saving cards, managing payment methods, auto-renew)
     YOOKASSA_AUTOPAYMENTS_ENABLED: bool = Field(default=False)
+    YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING: bool = Field(
+        default=True,
+        description="When true, new YooKassa payments in autopay mode force card binding without a user checkbox."
+    )
 
     WEBHOOK_BASE_URL: Optional[str] = None
 
@@ -114,7 +118,11 @@ class Settings(BaseSettings):
     # Referral program configuration
     REFERRAL_ONE_BONUS_PER_REFEREE: bool = Field(
         default=True,
-        description="When true, referral bonuses (for inviter and referee) are applied only once per invited user – on their first successful payment."
+        description="When true, referral bonuses (for inviter and referee) are applied only once per invited user - on their first successful payment."
+    )
+    LEGACY_REFS: bool = Field(
+        default=True,
+        description="Allow legacy referral links like ref_<telegram_id> to continue working. Defaults to True when unset."
     )
 
     PANEL_API_URL: Optional[str] = None

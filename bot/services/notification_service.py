@@ -1,10 +1,11 @@
 import logging
 import asyncio
 from aiogram import Bot
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.exceptions import TelegramRetryAfter
 from datetime import datetime, timezone
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Union, Dict, Any, Callable
 
 from config.settings import Settings
 from sqlalchemy.orm import sessionmaker
@@ -34,8 +35,45 @@ class NotificationService:
         if username:
             base_display = f"{base_display} ({username_for_display(username)})"
         return base_display
+
+    @staticmethod
+    def _build_profile_keyboard(
+        translate: Callable[..., str],
+        user_id: int,
+        referrer_id: Optional[int] = None,
+    ) -> InlineKeyboardMarkup:
+        """Create inline keyboard with links to user (and referrer) profiles."""
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text=translate(
+                        "log_open_profile_link",
+                        default="👤 Открыть профиль",
+                    ),
+                    url=f"tg://user?id={user_id}",
+                )
+            ]
+        ]
+
+        if referrer_id:
+            buttons.append([
+                InlineKeyboardButton(
+                    text=translate(
+                        "log_open_referrer_profile_button",
+                        default="👤 Открыть профиль пригласившего",
+                    ),
+                    url=f"tg://user?id={referrer_id}",
+                )
+            ])
+
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
     
-    async def _send_to_log_channel(self, message: str, thread_id: Optional[int] = None):
+    async def _send_to_log_channel(
+        self,
+        message: str,
+        thread_id: Optional[int] = None,
+        reply_markup: Optional[InlineKeyboardMarkup] = None,
+    ):
         """Send message to configured log channel/group using message queue"""
         if not self.settings.LOG_CHAT_ID:
             return
@@ -49,6 +87,7 @@ class NotificationService:
                     text=message,
                     parse_mode="HTML",
                     disable_web_page_preview=True,
+                    reply_markup=reply_markup,
                     message_thread_id=thread_id or self.settings.LOG_THREAD_ID
                 )
             except Exception as e:
@@ -64,6 +103,8 @@ class NotificationService:
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True
             }
+            if reply_markup:
+                kwargs["reply_markup"] = reply_markup
             
             # Add thread ID for supergroups if specified
             if final_thread_id:
@@ -124,7 +165,12 @@ class NotificationService:
         
         referral_text = ""
         if referred_by_id:
-            referral_text = _("log_referral_suffix", default=" (реферал от {referrer_id})", referrer_id=referred_by_id)
+            referrer_link = hd.link(str(referred_by_id), f"tg://user?id={referred_by_id}")
+            referral_text = _(
+                "log_referral_suffix",
+                default=" (реферал от {referrer_link})",
+                referrer_link=referrer_link,
+            )
         
         message = _(
             "log_new_user_registration",
@@ -137,9 +183,10 @@ class NotificationService:
             referral_text=referral_text,
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
-        
+
         # Send to log channel
-        await self._send_to_log_channel(message)
+        profile_keyboard = self._build_profile_keyboard(_, user_id, referred_by_id)
+        await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def notify_payment_received(self, user_id: int, amount: float, currency: str,
                                     months: int, payment_provider: str, 
@@ -182,7 +229,8 @@ class NotificationService:
         )
         
         # Send to log channel
-        await self._send_to_log_channel(message)
+        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def notify_promo_activation(self, user_id: int, promo_code: str, bonus_days: int,
                                     username: Optional[str] = None):
@@ -212,7 +260,8 @@ class NotificationService:
         )
         
         # Send to log channel
-        await self._send_to_log_channel(message)
+        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def notify_trial_activation(self, user_id: int, end_date: datetime,
                                     username: Optional[str] = None):
@@ -240,7 +289,8 @@ class NotificationService:
         )
         
         # Send to log channel
-        await self._send_to_log_channel(message)
+        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        await self._send_to_log_channel(message, reply_markup=profile_keyboard)
 
     async def notify_panel_sync(self, status: str, details: str, 
                                users_processed: int, subs_synced: int,
@@ -275,7 +325,7 @@ class NotificationService:
             details=details
         )
         
-        # Send to log channel 
+        # Send to log channel
         await self._send_to_log_channel(message)
 
     async def notify_suspicious_promo_attempt(
@@ -308,7 +358,8 @@ class NotificationService:
             timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z"))
 
         # Send to log channel
-        await self._send_to_log_channel(message)
+        profile_keyboard = self._build_profile_keyboard(_, user_id)
+        await self._send_to_log_channel(message, reply_markup=profile_keyboard)
     
     async def send_custom_notification(self, message: str, to_admins: bool = False, 
                                      to_log_channel: bool = True, thread_id: Optional[int] = None):

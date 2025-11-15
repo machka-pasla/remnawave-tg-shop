@@ -177,6 +177,8 @@ class ReferralService:
                                     "ACTIVE_BONUS",
                                     "traffic_limit_bytes":
                                     self.settings.user_traffic_limit_bytes,
+                                    "auto_renew_enabled":
+                                    False,
                                 }
                                 try:
                                     await subscription_dal.deactivate_other_active_subscriptions(
@@ -255,9 +257,35 @@ class ReferralService:
 
             raise
 
-    def generate_referral_link(self, bot_username: str,
-                               inviter_user_id: int) -> str:
-        return f"https://t.me/{bot_username}?start=ref_{inviter_user_id}"
+    async def generate_referral_link(self, session: AsyncSession,
+                                     bot_username: str,
+                                     inviter_user_id: int) -> Optional[str]:
+        try:
+            user = await user_dal.get_user_by_id(session, inviter_user_id)
+            if not user:
+                logging.warning(
+                    "Unable to generate referral link: user %s not found.",
+                    inviter_user_id,
+                )
+                return None
+
+            referral_code = await user_dal.ensure_referral_code(session, user)
+            if not referral_code:
+                logging.warning(
+                    "User %s has no referral code even after regeneration attempt.",
+                    inviter_user_id,
+                )
+                return None
+
+            return f"https://t.me/{bot_username}?start=ref_u{referral_code}"
+        except Exception as exc:
+            logging.error(
+                "Failed to generate referral link for user %s: %s",
+                inviter_user_id,
+                exc,
+                exc_info=True,
+            )
+            return None
 
     async def get_referral_stats(self, session: AsyncSession, user_id: int) -> dict:
         """Get referral statistics for a user"""
