@@ -2,6 +2,8 @@ import logging
 import json
 import os
 from typing import Any, Awaitable, Callable, Dict, Optional
+from pathlib import Path
+import time
 
 from aiogram import BaseMiddleware
 from aiogram.types import User, Update
@@ -18,6 +20,7 @@ class JsonI18n:
         self.path = path
         self.default_lang = default
         self.locales_data: Dict[str, Dict[str, str]] = {}
+        self.file_mtimes: Dict[str, float] = {}  # Track file modification times
         self._load_locales()
         logging.info(
             f"JsonI18n initialized. Loaded languages: {list(self.locales_data.keys())}. Default: {self.default_lang}"
@@ -28,13 +31,24 @@ class JsonI18n:
             logging.error(
                 f"Locales path not found or not a directory: {self.path}")
             return
+
         for item in os.listdir(self.path):
             if item.endswith(".json"):
                 lang_code = item.split(".")[0]
                 file_path = os.path.join(self.path, item)
+
+                # Check if file needs to be reloaded
                 try:
+                    current_mtime = os.path.getmtime(file_path)
+                    if file_path in self.file_mtimes and self.file_mtimes[file_path] == current_mtime:
+                        continue  # File hasn't changed, skip reloading
+
+                    self.file_mtimes[file_path] = current_mtime
+
                     with open(file_path, "r", encoding="utf-8") as f:
                         self.locales_data[lang_code] = json.load(f)
+                    logging.info(f"Loaded/Reloaded locale: {lang_code}")
+
                 except json.JSONDecodeError as e_json_load:
                     logging.error(
                         f"Error loading locale {lang_code} from {file_path} (JSON Decode Error): {e_json_load}"
@@ -44,7 +58,25 @@ class JsonI18n:
                         f"Error loading locale {lang_code} from {file_path}: {e_load}",
                         exc_info=True)
 
+    def _check_and_reload(self):
+        """Check if any locale files have been modified and reload if necessary"""
+        try:
+            for item in os.listdir(self.path):
+                if item.endswith(".json"):
+                    file_path = os.path.join(self.path, item)
+                    if os.path.exists(file_path):
+                        current_mtime = os.path.getmtime(file_path)
+                        if file_path not in self.file_mtimes or self.file_mtimes[file_path] != current_mtime:
+                            logging.info(f"Detected changes in {file_path}, reloading locales...")
+                            self._load_locales()
+                            break
+        except Exception as e:
+            logging.error(f"Error checking for locale changes: {e}")
+
     def gettext(self, lang_code: Optional[str], key: str, **kwargs) -> str:
+        # Check for file changes before getting text
+        self._check_and_reload()
+
         # Determine effective language with robust fallback
         if lang_code and lang_code in self.locales_data:
             effective_lang_code = lang_code
@@ -129,7 +161,7 @@ class I18nMiddleware(BaseMiddleware):
         self.settings = settings
 
     async def __call__(self, handler: Callable[[Update, Dict[str, Any]],
-                                               Awaitable[Any]], event: Update,
+    Awaitable[Any]], event: Update,
                        data: Dict[str, Any]) -> Any:
         session: AsyncSession = data["session"]
         event_user: Optional[User] = data.get("event_from_user")
