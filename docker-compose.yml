@@ -1,6 +1,6 @@
 services:
   remnawave-tg-shop:
-    image: ghcr.io/machka-pasla/remnawave-tg-shop:latest
+    image: ghcr.io/maks-kng/remnawave-tg-shop:latest
 #    build: .
     container_name: remnawave-tg-shop
     hostname: remnawave-tg-shop
