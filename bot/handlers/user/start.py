@@ -148,6 +148,7 @@ async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_d
         return
 
     user_id = event.from_user.id
+    db_user = await user_dal.get_user_by_id(session, user_id)
     try:
         username = hd.quote(event.from_user.username)
     except:
@@ -155,7 +156,7 @@ async def send_own_menu(event: Union[types.Message, types.CallbackQuery], i18n_d
 
 
     text = get_text(key="main_own_menu", username=username)
-    reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings)
+    reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings, db_user)
 
     target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
     if not target_message_obj:

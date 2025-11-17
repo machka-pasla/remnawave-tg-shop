@@ -4,6 +4,8 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
+from db.dal import user_dal
+
 from config.settings import Settings
 from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
@@ -27,6 +29,7 @@ async def request_trial_confirmation_handler(
     session: AsyncSession,
 ):
     user_id = callback.from_user.id
+    db_user = await user_dal.get_user_by_id(session, user_id)
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
@@ -60,7 +63,7 @@ async def request_trial_confirmation_handler(
         await callback.message.edit_text(
             _("trial_already_had_subscription_or_trial"),
             reply_markup=get_main_menu_inline_keyboard(
-                current_lang, i18n, settings, False
+                current_lang, i18n, settings, db_user, False
             ),
         )
         try:
@@ -146,7 +149,7 @@ async def request_trial_confirmation_handler(
         )
         if activation_result and activation_result.get("activated")
         else get_main_menu_inline_keyboard(
-            current_lang, i18n, settings, show_trial_button_after_action
+            current_lang, i18n, settings, db_user, show_trial_button_after_action
         )
     )
 
@@ -181,6 +184,7 @@ async def confirm_activate_trial_handler(
     session: AsyncSession,
 ):
     user_id = callback.from_user.id
+    db_user = await user_dal.get_user_by_id(session, user_id)
 
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
@@ -279,7 +283,7 @@ async def confirm_activate_trial_handler(
         )
         if activation_result and activation_result.get("activated")
         else get_main_menu_inline_keyboard(
-            current_lang, i18n, settings, show_trial_button_after_action
+            current_lang, i18n, settings, db_user, show_trial_button_after_action
         )
     )
 
