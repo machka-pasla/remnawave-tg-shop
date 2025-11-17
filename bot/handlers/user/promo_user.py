@@ -51,7 +51,7 @@ async def prompt_promo_code_input(callback: types.CallbackQuery,
     try:
         if settings.PHOTO_ID_MAIN_MENU:
             await callback.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=_(key="promo_code_prompt")),
-                                              reply_markup=get_back_to_main_menu_markup(current_lang, i18n), disable_web_page_preview=True)
+                                              reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="my_subscription"), disable_web_page_preview=True)
         else:
             await callback.message.edit_text(
             text=_(key="promo_code_prompt"),

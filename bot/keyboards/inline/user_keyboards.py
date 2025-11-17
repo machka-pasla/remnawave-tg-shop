@@ -518,7 +518,7 @@ def get_payment_methods_manage_keyboard(lang: str, i18n_instance, has_card: bool
         InlineKeyboardButton(text=_(key="payment_method_bind_button"), callback_data="pm:bind")
     )
     builder.row(
-        InlineKeyboardButton(text=_(key="back_to_main_menu_button"), callback_data="main_action:back_to_main")
+        InlineKeyboardButton(text=_(key="back_to_main_menu_button"), callback_data="main_action:my_subscription")
     )
     return builder.as_markup()
 
@@ -556,7 +556,7 @@ def get_payment_methods_list_keyboard(
 
     # Bind new card and back
     builder.row(InlineKeyboardButton(text=_(key="payment_method_bind_button"), callback_data="pm:bind"))
-    builder.row(InlineKeyboardButton(text=_(key="back_to_main_menu_button"), callback_data="main_action:back_to_main"))
+    builder.row(InlineKeyboardButton(text=_(key="back_to_main_menu_button"), callback_data="main_action:my_subscription"))
     return builder.as_markup()
 
 
