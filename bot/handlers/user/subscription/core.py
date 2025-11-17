@@ -22,88 +22,59 @@ from db.models import Subscription
 router = Router(name="user_subscription_core_router")
 
 
-async def display_subscription_options(event: Union[types.Message, types.CallbackQuery], i18n_data: dict, settings: Settings, session: AsyncSession):
+async def display_subscription_options(event, i18n_data, settings, session):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
-    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    i18n = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
-    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+    # Получаем объект для отправки сообщений
+    target = event.message if isinstance(event, types.CallbackQuery) else event
 
-    if not i18n:
-        err_msg = "Language service error."
-        if isinstance(event, types.CallbackQuery):
-            try:
-                await event.answer(err_msg, show_alert=True)
-            except Exception:
-                pass
-        elif isinstance(event, types.Message):
-            await event.answer(err_msg)
-        return
+    # ----------------------------------------------------------------------
+    #  МАРКЕТИНГОВЫЙ ТЕКСТ ТАРИФОВ
+    # ----------------------------------------------------------------------
+    opts = settings.subscription_options
+    p1 = opts.get(1)
+    p3 = opts.get(3)
+    p6 = opts.get(6)
+    p12 = opts.get(12)
 
-    currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
-    text_content = get_text("select_subscription_period") if settings.subscription_options else get_text("no_subscription_options_available")
+    m3 = round(p3 / 3) if p3 else None
+    m6 = round(p6 / 6) if p6 else None
+    m12 = round(p12 / 12) if p12 else None
 
-    reply_markup = (
-        get_subscription_options_keyboard(settings.subscription_options, currency_symbol_val, current_lang, i18n)
-        if settings.subscription_options
-        else get_back_to_main_menu_markup(current_lang, i18n)
+    marketing_text = (
+        f"🎯 <b>ВЫБЕРИТЕ ТАРИФ:</b>\n\n"
+        f"📈 <b>БАЗОВЫЙ — 1 месяц</b>\n"
+        f"{p1} ₽\n\n"
+        f"🔥 <b>СТАНДАРТНЫЙ — 3 месяца</b>\n"
+        f"{p3} ₽ • {m3} ₽/мес\n\n"
+        f"🚀 <b>ВЫГОДНЫЙ — 6 месяцев</b>\n"
+        f"{p6} ₽ • {m6} ₽/мес\n\n"
+        f"💎 <b>МАКСИМУМ — 12 месяцев</b>\n"
+        f"{p12} ₽ • {m12} ₽/мес\n"
     )
 
-    target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
-    if not target_message_obj:
-        if isinstance(event, types.CallbackQuery):
-            try:
-                await event.answer(get_text("error_occurred_try_again"), show_alert=True)
-            except Exception:
-                pass
-        return
+    await target.answer(marketing_text, parse_mode="HTML")
 
-        # --- NEW: SEND MARKETING MESSAGE BEFORE BUTTONS ---
+    # ----------------------------------------------------------------------
+    #  КНОПКИ
+    # ----------------------------------------------------------------------
+    reply_markup = get_subscription_options_keyboard(
+        settings.subscription_options,
+        settings.DEFAULT_CURRENCY_SYMBOL,
+        current_lang,
+        i18n
+    )
+
+    await target.answer(get_text("select_subscription_period"), reply_markup=reply_markup)
+
+    # Закрываем callback alert
     if isinstance(event, types.CallbackQuery):
-        try:
-            # delete old message
-            await target_message_obj.delete()
-        except Exception:
-            pass
-
-        # СОБИРАЕМ МАРКЕТИНГ ТАРИФОВ ДИНАМИЧЕСКИ
-        # параметры
-        opts = settings.subscription_options
-        p1 = opts.get(1)
-        p3 = opts.get(3)
-        p6 = opts.get(6)
-        p12 = opts.get(12)
-
-        if p1:
-            m3 = round(p3 / 3) if p3 else None
-            m6 = round(p6 / 6) if p6 else None
-            m12 = round(p12 / 12) if p12 else None
-
-        # Генерация текста
-        marketing_text = (
-            f"🎯 <b>ВЫБЕРИТЕ ТАРИФ:</b>\n\n"
-            f"📈 <b>БАЗОВЫЙ</b>\n"
-            f"1 месяц • {p1} ₽\n\n"
-            f"🔥 <b>СТАНДАРТНЫЙ</b>\n"
-            f"3 месяца • {m3} ₽/мес • {p3} ₽\n\n"
-            f"🚀 <b>ВЫГОДНЫЙ</b>\n"
-            f"6 месяцев • {m6} ₽/мес • {p6} ₽\n\n"
-            f"💎 <b>МАКСИМУМ</b>\n"
-            f"12 месяцев • {m12} ₽/мес • {p12} ₽\n"
-        )
-
-        await event.message.answer(marketing_text, parse_mode="HTML")
-
-    if isinstance(event, types.CallbackQuery):
-        try:
-            await target_message_obj.edit_text(text_content, reply_markup=reply_markup)
-        except Exception:
-            await target_message_obj.answer(text_content, reply_markup=reply_markup)
         try:
             await event.answer()
-        except Exception:
+        except:
             pass
-    else:
-        await target_message_obj.answer(text_content, reply_markup=reply_markup)
 
 
 @router.callback_query(F.data == "main_action:subscribe")
