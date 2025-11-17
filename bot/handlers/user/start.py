@@ -198,7 +198,7 @@ async def send_bonus_text(event: Union[types.Message, types.CallbackQuery], i18n
             await event.answer(err_msg)
         return
 
-    text = get_text(key="main_get_bonus_text")
+    text = get_text(key="menu_get_bonus_text")
     keyboard = (
         get_channel_subscription_keyboard(
             current_lang, i18n, settings.REQUIRED_CHANNEL_LINK
