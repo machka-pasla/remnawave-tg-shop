@@ -198,9 +198,14 @@ async def send_bonus_text(event: Union[types.Message, types.CallbackQuery], i18n
             await event.answer(err_msg)
         return
 
-    user_id = event.from_user.id
     text = get_text(key="main_get_bonus_text")
-    reply_markup = get_main_menu_inline_keyboard(current_lang, i18n, settings)
+    keyboard = (
+        get_channel_subscription_keyboard(
+            current_lang, i18n, settings.REQUIRED_CHANNEL_LINK
+        )
+        if i18n
+        else None
+    )
 
     target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
     if not target_message_obj:
@@ -213,10 +218,10 @@ async def send_bonus_text(event: Union[types.Message, types.CallbackQuery], i18n
 
     if isinstance(event, types.CallbackQuery):
         try:
-            if settings.PHOTO_ID_MAIN_MENU:
-                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=text), reply_markup=reply_markup, disable_web_page_preview=True)
+            if settings.PHOTO_ID_GET_BONUS:
+                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_GET_BONUS, caption=text), reply_markup=keyboard, disable_web_page_preview=True)
             else:
-                await target_message_obj.edit_text(text=text, reply_markup=reply_markup, disable_web_page_preview=True)
+                await target_message_obj.edit_text(text=text, reply_markup=keyboard, disable_web_page_preview=True)
         except Exception as e:
             print(repr(e))
         try:
@@ -775,9 +780,7 @@ async def main_action_callback_handler(
             callback, i18n_data, settings, panel_service, subscription_service,
             session, bot)
     elif action == "get_bonus":
-        await ensure_required_channel_subscription(callback, settings, i18n_data,
-                                                   current_lang, session,
-                                                   db_user)
+        await send_bonus_text(callback, i18n_data, settings, session)
     elif action == "referral":
         await user_referral_handlers.referral_command_handler(
             callback, settings, i18n_data, referral_service, bot, session)
