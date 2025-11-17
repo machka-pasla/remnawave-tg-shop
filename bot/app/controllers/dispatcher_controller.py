@@ -32,7 +32,6 @@ def build_dispatcher(settings: Settings, async_session_factory: sessionmaker) ->
     dp.update.outer_middleware(I18nMiddleware(i18n=i18n_instance, settings=settings))
     dp.update.outer_middleware(ProfileSyncMiddleware())
     dp.update.outer_middleware(BanCheckMiddleware(settings=settings, i18n_instance=i18n_instance))
-    dp.update.outer_middleware(ChannelSubscriptionMiddleware(settings=settings, i18n_instance=i18n_instance))
     dp.update.outer_middleware(ActionLoggerMiddleware(settings=settings))
 
     return dp, bot, {"i18n_instance": i18n_instance}
