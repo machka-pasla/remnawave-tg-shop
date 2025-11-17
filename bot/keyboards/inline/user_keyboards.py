@@ -99,6 +99,9 @@ def get_subscription_options_keyboard(
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
 
+    # Определяем цену базового тарифа (1 месяц)
+    base_price = subscription_options.get(1)
+
     # --- Пробный тариф ---
     if 0 in subscription_options and subscription_options[0] == 0:
         builder.row(
@@ -108,7 +111,7 @@ def get_subscription_options_keyboard(
             )
         )
 
-    # --- Базовый — 1 месяц ---
+    # --- Базовый (1 месяц) ---
     if 1 in subscription_options and subscription_options[1] is not None:
         price = subscription_options[1]
         builder.row(
@@ -118,38 +121,40 @@ def get_subscription_options_keyboard(
             )
         )
 
-    # --- Стандартный — 3 месяца ---
+    # Функция рендера тарифов
+    def add_tariff_button(icon: str, title: str, months: int, total_price: int):
+        monthly = round(total_price / months)
+
+        if base_price:
+            normal_total = base_price * months
+            economy_rub = normal_total - total_price
+            economy_pct = round((economy_rub / normal_total) * 100)
+        else:
+            economy_rub = 0
+            economy_pct = 0
+
+        # две строки
+        line1 = f"{icon} {title} — {months} мес • {monthly} ₽/мес ({total_price} ₽)"
+        line2 = f"   💰 Экономия {economy_rub} ₽ • {economy_pct}%"
+
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{line1}\n{line2}",
+                callback_data=f"subscribe_period:{months}"
+            )
+        )
+
+    # --- Стандартный (3 мес) ---
     if 3 in subscription_options and subscription_options[3] is not None:
-        total = subscription_options[3]          # 499
-        monthly = round(total / 3)               # 166
-        builder.row(
-            InlineKeyboardButton(
-                text=f"🔥 СТАНДАРТНЫЙ — 3 месяца • {monthly} ₽/мес ({total} ₽)",
-                callback_data="subscribe_period:3"
-            )
-        )
+        add_tariff_button("🔥", "СТАНДАРТНЫЙ", 3, subscription_options[3])
 
-    # --- Выгодный — 6 месяцев ---
+    # --- Выгодный (6 мес) ---
     if 6 in subscription_options and subscription_options[6] is not None:
-        total = subscription_options[6]          # 899
-        monthly = round(total / 6)               # 150
-        builder.row(
-            InlineKeyboardButton(
-                text=f"🚀 ВЫГОДНЫЙ — 6 месяцев • {monthly} ₽/мес ({total} ₽)",
-                callback_data="subscribe_period:6"
-            )
-        )
+        add_tariff_button("🚀", "ВЫГОДНЫЙ", 6, subscription_options[6])
 
-    # --- Максимум — 12 месяцев ---
+    # --- Максимум (12 мес) ---
     if 12 in subscription_options and subscription_options[12] is not None:
-        total = subscription_options[12]         # 1499
-        monthly = round(total / 12)              # 125
-        builder.row(
-            InlineKeyboardButton(
-                text=f"💎 МАКСИМУМ — 12 месяцев • {monthly} ₽/мес ({total} ₽)",
-                callback_data="subscribe_period:12"
-            )
-        )
+        add_tariff_button("💎", "МАКСИМУМ", 12, subscription_options[12])
 
     # Назад
     builder.row(
