@@ -552,10 +552,10 @@ async def start_command_handler(message: types.Message,
             except Exception:
                 pass
 
-    if not await ensure_required_channel_subscription(message, settings, i18n,
-                                                      current_lang, session,
-                                                      db_user):
-        return
+    # if not await ensure_required_channel_subscription(message, settings, i18n,
+    #                                                   current_lang, session,
+    #                                                   db_user):
+    #     return
 
     # Send welcome message if not disabled
     if not settings.DISABLE_WELCOME_MESSAGE:

@@ -13,8 +13,6 @@ from bot.middlewares.i18n import I18nMiddleware, get_i18n_instance, JsonI18n
 from bot.middlewares.ban_check_middleware import BanCheckMiddleware
 from bot.middlewares.action_logger_middleware import ActionLoggerMiddleware
 from bot.middlewares.profile_sync import ProfileSyncMiddleware
-from bot.middlewares.channel_subscription import ChannelSubscriptionMiddleware
-
 
 def build_dispatcher(settings: Settings, async_session_factory: sessionmaker) -> tuple[Dispatcher, Bot, Dict]:
     storage = MemoryStorage()

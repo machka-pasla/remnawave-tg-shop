@@ -1,5 +1,7 @@
 from aiogram import Router, F, types
 from typing import Optional, List
+
+from aiogram.types import InputMediaPhoto
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
@@ -64,7 +66,11 @@ async def payment_methods_manage(callback: types.CallbackQuery, settings: Settin
     if not cards:
         text += "\n\n" + get_text("payment_method_none")
 
-    await callback.message.edit_text(text, reply_markup=get_payment_methods_list_keyboard(cards, 0, current_lang, i18n))
+    if settings.PHOTO_ID_PAY_METHOD:
+        await callback.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_PAY_METHOD, caption=text),
+                                          reply_markup=get_payment_methods_list_keyboard(cards, 0, current_lang, i18n))
+    else:
+        await callback.message.edit_text(text, reply_markup=get_payment_methods_list_keyboard(cards, 0, current_lang, i18n))
     try:
         await callback.answer()
     except Exception:
