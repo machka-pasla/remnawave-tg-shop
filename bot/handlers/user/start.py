@@ -625,10 +625,6 @@ async def verify_channel_subscription_callback(
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
 
     db_user = await user_dal.get_user_by_id(session, callback.from_user.id)
-    # verified = await ensure_required_channel_subscription(
-    #     callback, settings, i18n, current_lang, session, db_user)
-    # if not verified:
-    #     return
 
     if db_user and db_user.language_code:
         current_lang = db_user.language_code
@@ -638,6 +634,14 @@ async def verify_channel_subscription_callback(
         _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
     else:
         _ = lambda key, **kwargs: key
+
+    verified = await ensure_required_channel_subscription(
+        callback, settings, i18n, current_lang, session, db_user)
+
+    if not verified:
+        await callback.answer(_(key="channel_subscription_check_failed"),
+                              show_alert=True)
+        return
 
     if not settings.DISABLE_WELCOME_MESSAGE:
         welcome_text = _(key="welcome",
