@@ -3,6 +3,7 @@ from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from typing import Dict, Optional, List, Tuple
 
 from config.settings import Settings
+from db.models import User
 
 
 def get_main_start_inline_keyboard(lang: str,
@@ -35,6 +36,7 @@ def get_main_menu_inline_keyboard(
         lang: str,
         i18n_instance,
         settings: Settings,
+        db_user: Optional[User],
         show_trial_button: bool = False) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
@@ -62,12 +64,14 @@ def get_main_menu_inline_keyboard(
     #####################
 
     rw_row = []
-    rw_row.append(
-        InlineKeyboardButton(
-            text=_(key="menu_get_bonus"),
-            callback_data="main_action:get_bonus"
+
+    if not (db_user.channel_subscription_verified and db_user.channel_subscription_verified_for == settings.REQUIRED_CHANNEL_ID):
+        rw_row.append(
+            InlineKeyboardButton(
+                text=_(key="menu_get_bonus"),
+                callback_data="main_action:get_bonus"
+            )
         )
-    )
     rw_row.append(
         InlineKeyboardButton(
             text=_(key="menu_gift"),

@@ -651,7 +651,6 @@ async def verify_channel_subscription_callback(
                                                 welcome_text)
 
     bonus_days = 4
-
     new_end_date = await subscription_service.extend_active_subscription_days(
         session=session,
         user_id=callback.from_user.id,
@@ -664,13 +663,7 @@ async def verify_channel_subscription_callback(
     except Exception:
         pass
 
-    await send_main_menu(callback,
-                         settings,
-                         i18n_data,
-                         subscription_service,
-                         session,
-                         is_edit=bool(callback.message))
-
+    await send_own_menu(callback, i18n_data, settings, session)
 
 @router.message(Command("language"))
 @router.callback_query(F.data == "main_action:language")
@@ -799,7 +792,6 @@ async def main_action_callback_handler(
         await user_trial_handlers.request_trial_confirmation_handler(
             callback, settings, i18n_data, subscription_service, session)
     elif action == "language":
-
         await language_command_handler(callback, i18n_data, settings)
     elif action == "back_to_main":
         await send_own_menu(callback,
