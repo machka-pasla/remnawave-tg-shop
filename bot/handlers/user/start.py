@@ -383,7 +383,7 @@ async def ensure_required_channel_subscription(
     )
                if i18n else None)
 
-    prompt_text = translate("menu_get_bonus_text")
+    prompt_text = translate("channel_subscription_required")
 
     if isinstance(event, types.CallbackQuery):
         if keyboard and event.message:
@@ -649,6 +649,14 @@ async def verify_channel_subscription_callback(
             if fallback_bot:
                 await fallback_bot.send_message(callback.from_user.id,
                                                 welcome_text)
+
+    bonus_days = 4
+
+    new_end_date = await subscription_service.extend_active_subscription_days(
+        session=session,
+        user_id=callback.from_user.id,
+        bonus_days=bonus_days,
+        reason=f"subscribe to channel")
 
     try:
         await callback.answer(_(key="channel_subscription_verified_success"),
