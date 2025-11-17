@@ -67,14 +67,22 @@ async def display_subscription_options(event, i18n_data, settings, session):
         i18n
     )
 
-    await target.answer("👇 Выберите тариф:", reply_markup=reply_markup)
-
-    # Закрываем callback alert
+    # Если это callback — закрываем его и используем message как target
     if isinstance(event, types.CallbackQuery):
         try:
             await event.answer()
         except:
             pass
+        target = event.message
+    else:
+        target = event
+
+    # Отправляем сообщение с кнопками
+    await target.answer(
+        "👇 Выберите тариф:",
+        reply_markup=reply_markup,
+        disable_web_page_preview=True
+    )
 
 
 @router.callback_query(F.data == "main_action:subscribe")
