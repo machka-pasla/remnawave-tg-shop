@@ -1,7 +1,7 @@
 import logging
 import re
 from aiogram import Router, F, types, Bot
-from aiogram.types import InputMediaPhoto
+from aiogram.types import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.text_decorations import html_decoration as hd
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -232,7 +232,6 @@ async def send_bonus_text(event: Union[types.Message, types.CallbackQuery], i18n
     else:
         pass
 
-
 async def ensure_required_channel_subscription(
         event: Union[types.Message, types.CallbackQuery],
         settings: Settings,
@@ -379,40 +378,54 @@ async def ensure_required_channel_subscription(
         )
         return True
 
-    # keyboard = (get_channel_subscription_keyboard(
-    #     current_lang, i18n, settings.REQUIRED_CHANNEL_LINK
-    # )
-    #            if i18n else None)
-    #
-    # prompt_text = translate("channel_subscription_required")
-    #
-    # if isinstance(event, types.CallbackQuery):
-    #     if keyboard and event.message:
-    #         try:
-    #             await event.message.edit_text(prompt_text, reply_markup=keyboard)
-    #         except Exception as edit_error:
-    #             logging.debug(
-    #                 "Failed to edit prompt message for user %s: %s",
-    #                 user_id,
-    #                 edit_error,
-    #             )
-    #     if keyboard is None and message_obj:
-    #         try:
-    #             await message_obj.answer(prompt_text)
-    #         except Exception:
-    #             pass
-    #     try:
-    #         await event.answer(prompt_text, show_alert=True)
-    #     except Exception:
-    #         pass
-    # else:
-    #     await event.answer(prompt_text, reply_markup=keyboard)
-
     return False
 
-@router.message(F.photo)
-async def phpphph(message: types.Message):
-    logging.info(f"PENIS: {message.photo}")
+async def send_terms_text(event: Union[types.Message, types.CallbackQuery], i18n_data: dict, settings: Settings, session: AsyncSession):
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+
+    if not i18n:
+        err_msg = "Language service error."
+        print(err_msg)
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer(err_msg, show_alert=True)
+            except Exception:
+                pass
+        elif isinstance(event, types.Message):
+            await event.answer(err_msg)
+        return
+
+    text = get_text(key="menu_terms_text")
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=get_text(key="back_to_main_menu_button"),
+                   callback_data="main_action:back_to_main")]
+    ])
+
+    target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
+    if not target_message_obj:
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await event.answer(get_text("error_occurred_try_again"), show_alert=True)
+            except Exception as e:
+                pass
+        return
+
+    if isinstance(event, types.CallbackQuery):
+        try:
+            if settings.PHOTO_ID_MAIN_MENU:
+                await target_message_obj.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=text), reply_markup=keyboard, disable_web_page_preview=True)
+            else:
+                await target_message_obj.edit_text(text=text, reply_markup=keyboard, disable_web_page_preview=True)
+        except Exception as e:
+            print(repr(e))
+        try:
+            await event.answer()
+        except Exception as e:
+            print(repr(e))
+    else:
+        pass
 
 @router.message(CommandStart())
 @router.message(CommandStart(magic=F.args.regexp(r"^ref_(\d+)$").as_("ref_match")))
@@ -786,6 +799,8 @@ async def main_action_callback_handler(
             session, bot)
     elif action == "get_bonus":
         await send_bonus_text(callback, i18n_data, settings, session)
+    elif action == "terms":
+        await send_terms_text(callback, i18n_data, settings, session)
     elif action == "referral":
         await user_referral_handlers.referral_command_handler(
             callback, settings, i18n_data, referral_service, bot, session)

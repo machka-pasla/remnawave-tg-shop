@@ -12,6 +12,7 @@
   "menu_gift": "🎁 Подарить VPN",
   "menu_get_bonus": "\uD83D\uDC8E Получить бонус",
   "menu_my_subscription_inline": "👤 Профиль",
+  "menu_terms_text": "<a href=\"https://telegra.ph/Polzovatelskoe-soglashenie-09-26-23\">⦁ Пользовательское соглашение</a>\n<a href=\"https://telegra.ph/Soglashenie-o-prisoedinenii-k-rekurrentnoj-sisteme-platezhej-09-26\">⦁ Соглашение о присоединении к рекуррентной системе платежей.</a>\n",
   "no_subscription_options_available": "Выдача подписки не настроена администратором бота",
   "menu_referral_inline": "💰 Пригласить друга и заработать",
   "referral_no_bonuses_configured": "Извините, реферальная программа в данный момент отключена",
