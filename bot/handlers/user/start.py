@@ -332,7 +332,7 @@ async def ensure_required_channel_subscription(
     )
                if i18n else None)
 
-    prompt_text = translate("channel_subscription_required")
+    prompt_text = translate("menu_get_bonus_text")
 
     if isinstance(event, types.CallbackQuery):
         if keyboard and event.message:
@@ -701,8 +701,10 @@ async def main_action_callback_handler(
         i18n_data: dict, bot: Bot, subscription_service: SubscriptionService,
         referral_service: ReferralService, panel_service: PanelApiService,
         promo_code_service: PromoCodeService, session: AsyncSession):
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     action = callback.data.split(":")[1]
     user_id = callback.from_user.id
+    db_user = await user_dal.get_user_by_id(session, user_id)
 
     from . import subscription as user_subscription_handlers
     from . import referral as user_referral_handlers
@@ -726,6 +728,10 @@ async def main_action_callback_handler(
         await user_subscription_handlers.my_devices_command_handler(
             callback, i18n_data, settings, panel_service, subscription_service,
             session, bot)
+    elif action == "get_bonus":
+        await ensure_required_channel_subscription(callback, settings, i18n_data,
+                                                   current_lang, session,
+                                                   db_user)
     elif action == "referral":
         await user_referral_handlers.referral_command_handler(
             callback, settings, i18n_data, referral_service, bot, session)
