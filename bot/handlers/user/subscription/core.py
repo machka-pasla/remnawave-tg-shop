@@ -67,7 +67,7 @@ async def display_subscription_options(event, i18n_data, settings, session):
         i18n
     )
 
-    await target.answer(reply_markup=reply_markup)
+    await target.answer("👇 Выберите тариф:", reply_markup=reply_markup)
 
     # Закрываем callback alert
     if isinstance(event, types.CallbackQuery):
