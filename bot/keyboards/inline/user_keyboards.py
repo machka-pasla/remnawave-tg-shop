@@ -120,11 +120,11 @@ def get_subscription_options_keyboard(
 
     def add_tariff(icon: str, title: str, months: int, total: int):
         monthly = round(total / months)
-        btn_text = (
-            f"{icon} {title.upper()} {months} месяца — {total} ₽ ({monthly} ₽/мес)"
-            if months in (2,3,4)
-            else f"{icon} {title.upper()} {months} месяцев — {total} ₽ ({monthly} ₽/мес)"
-        )
+        title_upper = title.upper()
+
+        # Финальный формат кнопки:
+        # 🔥 СТАНДАРТНЫЙ — 499 ₽ (166 ₽/мес)
+        btn_text = f"{icon} {title_upper} — {total} ₽ ({monthly} ₽/мес)"
 
         builder.row(
             InlineKeyboardButton(
