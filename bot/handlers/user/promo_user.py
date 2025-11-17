@@ -55,14 +55,14 @@ async def prompt_promo_code_input(callback: types.CallbackQuery,
         else:
             await callback.message.edit_text(
             text=_(key="promo_code_prompt"),
-            reply_markup=get_back_to_main_menu_markup(current_lang, i18n))
+            reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="my_subscription"))
     except Exception as e_edit:
         logging.warning(
             f"Failed to edit message for promo prompt: {e_edit}. Sending new one."
         )
         await callback.message.answer(
             text=_(key="promo_code_prompt"),
-            reply_markup=get_back_to_main_menu_markup(current_lang, i18n))
+            reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="my_subscription"))
 
     await callback.answer()
     await state.set_state(UserPromoStates.waiting_for_promo_code)
