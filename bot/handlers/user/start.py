@@ -379,34 +379,34 @@ async def ensure_required_channel_subscription(
         )
         return True
 
-    keyboard = (get_channel_subscription_keyboard(
-        current_lang, i18n, settings.REQUIRED_CHANNEL_LINK
-    )
-               if i18n else None)
-
-    prompt_text = translate("channel_subscription_required")
-
-    if isinstance(event, types.CallbackQuery):
-        if keyboard and event.message:
-            try:
-                await event.message.edit_text(prompt_text, reply_markup=keyboard)
-            except Exception as edit_error:
-                logging.debug(
-                    "Failed to edit prompt message for user %s: %s",
-                    user_id,
-                    edit_error,
-                )
-        if keyboard is None and message_obj:
-            try:
-                await message_obj.answer(prompt_text)
-            except Exception:
-                pass
-        try:
-            await event.answer(prompt_text, show_alert=True)
-        except Exception:
-            pass
-    else:
-        await event.answer(prompt_text, reply_markup=keyboard)
+    # keyboard = (get_channel_subscription_keyboard(
+    #     current_lang, i18n, settings.REQUIRED_CHANNEL_LINK
+    # )
+    #            if i18n else None)
+    #
+    # prompt_text = translate("channel_subscription_required")
+    #
+    # if isinstance(event, types.CallbackQuery):
+    #     if keyboard and event.message:
+    #         try:
+    #             await event.message.edit_text(prompt_text, reply_markup=keyboard)
+    #         except Exception as edit_error:
+    #             logging.debug(
+    #                 "Failed to edit prompt message for user %s: %s",
+    #                 user_id,
+    #                 edit_error,
+    #             )
+    #     if keyboard is None and message_obj:
+    #         try:
+    #             await message_obj.answer(prompt_text)
+    #         except Exception:
+    #             pass
+    #     try:
+    #         await event.answer(prompt_text, show_alert=True)
+    #     except Exception:
+    #         pass
+    # else:
+    #     await event.answer(prompt_text, reply_markup=keyboard)
 
     return False
 
