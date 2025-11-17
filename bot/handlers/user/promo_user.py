@@ -51,18 +51,18 @@ async def prompt_promo_code_input(callback: types.CallbackQuery,
     try:
         if settings.PHOTO_ID_MAIN_MENU:
             await callback.message.edit_media(media=InputMediaPhoto(media=settings.PHOTO_ID_MAIN_MENU, caption=_(key="promo_code_prompt")),
-                                              reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="my_subscription"), disable_web_page_preview=True)
+                                              reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="main_action:my_subscription"), disable_web_page_preview=True)
         else:
             await callback.message.edit_text(
             text=_(key="promo_code_prompt"),
-            reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="my_subscription"))
+            reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="main_action:my_subscription"))
     except Exception as e_edit:
         logging.warning(
             f"Failed to edit message for promo prompt: {e_edit}. Sending new one."
         )
         await callback.message.answer(
             text=_(key="promo_code_prompt"),
-            reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="my_subscription"))
+            reply_markup=get_back_to_main_menu_markup(current_lang, i18n, callback_data="main_action:my_subscription"))
 
     await callback.answer()
     await state.set_state(UserPromoStates.waiting_for_promo_code)
