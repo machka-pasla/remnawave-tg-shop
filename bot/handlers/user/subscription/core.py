@@ -249,7 +249,8 @@ async def my_subscription_command_handler(
         # 3) Payment methods management (when autopayments enabled)
         if getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
             prepend_rows.append([
-                InlineKeyboardButton(text=get_text("payment_methods_manage_button"), callback_data="pm:manage")
+                InlineKeyboardButton(text=get_text("payment_methods_manage_button"), callback_data="pm:manage"),
+                InlineKeyboardButton(text=get_text(key="menu_apply_promo_button"), callback_data="main_action:apply_promo")
             ])
 
         if prepend_rows:
