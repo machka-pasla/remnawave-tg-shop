@@ -57,6 +57,42 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
                 pass
         return
 
+        # --- NEW: SEND MARKETING MESSAGE BEFORE BUTTONS ---
+    if isinstance(event, types.CallbackQuery):
+        try:
+            # delete old message
+            await target_message_obj.delete()
+        except Exception:
+            pass
+
+        # СОБИРАЕМ МАРКЕТИНГ ТАРИФОВ ДИНАМИЧЕСКИ
+        # параметры
+        opts = settings.subscription_options
+        p1 = opts.get(1)
+        p3 = opts.get(3)
+        p6 = opts.get(6)
+        p12 = opts.get(12)
+
+        if p1:
+            m3 = round(p3 / 3) if p3 else None
+            m6 = round(p6 / 6) if p6 else None
+            m12 = round(p12 / 12) if p12 else None
+
+        # Генерация текста
+        marketing_text = (
+            f"🎯 <b>ВЫБЕРИТЕ ТАРИФ:</b>\n\n"
+            f"📈 <b>БАЗОВЫЙ</b>\n"
+            f"1 месяц • {p1} ₽\n\n"
+            f"🔥 <b>СТАНДАРТНЫЙ</b>\n"
+            f"3 месяца • {m3} ₽/мес • {p3} ₽\n\n"
+            f"🚀 <b>ВЫГОДНЫЙ</b>\n"
+            f"6 месяцев • {m6} ₽/мес • {p6} ₽\n\n"
+            f"💎 <b>МАКСИМУМ</b>\n"
+            f"12 месяцев • {m12} ₽/мес • {p12} ₽\n"
+        )
+
+        await event.message.answer(marketing_text, parse_mode="HTML")
+
     if isinstance(event, types.CallbackQuery):
         try:
             await target_message_obj.edit_text(text_content, reply_markup=reply_markup)
