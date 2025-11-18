@@ -113,7 +113,7 @@ def get_subscription_options_keyboard(
         total = subscription_options[1]
         builder.row(
             InlineKeyboardButton(
-                text=f"📈 БАЗОВЫЙ 1 месяц — {total} ₽ ({total} ₽/мес)",
+                text=f"📈 БАЗОВЫЙ — {total} ₽ ({total} ₽/мес)",
                 callback_data="subscribe_period:1"
             )
         )
