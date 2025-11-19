@@ -118,6 +118,7 @@
     | `PANEL_API_KEY` | API ключ для доступа к панели. |
     | `PANEL_WEBHOOK_SECRET`| Секретный ключ для проверки вебхуков от панели. |
     | `USER_SQUAD_UUIDS` | ID отрядов для новых пользователей. |
+    | `USER_EXTERNAL_SQUAD_UUID` | Опционально. UUID внешнего отряда (External Squad) из [документации Remnawave](https://docs.rw/api), куда автоматически добавляются новые пользователи. |
     | `USER_TRAFFIC_LIMIT_GB`| Лимит трафика в ГБ (0 - безлимит). |
     | `USER_HWID_DEVICE_LIMIT`| Лимит устройств (HWID) для новых пользователей (0 - безлимит). |
 

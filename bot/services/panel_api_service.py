@@ -339,6 +339,7 @@ class PanelApiService:
             default_traffic_limit_strategy: str = "NO_RESET",
             hwid_device_limit: Optional[int] = None,
             specific_squad_uuids: Optional[List[str]] = None,
+            external_squad_uuid: Optional[str] = None,
             description: Optional[str] = None,
             tag: Optional[str] = None,
             status: str = "ACTIVE",
@@ -383,6 +384,8 @@ class PanelApiService:
                 )
         if specific_squad_uuids:
             payload["activeInternalSquads"] = specific_squad_uuids
+        if external_squad_uuid:
+            payload["externalSquadUuid"] = external_squad_uuid
         if telegram_id is not None: payload["telegramId"] = telegram_id
         if email: payload["email"] = email
         if description: payload["description"] = description
