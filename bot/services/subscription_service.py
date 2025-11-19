@@ -125,6 +125,7 @@ class SubscriptionService:
                             (db_user.last_name or "") if db_user else "",
                         ]),
                         specific_squad_uuids=self.settings.parsed_user_squad_uuids,
+                        external_squad_uuid=self.settings.parsed_user_external_squad_uuid,
                         default_traffic_limit_bytes=self.settings.user_traffic_limit_bytes,
                         default_traffic_limit_strategy=self.settings.USER_TRAFFIC_STRATEGY,
                     )
@@ -153,6 +154,7 @@ class SubscriptionService:
                         (db_user.last_name or "") if db_user else "",
                     ]),
                     specific_squad_uuids=self.settings.parsed_user_squad_uuids,
+                    external_squad_uuid=self.settings.parsed_user_external_squad_uuid,
                     default_traffic_limit_bytes=self.settings.user_traffic_limit_bytes,
                     default_traffic_limit_strategy=self.settings.USER_TRAFFIC_STRATEGY,
                 )
@@ -915,4 +917,6 @@ class SubscriptionService:
             payload["trafficLimitStrategy"] = self.settings.USER_TRAFFIC_STRATEGY
         if self.settings.parsed_user_squad_uuids:
             payload["activeInternalSquads"] = self.settings.parsed_user_squad_uuids
+        if self.settings.parsed_user_external_squad_uuid:
+            payload["externalSquadUuid"] = self.settings.parsed_user_external_squad_uuid
         return payload

@@ -133,6 +133,10 @@ class Settings(BaseSettings):
         default=None,
         description=
         "Comma-separated UUIDs of internal squads to assign to new panel users")
+    USER_EXTERNAL_SQUAD_UUID: Optional[str] = Field(
+        default=None,
+        description=
+        "UUID of the external squad to assign to new panel users (optional)")
 
     TRIAL_ENABLED: bool = Field(default=True)
     TRIAL_DURATION_DAYS: int = Field(default=3)
@@ -213,6 +217,15 @@ class Settings(BaseSettings):
                 for uuid in self.USER_SQUAD_UUIDS.split(',')
                 if uuid.strip()
             ]
+        return None
+
+    @computed_field
+    @property
+    def parsed_user_external_squad_uuid(self) -> Optional[str]:
+        if self.USER_EXTERNAL_SQUAD_UUID:
+            cleaned = self.USER_EXTERNAL_SQUAD_UUID.strip()
+            if cleaned:
+                return cleaned
         return None
 
     @computed_field
