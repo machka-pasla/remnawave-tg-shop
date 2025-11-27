@@ -3,7 +3,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.dals.payment_dal import create_payment_record
+from db.dal.payment_dal import create_payment_record
 from bot.services.promo_code_service import PromoCodeService
 from bot.services.yookassa_service import YooKassaService
 from bot.services.freekassa_service import FreeKassaService
