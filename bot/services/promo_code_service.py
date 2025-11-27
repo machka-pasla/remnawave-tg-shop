@@ -66,32 +66,39 @@ class PromoCodeService:
     # ==============================================================
 
     async def apply_promo_to_price(
-        self,
-        base_price: float,
-        months: int,
-        promo: PromoCode
-    ) -> Tuple[float, Optional[str]]:
+            self,
+            base_price: float,
+            months: int,
+            promo: Optional[PromoCode]
+    ) -> Tuple[float, Optional[PromoCode], Optional[str]]:
         """
-        Возвращает (new_price, discount_info_text)
+        Возвращает:
+          new_price,
+          promo (если применён), иначе None,
+          discount_info_text
         """
-        # --- СКИДКА НА ВСЕ ТАРИФЫ (%)
+
+        # --- НЕТ ПРОМОКОДА — ВОЗВРАЩАЕМ ЦЕНУ БЕЗ ИЗМЕНЕНИЙ ---
+        if promo is None:
+            return base_price, None, None
+
+        # --- СКИДКА % ---
         if promo.discount_percent:
             discount = promo.discount_percent
             new_price = round(base_price * (100 - discount) / 100, 2)
-            return new_price, f"-{discount}%"
+            return new_price, promo, f"-{discount}%"
 
         # --- СКИДКА НА КОНКРЕТНЫЙ ТАРИФ ---
         if promo.discount_plan_months:
             if promo.discount_plan_months == months:
-                # 20% скидка фиксированно (как у тебя в версии)
-                # Если хочешь – можно заменить на процент или фикс. сумму.
-                new_price = round(base_price * 0.8, 2)
-                return new_price, f"Скидка для тарифа {months} мес"
+                new_price = round(base_price * 0.8, 2)  # фиксированные 20%
+                return new_price, promo, f"Скидка для тарифа {months} мес"
             else:
-                # Тариф не совпал → скидки нет
-                return base_price, None
+                # тариф не совпал → нет скидки
+                return base_price, None, None
 
-        return base_price, None
+        # --- НЕТ СКИДОК ---
+        return base_price, None, None
 
     # ==============================================================
     # 4) ПРИМЕНЕНИЕ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ (ввод вручную)
