@@ -1,5 +1,5 @@
-from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
-from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from typing import Optional, List, Any
 import math
 
@@ -7,6 +7,23 @@ from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
 from db.models import User
 
+def promo_type_choice_kb():
+    kb = InlineKeyboardBuilder()
+    kb.row(InlineKeyboardButton(text="🎁 Бонусные дни", callback_data="promo_type_bonus"))
+    kb.row(InlineKeyboardButton(text="💸 Скидка % на все тарифы", callback_data="promo_type_discount"))
+    kb.row(InlineKeyboardButton(text="💸 Скидка % на тариф", callback_data="promo_type_discount_plan"))
+    kb.row(InlineKeyboardButton(text="🔙 Назад", callback_data="admin_action:main"))
+    return kb.as_markup()
+
+
+def promo_plan_choice_kb():
+    kb = InlineKeyboardBuilder()
+    kb.row(InlineKeyboardButton(text="1 месяц", callback_data="promo_plan_1"))
+    kb.row(InlineKeyboardButton(text="3 месяца", callback_data="promo_plan_3"))
+    kb.row(InlineKeyboardButton(text="6 месяцев", callback_data="promo_plan_6"))
+    kb.row(InlineKeyboardButton(text="12 месяцев", callback_data="promo_plan_12"))
+    kb.row(InlineKeyboardButton(text="Все тарифы", callback_data="promo_plan_all"))
+    return kb.as_markup()
 
 def get_admin_panel_keyboard(i18n_instance, lang: str,
                              settings: Settings) -> InlineKeyboardMarkup:
