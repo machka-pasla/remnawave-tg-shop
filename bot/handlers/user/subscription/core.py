@@ -607,10 +607,10 @@ async def select_period_handler(callback, i18n_data, settings, session, promo_co
     # Apply promo
     active_promo = await promo_code_service.get_active_promo(session, callback.from_user.id)
 
-    final_price, discount_info = await promo_code_service.apply_promo_to_price(
+    final_price, promo, discount_info = await promo_code_service.apply_promo_to_price(
         base_price=price,
         months=months,
-        promo=active_promo
+        promo=await promo_code_service.get_active_promo(session, callback.from_user.id)
     )
 
     keyboard = get_payment_method_keyboard(
