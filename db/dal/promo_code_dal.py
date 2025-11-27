@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update, func, and_, or_
+from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
 
 from db.models import PromoCode, PromoCodeActivation, User, Payment
@@ -215,10 +216,12 @@ async def get_user_promo_activations(
     """
     Возвращает все активации промокодов пользователя,
     отсортированные по времени (от старых к новым).
-    Используется для получения последнего скидочного промокода.
+    ВАЖНО: промокод подгружается сразу (selectinload),
+    чтобы не было lazy-load в async (MissingGreenlet).
     """
     stmt = (
         select(PromoCodeActivation)
+        .options(selectinload(PromoCodeActivation.promo_code))
         .where(PromoCodeActivation.user_id == user_id)
         .order_by(PromoCodeActivation.activated_at.asc())
     )
