@@ -605,10 +605,12 @@ async def select_period_handler(callback, i18n_data, settings, session, promo_co
         return await callback.answer("Ошибка тарификации", show_alert=True)
 
     # Apply promo
-    final_price, promo, discount_info = await promo_code_service.apply_promo_to_price(
+    active_promo = await promo_code_service.get_active_promo(session, callback.from_user.id)
+
+    final_price, discount_info = await promo_code_service.apply_promo_to_price(
         base_price=price,
         months=months,
-        promo=await promo_code_service.get_active_promo(session, callback.from_user.id)
+        promo=active_promo
     )
 
     keyboard = user_keyboards.get_payment_method_keyboard(
@@ -622,8 +624,12 @@ async def select_period_handler(callback, i18n_data, settings, session, promo_co
         settings=settings
     )
 
+    text = "Выберите способ оплаты:"
+    if discount_info:
+        text = f"🟢 Промокод применён: {discount_info}\n\n" + text
+
     await callback.message.edit_text(
-        f"Выберите способ оплаты:",
+        text,
         reply_markup=keyboard
     )
     await callback.answer()
