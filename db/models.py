@@ -154,13 +154,18 @@ class PromoCode(Base):
 
     promo_code_id = Column(Integer, primary_key=True, autoincrement=True)
     code = Column(String, unique=True, nullable=False, index=True)
-    bonus_days = Column(Integer, nullable=False)
-    max_activations = Column(Integer, nullable=False)
+
+    bonus_days = Column(Integer, nullable=True)
+
+    max_activations = Column(Integer, nullable=False, default=1)
     current_activations = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     created_by_admin_id = Column(BigInteger, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     valid_until = Column(DateTime(timezone=True), nullable=True)
+
+    discount_percent = Column(Integer, nullable=True)
+    discount_plan_months = Column(Integer, nullable=True)
 
     activations = relationship("PromoCodeActivation",
                                back_populates="promo_code",

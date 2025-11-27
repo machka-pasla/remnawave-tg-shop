@@ -1,9 +1,8 @@
 import logging
 import json
 import os
-from typing import Any, Awaitable, Callable, Dict, Optional
-from pathlib import Path
 import time
+from typing import Any, Awaitable, Callable, Dict, Optional
 
 from aiogram import BaseMiddleware
 from aiogram.types import User, Update
@@ -13,190 +12,192 @@ from db.dal import user_dal
 from config.settings import Settings
 
 
+# ============================================================
+#                    JSON-BASED I18N ENGINE
+# ============================================================
+
 class JsonI18n:
+    """Fast, safe, cached JSON i18n loader with debounce hot-reload."""
+
+    RELOAD_DEBOUNCE_SEC = 2  # how often to check .json files
 
     def __init__(self, path: str, default: str = "en", domain: str = "bot"):
-        self.domain = domain
         self.path = path
         self.default_lang = default
-        self.locales_data: Dict[str, Dict[str, str]] = {}
-        self.file_mtimes: Dict[str, float] = {}  # Track file modification times
-        self._load_locales()
-        logging.info(
-            f"JsonI18n initialized. Loaded languages: {list(self.locales_data.keys())}. Default: {self.default_lang}"
-        )
+        self.domain = domain
 
-    def _load_locales(self):
+        # loaded JSON locales
+        self.locales_data: Dict[str, Dict[str, str]] = {}
+
+        # file modified times
+        self.file_mtimes: Dict[str, float] = {}
+
+        # debounce timestamp
+        self._last_reload_check = 0.0
+
+        self._load_all_locales()
+        logging.info(f"[i18n] Loaded languages: {list(self.locales_data.keys())}")
+
+    # -------------------------------
+
+    def _load_all_locales(self):
+        """Load or reload all .json locale files."""
         if not os.path.isdir(self.path):
-            logging.error(
-                f"Locales path not found or not a directory: {self.path}")
+            logging.error(f"[i18n] Locales dir not found: {self.path}")
             return
 
-        for item in os.listdir(self.path):
-            if item.endswith(".json"):
-                lang_code = item.split(".")[0]
-                file_path = os.path.join(self.path, item)
+        for file in os.listdir(self.path):
+            if not file.endswith(".json"):
+                continue
 
-                # Check if file needs to be reloaded
-                try:
-                    current_mtime = os.path.getmtime(file_path)
-                    if file_path in self.file_mtimes and self.file_mtimes[file_path] == current_mtime:
-                        continue  # File hasn't changed, skip reloading
+            lang = file.split(".")[0]
+            full_path = os.path.join(self.path, file)
 
-                    self.file_mtimes[file_path] = current_mtime
+            # check file modification
+            try:
+                mtime = os.path.getmtime(full_path)
+                if self.file_mtimes.get(full_path) == mtime:
+                    continue  # no change
 
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        self.locales_data[lang_code] = json.load(f)
-                    logging.info(f"Loaded/Reloaded locale: {lang_code}")
+                self.file_mtimes[full_path] = mtime
 
-                except json.JSONDecodeError as e_json_load:
-                    logging.error(
-                        f"Error loading locale {lang_code} from {file_path} (JSON Decode Error): {e_json_load}"
-                    )
-                except Exception as e_load:
-                    logging.error(
-                        f"Error loading locale {lang_code} from {file_path}: {e_load}",
-                        exc_info=True)
+                with open(full_path, "r", encoding="utf-8") as f:
+                    self.locales_data[lang] = json.load(f)
 
-    def _check_and_reload(self):
-        """Check if any locale files have been modified and reload if necessary"""
+                logging.info(f"[i18n] Reloaded: {lang}")
+
+            except Exception as e:
+                logging.error(f"[i18n] Failed to load locale {file}: {e}", exc_info=True)
+
+    # -------------------------------
+
+    def _check_and_reload_debounced(self):
+        """Check .json changes not more often than RELOAD_DEBOUNCE_SEC."""
+        now = time.time()
+        if now - self._last_reload_check < self.RELOAD_DEBOUNCE_SEC:
+            return  # do nothing
+
+        self._last_reload_check = now
+        self._load_all_locales()
+
+    # -------------------------------
+
+    def _safe_format(self, text: str, kwargs: Dict[str, Any]) -> str:
+        """Safe text.format without exceptions."""
         try:
-            for item in os.listdir(self.path):
-                if item.endswith(".json"):
-                    file_path = os.path.join(self.path, item)
-                    if os.path.exists(file_path):
-                        current_mtime = os.path.getmtime(file_path)
-                        if file_path not in self.file_mtimes or self.file_mtimes[file_path] != current_mtime:
-                            logging.info(f"Detected changes in {file_path}, reloading locales...")
-                            self._load_locales()
-                            break
+            return text.format(**kwargs)
+        except KeyError as missing:
+            logging.warning(f"[i18n] Missing placeholder '{missing}' in '{text}'")
+            return text
         except Exception as e:
-            logging.error(f"Error checking for locale changes: {e}")
+            logging.error(f"[i18n] Formatting error for '{text}': {e}", exc_info=True)
+            return text
+
+    # -------------------------------
 
     def gettext(self, lang_code: Optional[str], key: str, **kwargs) -> str:
-        # Check for file changes before getting text
-        self._check_and_reload()
+        """Return translated text with fallback chain and safe formatting."""
 
-        # Determine effective language with robust fallback
+        self._check_and_reload_debounced()
+
+        # Choose effective language
+        lang_code = (lang_code or "").lower()
+
+        candidates = []
+
+        # user lang
         if lang_code and lang_code in self.locales_data:
-            effective_lang_code = lang_code
-        elif self.default_lang in self.locales_data:
-            effective_lang_code = self.default_lang
-        elif 'en' in self.locales_data:
-            effective_lang_code = 'en'
-        else:
-            effective_lang_code = lang_code or self.default_lang
+            candidates.append(lang_code)
 
-        lang_data = self.locales_data.get(effective_lang_code)
-        if lang_data is None:
-            # Try explicit fallback to English if available
-            fallback_data = self.locales_data.get('en')
-            if fallback_data is not None:
-                text = fallback_data.get(key)
-                if text is not None:
-                    try:
-                        return text.format(**kwargs) if kwargs else text
-                    except Exception:
-                        return text
-            logging.warning(
-                f"No language data for '{effective_lang_code}' (default '{self.default_lang}' also missing). Key '{key}' will be returned as is."
-            )
-            return key.format(**kwargs) if kwargs else key
+        # try prefix (ru-RU → ru)
+        if "-" in lang_code:
+            prefix = lang_code.split("-")[0]
+            if prefix in self.locales_data:
+                candidates.append(prefix)
 
-        text = lang_data.get(key)
-        if text is None:
-            if effective_lang_code != self.default_lang:
-                default_lang_data = self.locales_data.get(
-                    self.default_lang, {})
-                text = default_lang_data.get(key)
+        # default lang
+        if self.default_lang in self.locales_data:
+            candidates.append(self.default_lang)
 
-            if text is None:
-                logging.warning(
-                    f"Translation key '{key}' not found for lang '{effective_lang_code}' or default '{self.default_lang}'. Returning key."
-                )
-                return key.format(**kwargs) if kwargs else key
-        try:
-            return text.format(**kwargs) if kwargs else text
-        except KeyError as e_format:
-            logging.warning(
-                f"Missing format key '{e_format}' for i18n key '{key}' (lang: {effective_lang_code}). Original text: '{text}'"
-            )
-            return text
-        except Exception as e_general_format:
-            logging.error(
-                f"General error formatting i18n key '{key}' (lang: {effective_lang_code}): {e_general_format}. Original text: '{text}'",
-                exc_info=True)
-            return text
+        # english fallback
+        if "en" in self.locales_data:
+            candidates.append("en")
+
+        # flatten search
+        for lang in candidates:
+            text = self.locales_data.get(lang, {}).get(key)
+            if text is not None:
+                return self._safe_format(text, kwargs) if kwargs else text
+
+        # fallback → key as text
+        logging.warning(f"[i18n] Missing key='{key}' in languages {candidates}")
+        return key
+
+# ============================================================
+#                      SINGLETON FACTORY
+# ============================================================
+
+_i18n_singleton: Optional[JsonI18n] = None
+
+def get_i18n_instance(path="locales", default="en", domain="bot") -> JsonI18n:
+    global _i18n_singleton
+
+    if _i18n_singleton is None:
+        _i18n_singleton = JsonI18n(path=path, default=default, domain=domain)
+
+    return _i18n_singleton
 
 
-_i18n_instance_singleton: Optional[JsonI18n] = None
-
-
-def get_i18n_instance(path: str = "locales",
-                      default: str = "en",
-                      domain: str = "bot") -> JsonI18n:
-    global _i18n_instance_singleton
-    if _i18n_instance_singleton is None:
-
-        if not os.path.exists(path) or not os.path.isdir(path):
-            logging.error(
-                f"CRITICAL: Locales directory '{path}' not found. i18n will not work correctly."
-            )
-
-            _i18n_instance_singleton = JsonI18n(path=path,
-                                                default=default,
-                                                domain=domain)
-        else:
-            _i18n_instance_singleton = JsonI18n(path=path,
-                                                default=default,
-                                                domain=domain)
-    return _i18n_instance_singleton
-
+# ============================================================
+#                         MIDDLEWARE
+# ============================================================
 
 class I18nMiddleware(BaseMiddleware):
+    """Aiogram middleware: injects i18n_instance + user language."""
 
     def __init__(self, i18n: JsonI18n, settings: Settings):
         super().__init__()
         self.i18n = i18n
         self.settings = settings
 
-    async def __call__(self, handler: Callable[[Update, Dict[str, Any]],
-    Awaitable[Any]], event: Update,
-                       data: Dict[str, Any]) -> Any:
+    async def __call__(
+        self,
+        handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
+        event: Update,
+        data: Dict[str, Any]
+    ) -> Any:
+
         session: AsyncSession = data["session"]
-        event_user: Optional[User] = data.get("event_from_user")
+        tg_user: Optional[User] = data.get("event_from_user")
 
-        current_language = self.i18n.default_lang
+        lang = self.i18n.default_lang
 
-        if event_user:
+        if tg_user:
             try:
-                user_db_model = await user_dal.get_user_by_id(
-                    session, event_user.id)
-                if user_db_model and user_db_model.language_code and user_db_model.language_code in self.i18n.locales_data:
-                    current_language = user_db_model.language_code
-                elif event_user.language_code:
-                    lang_prefix = event_user.language_code.split(
-                        '-')[0].lower()
-                    if lang_prefix in self.i18n.locales_data:
-                        current_language = lang_prefix
-                    elif event_user.language_code.lower(
-                    ) in self.i18n.locales_data:
-                        current_language = event_user.language_code.lower()
-            except Exception as e_db_lang:
+                db_user = await user_dal.get_user_by_id(session, tg_user.id)
+
+                if db_user and db_user.language_code in self.i18n.locales_data:
+                    lang = db_user.language_code
+                else:
+                    # Detect via Telegram language
+                    if tg_user.language_code:
+                        raw = tg_user.language_code.lower()
+                        prefix = raw.split("-")[0]
+
+                        if raw in self.i18n.locales_data:
+                            lang = raw
+                        elif prefix in self.i18n.locales_data:
+                            lang = prefix
+
+            except Exception as e:
                 logging.error(
-                    f"I18nMiddleware: Error fetching user lang from DB for {event_user.id}: {e_db_lang}. Falling back.",
-                    exc_info=True)
-                if event_user.language_code:
-                    lang_prefix = event_user.language_code.split(
-                        '-')[0].lower()
-                    if lang_prefix in self.i18n.locales_data:
-                        current_language = lang_prefix
-                    elif event_user.language_code.lower(
-                    ) in self.i18n.locales_data:
-                        current_language = event_user.language_code.lower()
+                    f"[i18n] Error loading language for user {tg_user.id}: {e}",
+                    exc_info=True
+                )
 
         data["i18n_data"] = {
             "i18n_instance": self.i18n,
-            "current_language": current_language
+            "current_language": lang,
         }
+
         return await handler(event, data)

@@ -1,14 +1,12 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, Tuple, Dict
+from typing import Tuple, Union, Optional, List
 from aiogram import Bot
 
 from config.settings import Settings
-
 from db.dal import promo_code_dal, user_dal
-from db.models import PromoCode, User
-
+from db.models import PromoCode
 from .subscription_service import SubscriptionService
 from bot.middlewares.i18n import JsonI18n
 from .notification_service import NotificationService
@@ -16,13 +14,87 @@ from .notification_service import NotificationService
 
 class PromoCodeService:
 
-    def __init__(self, settings: Settings,
-                 subscription_service: SubscriptionService, bot: Bot,
-                 i18n: JsonI18n):
+    # ==============================================================
+    # 1) ИНИЦИАЛИЗАТОР — ДОЛЖЕН БЫТЬ ПЕРВЫМ
+    # ==============================================================
+    def __init__(
+        self,
+        settings: Settings,
+        subscription_service: SubscriptionService,
+        bot: Bot,
+        i18n: JsonI18n,
+    ):
         self.settings = settings
         self.subscription_service = subscription_service
         self.bot = bot
         self.i18n = i18n
+
+    # ==============================================================
+    # 2) ПОЛУЧИТЬ ПОСЛЕДНИЙ АКТИВИРОВАННЫЙ СКИДОЧНЫЙ ПРОМОКОД ПОЛЬЗОВАТЕЛЯ
+    # ==============================================================
+
+    async def get_active_promo(self, session: AsyncSession, user_id: int) -> Optional[PromoCode]:
+        """
+        Возвращает последний СКИДОЧНЫЙ промокод, который НЕ бонусный,
+        и может применяться к цене.
+        """
+        activations = await promo_code_dal.get_user_promo_activations(session, user_id)
+        if not activations:
+            return None
+
+        # Идём с конца — последний применённый
+        for act in reversed(activations):
+            promo: PromoCode = act.promo_code
+            if not promo:
+                continue
+            if not promo.is_active:
+                continue
+
+            # Промокод с бонусными днями — НЕ применяется к цене
+            if promo.bonus_days and promo.bonus_days > 0:
+                continue
+
+            # Скидка процентная или скидка на конкретный тариф
+            if promo.discount_percent or promo.discount_plan_months:
+                return promo
+
+        return None
+
+    # ==============================================================
+    # 3) ПРИМЕНИТЬ ПРОМОКОД К СТОИМОСТИ ПЛАТЕЖА
+    # ==============================================================
+
+    async def apply_promo_to_price(
+        self,
+        base_price: float,
+        months: int,
+        promo: PromoCode
+    ) -> Tuple[float, Optional[str]]:
+        """
+        Возвращает (new_price, discount_info_text)
+        """
+        # --- СКИДКА НА ВСЕ ТАРИФЫ (%)
+        if promo.discount_percent:
+            discount = promo.discount_percent
+            new_price = round(base_price * (100 - discount) / 100, 2)
+            return new_price, f"-{discount}%"
+
+        # --- СКИДКА НА КОНКРЕТНЫЙ ТАРИФ ---
+        if promo.discount_plan_months:
+            if promo.discount_plan_months == months:
+                # 20% скидка фиксированно (как у тебя в версии)
+                # Если хочешь – можно заменить на процент или фикс. сумму.
+                new_price = round(base_price * 0.8, 2)
+                return new_price, f"Скидка для тарифа {months} мес"
+            else:
+                # Тариф не совпал → скидки нет
+                return base_price, None
+
+        return base_price, None
+
+    # ==============================================================
+    # 4) ПРИМЕНЕНИЕ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ (ввод вручную)
+    # ==============================================================
 
     async def apply_promo_code(
         self,
@@ -30,56 +102,107 @@ class PromoCodeService:
         user_id: int,
         code_input: str,
         user_lang: str,
-    ) -> Tuple[bool, datetime | str]:
+    ) -> Tuple[bool, Union[str, datetime, dict]]:
+
         _ = lambda k, **kw: self.i18n.gettext(user_lang, k, **kw)
-        code_input_upper = code_input.strip().upper()
+        code_upper = code_input.strip().upper()
 
-        promo_data = await promo_code_dal.get_active_promo_code_by_code_str(
-            session, code_input_upper)
+        # Ищем промокод
+        promo: Optional[PromoCode] = await promo_code_dal.get_active_promo_code_by_code_str(
+            session, code_upper
+        )
 
-        if not promo_data:
-            return False, _("promo_code_not_found", code=code_input_upper)
+        if not promo:
+            return False, _("promo_code_not_found", code=code_upper)
 
+        # Проверяем, использовал ли пользователь
         existing_activation = await promo_code_dal.get_user_activation_for_promo(
-            session, promo_data.promo_code_id, user_id)
+            session, promo.promo_code_id, user_id
+        )
         if existing_activation:
-            return False, _("promo_code_already_used_by_user",
-                            code=code_input_upper)
+            return False, _("promo_code_already_used_by_user", code=code_upper)
 
-        bonus_days = promo_data.bonus_days
+        # Определяем тип
+        is_bonus = promo.bonus_days and promo.bonus_days > 0
+        is_percent = promo.discount_percent is not None
+        is_plan_discount = promo.discount_plan_months is not None
 
-        new_end_date = await self.subscription_service.extend_active_subscription_days(
-            session=session,
-            user_id=user_id,
-            bonus_days=bonus_days,
-            reason=f"promo code {code_input_upper}")
+        # ----------------------------------------------------------
+        # 4.1 БОНУСНЫЕ ДНИ
+        # ----------------------------------------------------------
+        if is_bonus:
+            new_end_date = await self.subscription_service.extend_active_subscription_days(
+                session=session,
+                user_id=user_id,
+                bonus_days=promo.bonus_days,
+                reason=f"promo code {code_upper}"
+            )
 
-        if new_end_date:
-            activation_recorded = await promo_code_dal.record_promo_activation(
-                session, promo_data.promo_code_id, user_id, payment_id=None)
-            promo_incremented = await promo_code_dal.increment_promo_code_usage(
-                session, promo_data.promo_code_id)
-
-            if activation_recorded and promo_incremented:
-                # Send notification about promo activation
-                try:
-                    notification_service = NotificationService(self.bot, self.settings, self.i18n)
-                    user = await user_dal.get_user_by_id(session, user_id)
-                    await notification_service.notify_promo_activation(
-                        user_id=user_id,
-                        promo_code=code_input_upper,
-                        bonus_days=bonus_days,
-                        username=user.username if user else None
-                    )
-                except Exception as e:
-                    logging.error(f"Failed to send promo activation notification: {e}")
-                
-                return True, new_end_date
-            else:
-
-                logging.error(
-                    f"Failed to record activation or increment usage for promo {promo_data.code} by user {user_id}"
-                )
+            if not new_end_date:
                 return False, _("error_applying_promo_bonus")
-        else:
-            return False, _("error_applying_promo_bonus")
+
+            await promo_code_dal.record_promo_activation(
+                session, promo.promo_code_id, user_id, payment_id=None
+            )
+            await promo_code_dal.increment_promo_code_usage(session, promo.promo_code_id)
+
+            await self._notify_promo_activation(session, user_id, code_upper, promo.bonus_days)
+            return True, new_end_date
+
+        # ----------------------------------------------------------
+        # 4.2 СКИДКА (%)
+        # ----------------------------------------------------------
+        if is_percent:
+            await promo_code_dal.record_promo_activation(
+                session, promo.promo_code_id, user_id, payment_id=None
+            )
+            await promo_code_dal.increment_promo_code_usage(session, promo.promo_code_id)
+            await self._notify_promo_activation(session, user_id, code_upper, None)
+
+            return True, {
+                "type": "discount",
+                "discount_percent": promo.discount_percent,
+                "discount_plan_months": None
+            }
+
+        # ----------------------------------------------------------
+        # 4.3 СКИДКА ДЛЯ ОПРЕДЕЛЁННОГО ТАРИФА
+        # ----------------------------------------------------------
+        if is_plan_discount:
+            await promo_code_dal.record_promo_activation(
+                session, promo.promo_code_id, user_id, payment_id=None
+            )
+            await promo_code_dal.increment_promo_code_usage(session, promo.promo_code_id)
+            await self._notify_promo_activation(session, user_id, code_upper, None)
+
+            return True, {
+                "type": "discount",
+                "discount_percent": None,
+                "discount_plan_months": promo.discount_plan_months
+            }
+
+        logging.error(f"Promo code has no logic fields: {promo.code}")
+        return False, _("promo_code_invalid_type")
+
+    # ==============================================================
+    # 5) УВЕДОМЛЕНИЕ АДМИНА
+    # ==============================================================
+
+    async def _notify_promo_activation(
+        self,
+        session: AsyncSession,
+        user_id: int,
+        code: str,
+        bonus_days: Optional[int]
+    ):
+        try:
+            notification_service = NotificationService(self.bot, self.settings, self.i18n)
+            user = await user_dal.get_user_by_id(session, user_id)
+            await notification_service.notify_promo_activation(
+                user_id=user_id,
+                promo_code=code,
+                bonus_days=bonus_days,
+                username=user.username if user else None
+            )
+        except Exception as e:
+            logging.error(f"Notification send error: {e}")

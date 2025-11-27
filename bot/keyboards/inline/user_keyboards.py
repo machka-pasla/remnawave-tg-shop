@@ -155,29 +155,61 @@ def get_subscription_options_keyboard(
 
     return builder.as_markup()
 
-def get_payment_method_keyboard(months: int, price: float,
-                                tribute_url: Optional[str],
-                                stars_price: Optional[int],
-                                currency_symbol_val: str, lang: str,
-                                i18n_instance, settings: Settings) -> InlineKeyboardMarkup:
+def get_payment_method_keyboard(
+        months: int,
+        price: float,   # уже не используется, но оставляем для совместимости
+        tribute_url: Optional[str],
+        stars_price: Optional[int],
+        currency_symbol_val: str,
+        lang: str,
+        i18n_instance,
+        settings: Settings
+) -> InlineKeyboardMarkup:
+
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+
+    # Freekassa — без цены
     if settings.FREEKASSA_ENABLED:
-        builder.button(text=_("pay_with_sbp_button"),
-                       callback_data=f"pay_fk:{months}:{price}")
+        builder.button(
+            text=_("pay_with_sbp_button"),
+            callback_data=f"pay_fk:{months}"
+        )
+
+    # YooKassa — без цены
     if settings.YOOKASSA_ENABLED:
-        builder.button(text=_("pay_with_yookassa_button"),
-                       callback_data=f"pay_yk:{months}:{price}")
+        builder.button(
+            text=_("pay_with_yookassa_button"),
+            callback_data=f"pay_yk:{months}"
+        )
+
+    # Tribute (URL)
     if settings.TRIBUTE_ENABLED and tribute_url:
-        builder.button(text=_("pay_with_tribute_button"), url=tribute_url)
+        builder.button(
+            text=_("pay_with_tribute_button"),
+            url=tribute_url
+        )
+
+    # Stars — без цены
     if settings.STARS_ENABLED and stars_price is not None:
-        builder.button(text=_("pay_with_stars_button"),
-                       callback_data=f"pay_stars:{months}:{stars_price}")
+        builder.button(
+            text=_("pay_with_stars_button"),
+            callback_data=f"pay_stars:{months}"
+        )
+
+    # CryptoPay — без цены
     if settings.CRYPTOPAY_ENABLED:
-        builder.button(text=_("pay_with_cryptopay_button"),
-                       callback_data=f"pay_crypto:{months}:{price}")
-    builder.button(text=_(key="cancel_button"),
-                   callback_data="main_action:subscribe")
+        builder.button(
+            text=_("pay_with_cryptopay_button"),
+            callback_data=f"pay_crypto:{months}"
+        )
+
+    # Назад
+    builder.button(
+        text=_("cancel_button"),
+        callback_data="main_action:subscribe"
+    )
+
     builder.adjust(1)
     return builder.as_markup()
 
@@ -202,94 +234,104 @@ def get_payment_url_keyboard(payment_url: str,
 
 def get_yk_autopay_choice_keyboard(
     months: int,
-    price: float,
+    price: float,   # не используется
     lang: str,
     i18n_instance,
     has_saved_cards: bool = True,
 ) -> InlineKeyboardMarkup:
-    """Keyboard for choosing between saved card charge or new card payment when auto-renew is enabled."""
+
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
-    price_str = str(price)
+
+    # Оплата сохранённой картой
     if has_saved_cards:
         builder.row(
             InlineKeyboardButton(
                 text=_(key="yookassa_autopay_pay_saved_card_button"),
-                callback_data=f"pay_yk_saved_list:{months}:{price_str}",
+                callback_data=f"pay_yk_saved_list:{months}",
             )
         )
+
+    # Новая карта
     builder.row(
         InlineKeyboardButton(
             text=_(key="yookassa_autopay_pay_new_card_button"),
-            callback_data=f"pay_yk_new:{months}:{price_str}",
+            callback_data=f"pay_yk_new:{months}",
         )
     )
+
+    # Назад
     builder.row(
         InlineKeyboardButton(
             text=_(key="back_to_payment_methods_button"),
             callback_data=f"subscribe_period:{months}",
         )
     )
-    return builder.as_markup()
 
+    return builder.as_markup()
 
 def get_yk_saved_cards_keyboard(
     cards: List[Tuple[str, str]],
     months: int,
-    price: float,
+    price: float,   # не используется
     lang: str,
     i18n_instance,
     page: int = 0,
 ) -> InlineKeyboardMarkup:
-    """Paginated keyboard for selecting a saved YooKassa card."""
+
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+
     per_page = 5
     total = len(cards)
     start = page * per_page
     end = min(total, start + per_page)
-    price_str = str(price)
 
+    # список карт
     for method_id, title in cards[start:end]:
         builder.row(
             InlineKeyboardButton(
                 text=title,
-                callback_data=f"pay_yk_use_saved:{months}:{price_str}:{method_id}",
+                callback_data=f"pay_yk_use_saved:{months}:{method_id}",
             )
         )
 
-    nav_buttons: List[InlineKeyboardButton] = []
+    # пагинация
+    nav = []
     if start > 0:
-        nav_buttons.append(
+        nav.append(
             InlineKeyboardButton(
                 text="⬅️",
-                callback_data=f"pay_yk_saved_list:{months}:{price_str}:{page-1}",
+                callback_data=f"pay_yk_saved_list:{months}:{page-1}",
             )
         )
     if end < total:
-        nav_buttons.append(
+        nav.append(
             InlineKeyboardButton(
                 text="➡️",
-                callback_data=f"pay_yk_saved_list:{months}:{price_str}:{page+1}",
+                callback_data=f"pay_yk_saved_list:{months}:{page+1}",
             )
         )
-    if nav_buttons:
-        builder.row(*nav_buttons)
+    if nav:
+        builder.row(*nav)
 
+    # новая карта
     builder.row(
         InlineKeyboardButton(
             text=_(key="yookassa_autopay_pay_new_card_button"),
-            callback_data=f"pay_yk_new:{months}:{price_str}",
+            callback_data=f"pay_yk_new:{months}",
         )
     )
+
+    # назад
     builder.row(
         InlineKeyboardButton(
             text=_(key="back_to_autopay_method_choice_button"),
-            callback_data=f"pay_yk:{months}:{price_str}",
+            callback_data=f"pay_yk:{months}",
         )
     )
-    return builder.as_markup()
 
+    return builder.as_markup()
 
 def get_referral_link_keyboard(lang: str,
                                i18n_instance) -> InlineKeyboardMarkup:

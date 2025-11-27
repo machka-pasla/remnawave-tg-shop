@@ -26,6 +26,10 @@ def _ensure_migrations_table(connection: Connection) -> None:
     )
 
 
+# ------------------------------
+# 0001
+# ------------------------------
+
 def _migration_0001_add_channel_subscription_fields(connection: Connection) -> None:
     inspector = inspect(connection)
     columns: Set[str] = {col["name"] for col in inspector.get_columns("users")}
@@ -48,6 +52,10 @@ def _migration_0001_add_channel_subscription_fields(connection: Connection) -> N
         connection.execute(text(stmt))
 
 
+# ------------------------------
+# 0002
+# ------------------------------
+
 def _migration_0002_add_referral_code(connection: Connection) -> None:
     inspector = inspect(connection)
     columns: Set[str] = {col["name"] for col in inspector.get_columns("users")}
@@ -57,6 +65,7 @@ def _migration_0002_add_referral_code(connection: Connection) -> None:
             text("ALTER TABLE users ADD COLUMN referral_code VARCHAR(16)")
         )
 
+    # backfill codes
     connection.execute(
         text(
             """
@@ -95,6 +104,10 @@ def _migration_0002_add_referral_code(connection: Connection) -> None:
     )
 
 
+# ------------------------------
+# 0003
+# ------------------------------
+
 def _migration_0003_normalize_referral_codes(connection: Connection) -> None:
     inspector = inspect(connection)
     columns: Set[str] = {col["name"] for col in inspector.get_columns("users")}
@@ -112,6 +125,42 @@ def _migration_0003_normalize_referral_codes(connection: Connection) -> None:
         )
     )
 
+
+# ------------------------------
+# 0004 — наши новые поля
+# ------------------------------
+
+def _migration_0004_add_promo_discount_fields(connection: Connection) -> None:
+    inspector = inspect(connection)
+    cols = {c["name"] for c in inspector.get_columns("promo_codes")}
+    statements = []
+
+    # new columns
+    if "discount_percent" not in cols:
+        statements.append(
+            "ALTER TABLE promo_codes ADD COLUMN discount_percent INTEGER"
+        )
+
+    if "discount_plan_months" not in cols:
+        statements.append(
+            "ALTER TABLE promo_codes ADD COLUMN discount_plan_months INTEGER"
+        )
+
+    # make bonus_days nullable
+    if "bonus_days" in cols:
+        statements.append(
+            "ALTER TABLE promo_codes ALTER COLUMN bonus_days DROP NOT NULL"
+        )
+
+    # execute all
+    for stmt in statements:
+        connection.execute(text(stmt))
+
+
+# ------------------------------
+# MIGRATIONS LIST
+# ------------------------------
+
 MIGRATIONS: List[Migration] = [
     Migration(
         id="0001_add_channel_subscription_fields",
@@ -128,8 +177,17 @@ MIGRATIONS: List[Migration] = [
         description="Normalize referral codes to uppercase for consistent lookups",
         upgrade=_migration_0003_normalize_referral_codes,
     ),
+    Migration(
+        id="0004_add_promo_discount_fields",
+        description="Add discount_percent and discount_plan_months columns to promo_codes and make bonus_days nullable",
+        upgrade=_migration_0004_add_promo_discount_fields,
+    ),
 ]
 
+
+# ------------------------------
+# RUN MIGRATIONS
+# ------------------------------
 
 def run_database_migrations(connection: Connection) -> None:
     """

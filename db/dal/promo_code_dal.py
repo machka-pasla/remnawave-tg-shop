@@ -189,3 +189,38 @@ async def record_promo_activation(
         f"Promo code {promo_code_id} activated by user {user_id}. Activation ID: {new_activation.activation_id}"
     )
     return new_activation
+
+async def is_promo_applicable_to_plan(session: AsyncSession, promo: PromoCode, plan_months: int) -> bool:
+    """
+    Возвращает True, если промокод применим к тарифу plan_months.
+    Если promo.discount_percent is None (т.е. это не скидка), но promo.bonus_days есть —
+    он может применяться в активации через другую логику. Эта функция служит для скидочных промокодов.
+    """
+    if not promo:
+        return False
+    if promo.discount_percent is None:
+        return False
+    # applies to all plans
+    if promo.discount_plan_months is None:
+        return True
+    try:
+        return int(promo.discount_plan_months) == int(plan_months)
+    except Exception:
+        return False
+
+async def get_user_promo_activations(
+        session: AsyncSession,
+        user_id: int
+) -> List[PromoCodeActivation]:
+    """
+    Возвращает все активации промокодов пользователя,
+    отсортированные по времени (от старых к новым).
+    Используется для получения последнего скидочного промокода.
+    """
+    stmt = (
+        select(PromoCodeActivation)
+        .where(PromoCodeActivation.user_id == user_id)
+        .order_by(PromoCodeActivation.activated_at.asc())
+    )
+    result = await session.execute(stmt)
+    return result.scalars().all()
