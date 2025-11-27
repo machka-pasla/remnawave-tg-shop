@@ -7,13 +7,13 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from bot.keyboards.inline import user_keyboards
-from config.settings import Settings
 from bot.keyboards.inline.user_keyboards import (
     get_subscription_options_keyboard,
     get_back_to_main_menu_markup,
     get_autorenew_confirm_keyboard,
+    get_payment_method_keyboard,
 )
+
 from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
 from bot.middlewares.i18n import JsonI18n
@@ -593,7 +593,6 @@ async def autorenew_cancel_from_webhook_button(
 # =====================================================================
 
 from bot.services.promo_code_service import PromoCodeService
-from bot.keyboards.inline.user_keyboards import get_payment_method_keyboard
 
 @router.callback_query(F.data.startswith("subscribe_period:"))
 async def select_period_handler(callback, i18n_data, settings, session, promo_code_service):
