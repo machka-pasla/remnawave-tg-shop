@@ -157,7 +157,7 @@ def get_subscription_options_keyboard(
 
 def get_payment_method_keyboard(
         months: int,
-        price: float,   # уже не используется, но оставляем для совместимости
+        price: float,
         tribute_url: Optional[str],
         stars_price: Optional[int],
         currency_symbol_val: str,
@@ -169,42 +169,45 @@ def get_payment_method_keyboard(
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
 
-    # Freekassa — без цены
+    # preparing full payload for handlers
+    full_payload = f"months:{months}|price:{price}"
+
+    # === Freekassa ===
     if settings.FREEKASSA_ENABLED:
         builder.button(
             text=_("pay_with_sbp_button"),
-            callback_data=f"pay_fk:{months}"
+            callback_data=f"pay_fk:{full_payload}"
         )
 
-    # YooKassa — без цены
+    # === YooKassa ===
     if settings.YOOKASSA_ENABLED:
         builder.button(
             text=_("pay_with_yookassa_button"),
-            callback_data=f"pay_yk:{months}"
+            callback_data=f"pay_yk:{full_payload}"
         )
 
-    # Tribute (URL)
+    # === Tribute ===
     if settings.TRIBUTE_ENABLED and tribute_url:
         builder.button(
             text=_("pay_with_tribute_button"),
             url=tribute_url
         )
 
-    # Stars — без цены
+    # === Stars ===
     if settings.STARS_ENABLED and stars_price is not None:
         builder.button(
             text=_("pay_with_stars_button"),
-            callback_data=f"pay_stars:{months}"
+            callback_data=f"pay_stars:{full_payload}"
         )
 
-    # CryptoPay — без цены
+    # === CryptoPay ===
     if settings.CRYPTOPAY_ENABLED:
         builder.button(
             text=_("pay_with_cryptopay_button"),
-            callback_data=f"pay_crypto:{months}"
+            callback_data=f"pay_crypto:{full_payload}"
         )
 
-    # Назад
+    # Back
     builder.button(
         text=_("cancel_button"),
         callback_data="main_action:subscribe"
@@ -572,4 +575,9 @@ def get_autorenew_confirm_keyboard(enable: bool, sub_id: int, lang: str, i18n_in
         InlineKeyboardButton(text=_(key="yes_button"), callback_data=f"autorenew:confirm:{sub_id}:{1 if enable else 0}"),
         InlineKeyboardButton(text=_(key="no_button"), callback_data="main_action:my_subscription"),
     )
+    return builder.as_markup()
+
+def payment_open_link(payment_url: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="💳 ОПЛАТИТЬ", url=payment_url)
     return builder.as_markup()
