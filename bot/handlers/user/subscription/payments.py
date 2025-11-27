@@ -8,7 +8,7 @@ from bot.services.promo_code_service import PromoCodeService
 from bot.services.yookassa_service import YooKassaService
 from bot.services.freekassa_service import FreeKassaService
 from bot.services.panel_api_service import PanelApiService
-from bot.keyboards import user_keyboards
+from bot.keyboards.inline import user_keyboards
 
 router = Router()
 
