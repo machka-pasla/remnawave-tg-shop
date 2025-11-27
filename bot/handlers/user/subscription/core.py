@@ -6,6 +6,7 @@ from typing import Optional, Union
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from config.settings import Settings
 
 from bot.keyboards.inline.user_keyboards import (
     get_subscription_options_keyboard,
