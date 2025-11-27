@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.states.admin_states import AdminStates
 from bot.keyboards.inline.admin_keyboards import get_back_to_admin_panel_keyboard
 from bot.middlewares.i18n import JsonI18n
-from bot.services.promo_code_service import promo_code_service
 
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
