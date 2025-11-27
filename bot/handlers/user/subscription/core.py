@@ -613,7 +613,7 @@ async def select_period_handler(callback, i18n_data, settings, session, promo_co
         promo=active_promo
     )
 
-    keyboard = user_keyboards.get_payment_method_keyboard(
+    keyboard = get_payment_method_keyboard(
         months=months,
         price=final_price,
         tribute_url=None,
