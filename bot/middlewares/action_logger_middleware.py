@@ -16,9 +16,14 @@ class ActionLoggerMiddleware(BaseMiddleware):
         super().__init__()
         self.settings = settings
 
-    async def __call__(self, handler: Callable[[Update, Dict[str, Any]],
-                                               Awaitable[Any]], event: Update,
-                       data: Dict[str, Any]) -> Any:
+    async def __call__(self, handler, event: Update, data):
+
+        # === DEBUG: Логируем callback_data ===
+        if event.callback_query:
+            try:
+                logging.warning(f"[CALLBACK DATA] {event.callback_query.data}")
+            except Exception:
+                pass
 
         result = await handler(event, data)
 
