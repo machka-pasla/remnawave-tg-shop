@@ -35,26 +35,27 @@ class PromoCodeService:
 
     async def get_active_promo(self, session: AsyncSession, user_id: int) -> Optional[PromoCode]:
         """
-        Возвращает последний СКИДОЧНЫЙ промокод, который НЕ бонусный,
-        и может применяться к цене.
+        Возвращает последний СКИДОЧНЫЙ промокод пользователя.
+        ИСПРАВЛЕНО: убрана ленивя загрузка act.promo_code → ручная выборка.
         """
+
+        # Загружаем все активации
         activations = await promo_code_dal.get_user_promo_activations(session, user_id)
         if not activations:
             return None
 
-        # Идём с конца — последний применённый
+        # Перебираем с конца — последний активированный промокод
         for act in reversed(activations):
-            promo: PromoCode = act.promo_code
+            promo = await promo_code_dal.get_promo_code_by_id(session, act.promo_code_id)
             if not promo:
                 continue
+
             if not promo.is_active:
                 continue
 
-            # Промокод с бонусными днями — НЕ применяется к цене
             if promo.bonus_days and promo.bonus_days > 0:
                 continue
 
-            # Скидка процентная или скидка на конкретный тариф
             if promo.discount_percent or promo.discount_plan_months:
                 return promo
 

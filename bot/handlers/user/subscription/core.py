@@ -595,67 +595,36 @@ from bot.services.promo_code_service import PromoCodeService
 from bot.keyboards.inline.user_keyboards import get_payment_method_keyboard
 
 @router.callback_query(F.data.startswith("subscribe_period:"))
-async def select_period_handler(
-    callback: types.CallbackQuery,
-    session: AsyncSession,
-    promo_code_service: PromoCodeService,
-    settings: Settings,
-    i18n_data: dict,
-):
-    user_id = callback.from_user.id
+async def select_period_handler(callback, i18n_data, settings, session, promo_code_service):
+    _, months_str = callback.data.split(":")
+    months = int(months_str)
 
-    # i18n
-    lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
-    i18n = i18n_data.get("i18n_instance")
-    _ = lambda key, **kw: i18n.gettext(lang, key, **kw)
+    price = settings.subscription_options.get(months)
+    if price is None:
+        return await callback.answer("Ошибка тарификации", show_alert=True)
 
-    # --- Parse months ---
-    try:
-        months = int(callback.data.split(":")[1])
-    except:
-        return await callback.answer("Ошибка тарифа!", show_alert=True)
-
-    # --- Get price from settings ---
-    prices = settings.subscription_options
-    base_price = prices.get(months)
-
-    if base_price is None:
-        return await callback.answer("Тариф не найден!", show_alert=True)
-
-    # --- Apply promo code (if any) ---
-    promo = await promo_code_service.get_active_promo(session, user_id)
-
-    discount_info = None
-    if promo:
-        final_price, promo_obj, discount_info = \
-            await promo_code_service.apply_promo_to_price(
-                base_price=base_price,
-                months=months,
-                promo=promo,
-            )
-        price = final_price
-    else:
-        price = base_price
-
-    # --- Build payment methods keyboard ---
-    kb = get_payment_method_keyboard(
+    # Apply promo
+    final_price, promo, discount_info = await promo_code_service.apply_promo_to_price(
+        base_price=price,
         months=months,
-        price=price,
-        tribute_url=None,
-        stars_price=None,
-        currency_symbol_val="₽",
-        lang=lang,
-        i18n_instance=i18n,
-        settings=settings,
+        promo=await promo_code_service.get_active_promo(session, callback.from_user.id)
     )
 
-    # --- Text message ---
-    text = f"Вы выбрали тариф <b>{months} мес</b>\nЦена: <b>{price} ₽</b>"
+    keyboard = user_keyboards.get_payment_method_keyboard(
+        months=months,
+        price=final_price,
+        tribute_url=None,
+        stars_price=None,
+        currency_symbol_val=settings.DEFAULT_CURRENCY_SYMBOL,
+        lang=i18n_data["current_language"],
+        i18n_instance=i18n_data["i18n_instance"],
+        settings=settings
+    )
 
-    if discount_info:
-        text += f"\n🔥 Скидка: {discount_info}"
-
-    await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
+    await callback.message.edit_text(
+        f"Выберите способ оплаты:",
+        reply_markup=keyboard
+    )
     await callback.answer()
 
 @router.message(Command("connect"))
