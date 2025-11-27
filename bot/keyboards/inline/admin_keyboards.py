@@ -464,3 +464,167 @@ def get_back_to_admin_panel_keyboard(lang: str,
     builder.button(text=_(key="back_to_admin_panel_button"),
                    callback_data="admin_action:main")
     return builder.as_markup()
+
+def get_promo_list_keyboard(
+    i18n_instance,
+    lang: str,
+    promos: list,
+    current_page: int,
+    total_pages: int
+) -> InlineKeyboardMarkup:
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+
+    # Список промокодов
+    for promo in promos:
+        label = f"{promo.code} — {promo.bonus_days} дней"
+        builder.button(
+            text=label,
+            callback_data=f"admin_promo:card:{promo.id}:{current_page}"
+        )
+
+    # Пагинация
+    if total_pages > 1:
+        row = []
+        if current_page > 0:
+            row.append(
+                InlineKeyboardButton(
+                    text="⬅️",
+                    callback_data=f"admin_promo:page:{current_page - 1}"
+                )
+            )
+        row.append(
+            InlineKeyboardButton(
+                text=f"{current_page + 1}/{total_pages}",
+                callback_data="promo_page_display"
+            )
+        )
+        if current_page < total_pages - 1:
+            row.append(
+                InlineKeyboardButton(
+                    text="➡️",
+                    callback_data=f"admin_promo:page:{current_page + 1}"
+                )
+            )
+        builder.row(*row)
+
+    builder.row(
+        InlineKeyboardButton(
+            text=_(key="back_to_admin_panel_button"),
+            callback_data="admin_action:main"
+        )
+    )
+
+    return builder.as_markup()
+
+
+def get_promo_card_keyboard(
+    i18n_instance,
+    lang: str,
+    promo_id: int,
+    back_page: int
+) -> InlineKeyboardMarkup:
+
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=_(key="admin_edit_promo_button", default="✏️ Редактировать"),
+        callback_data=f"admin_promo:edit:{promo_id}:{back_page}"
+    )
+    builder.button(
+        text=_(key="admin_delete_promo_button", default="🗑 Удалить"),
+        callback_data=f"admin_promo:delete:{promo_id}:{back_page}"
+    )
+    builder.button(
+        text=_(key="back_to_promo_list_button", default="⬅️ К списку"),
+        callback_data=f"admin_promo:page:{back_page}"
+    )
+    builder.button(
+        text=_(key="back_to_admin_panel_button"),
+        callback_data="admin_action:main"
+    )
+    builder.adjust(1)
+
+    return builder.as_markup()
+
+
+def get_bulk_promo_list_keyboard(
+    i18n_instance,
+    lang: str,
+    bulk_sets: list,
+    current_page: int,
+    total_pages: int
+) -> InlineKeyboardMarkup:
+
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+
+    for group in bulk_sets:
+        label = f"Пакет #{group.id} — {group.quantity} шт."
+        builder.button(
+            text=label,
+            callback_data=f"admin_bulkpromo:card:{group.id}:{current_page}"
+        )
+
+    if total_pages > 1:
+        row = []
+        if current_page > 0:
+            row.append(
+                InlineKeyboardButton(
+                    text="⬅️",
+                    callback_data=f"admin_bulkpromo:page:{current_page - 1}"
+                )
+            )
+        row.append(
+            InlineKeyboardButton(
+                text=f"{current_page + 1}/{total_pages}",
+                callback_data="bulkpromo_page_display"
+            )
+        )
+        if current_page < total_pages - 1:
+            row.append(
+                InlineKeyboardButton(
+                    text="➡️",
+                    callback_data=f"admin_bulkpromo:page:{current_page + 1}"
+                )
+            )
+        builder.row(*row)
+
+    builder.row(
+        InlineKeyboardButton(
+            text=_(key="back_to_admin_panel_button"),
+            callback_data="admin_action:main"
+        )
+    )
+
+    return builder.as_markup()
+
+
+def get_bulk_promo_card_keyboard(
+    i18n_instance,
+    lang: str,
+    pack_id: int,
+    back_page: int
+) -> InlineKeyboardMarkup:
+
+    _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=_(key="admin_delete_bulkpromo_button", default="🗑 Удалить пакет"),
+        callback_data=f"admin_bulkpromo:delete:{pack_id}:{back_page}"
+    )
+
+    builder.button(
+        text=_(key="back_to_bulkpromo_list_button", default="⬅️ К списку"),
+        callback_data=f"admin_bulkpromo:page:{back_page}"
+    )
+
+    builder.button(
+        text=_(key="back_to_admin_panel_button"),
+        callback_data="admin_action:main"
+    )
+
+    builder.adjust(1)
+    return builder.as_markup()
