@@ -69,35 +69,50 @@ class PromoCodeService:
             self,
             base_price: float,
             months: int,
-            promo: Optional[PromoCode]
+            promo: Optional[PromoCode],
     ) -> Tuple[float, Optional[PromoCode], Optional[str]]:
         """
         Возвращает:
           new_price,
           promo (если применён), иначе None,
-          discount_info_text
+          discount_info_text (строка для описания в платеже)
         """
 
-        # --- НЕТ ПРОМОКОДА — ВОЗВРАЩАЕМ ЦЕНУ БЕЗ ИЗМЕНЕНИЙ ---
         if promo is None:
             return base_price, None, None
 
-        # --- СКИДКА % ---
-        if promo.discount_percent:
+        has_percent = promo.discount_percent is not None
+        has_plan = promo.discount_plan_months is not None
+
+        # ----- 1) Глобальная скидка на все тарифы -----
+        if has_percent and not has_plan:
             discount = promo.discount_percent
             new_price = round(base_price * (100 - discount) / 100, 2)
-            return new_price, promo, f"-{discount}%"
+            info = f"-{discount}%"
+            return new_price, promo, info
 
-        # --- СКИДКА НА КОНКРЕТНЫЙ ТАРИФ ---
-        if promo.discount_plan_months:
+        # ----- 2) Скидка на конкретный тариф (новая модель) -----
+        if has_percent and has_plan:
             if promo.discount_plan_months == months:
-                new_price = round(base_price * 0.8, 2)  # фиксированные 20%
-                return new_price, promo, f"Скидка для тарифа {months} мес"
+                discount = promo.discount_percent
+                new_price = round(base_price * (100 - discount) / 100, 2)
+                info = f"-{discount}% для тарифа {months} мес"
+                return new_price, promo, info
             else:
-                # тариф не совпал → нет скидки
+                # Промокод не подходит к выбранному тарифу
                 return base_price, None, None
 
-        # --- НЕТ СКИДОК ---
+        # ----- 3) LEGACY: скидка только по discount_plan_months, без процента -----
+        if not has_percent and has_plan:
+            if promo.discount_plan_months == months:
+                # Старая логика: фиксированная скидка 20%
+                new_price = round(base_price * 0.8, 2)
+                info = f"Скидка для тарифа {months} мес (legacy 20%)"
+                return new_price, promo, info
+            else:
+                return base_price, None, None
+
+        # ----- 4) Нет скидочных полей — ничего не делаем -----
         return base_price, None, None
 
     # ==============================================================
@@ -115,7 +130,7 @@ class PromoCodeService:
         _ = lambda k, **kw: self.i18n.gettext(user_lang, k, **kw)
         code_upper = code_input.strip().upper()
 
-        # Ищем промокод
+        # 1. Ищем промокод
         promo: Optional[PromoCode] = await promo_code_dal.get_active_promo_code_by_code_str(
             session, code_upper
         )
@@ -123,27 +138,26 @@ class PromoCodeService:
         if not promo:
             return False, _("promo_code_not_found", code=code_upper)
 
-        # Проверяем, использовал ли пользователь
+        # 2. Проверяем, использовал ли пользователь
         existing_activation = await promo_code_dal.get_user_activation_for_promo(
             session, promo.promo_code_id, user_id
         )
         if existing_activation:
             return False, _("promo_code_already_used_by_user", code=code_upper)
 
-        # Определяем тип
-        is_bonus = promo.bonus_days and promo.bonus_days > 0
-        is_percent = promo.discount_percent is not None
-        is_plan_discount = promo.discount_plan_months is not None
+        has_bonus = promo.bonus_days is not None and promo.bonus_days > 0
+        has_percent = promo.discount_percent is not None
+        has_plan = promo.discount_plan_months is not None
 
-        # ----------------------------------------------------------
-        # 4.1 БОНУСНЫЕ ДНИ
-        # ----------------------------------------------------------
-        if is_bonus:
+        # -------------------------
+        # 3. БОНУСНЫЕ ДНИ
+        # -------------------------
+        if has_bonus:
             new_end_date = await self.subscription_service.extend_active_subscription_days(
                 session=session,
                 user_id=user_id,
                 bonus_days=promo.bonus_days,
-                reason=f"promo code {code_upper}"
+                reason=f"promo code {code_upper}",
             )
 
             if not new_end_date:
@@ -153,14 +167,16 @@ class PromoCodeService:
                 session, promo.promo_code_id, user_id, payment_id=None
             )
             await promo_code_dal.increment_promo_code_usage(session, promo.promo_code_id)
-
             await self._notify_promo_activation(session, user_id, code_upper, promo.bonus_days)
+
             return True, new_end_date
 
-        # ----------------------------------------------------------
-        # 4.2 СКИДКА (%)
-        # ----------------------------------------------------------
-        if is_percent:
+        # -------------------------
+        # 4. СКИДКИ
+        # -------------------------
+
+        # 4.1 Глобальная скидка на все тарифы
+        if has_percent and not has_plan:
             await promo_code_dal.record_promo_activation(
                 session, promo.promo_code_id, user_id, payment_id=None
             )
@@ -170,13 +186,11 @@ class PromoCodeService:
             return True, {
                 "type": "discount",
                 "discount_percent": promo.discount_percent,
-                "discount_plan_months": None
+                "discount_plan_months": None,
             }
 
-        # ----------------------------------------------------------
-        # 4.3 СКИДКА ДЛЯ ОПРЕДЕЛЁННОГО ТАРИФА
-        # ----------------------------------------------------------
-        if is_plan_discount:
+        # 4.2 Скидка на конкретный тариф (новая модель)
+        if has_percent and has_plan:
             await promo_code_dal.record_promo_activation(
                 session, promo.promo_code_id, user_id, payment_id=None
             )
@@ -185,16 +199,28 @@ class PromoCodeService:
 
             return True, {
                 "type": "discount",
-                "discount_percent": None,
-                "discount_plan_months": promo.discount_plan_months
+                "discount_percent": promo.discount_percent,
+                "discount_plan_months": promo.discount_plan_months,
             }
 
-        logging.error(f"Promo code has no logic fields: {promo.code}")
-        return False, _("promo_code_invalid_type")
+        # 4.3 LEGACY: скидка только по тарифу, без процента (жёсткие 20%)
+        if not has_percent and has_plan:
+            await promo_code_dal.record_promo_activation(
+                session, promo.promo_code_id, user_id, payment_id=None
+            )
+            await promo_code_dal.increment_promo_code_usage(session, promo.promo_code_id)
+            await self._notify_promo_activation(session, user_id, code_upper, None)
 
-    # ==============================================================
-    # 5) УВЕДОМЛЕНИЕ АДМИНА
-    # ==============================================================
+            return True, {
+                "type": "discount",
+                "discount_percent": 20,
+                "discount_plan_months": promo.discount_plan_months,
+            }
+
+        # -------------------------
+        # 5. Ничего не подошло
+        # -------------------------
+        return False, _("error_applying_promo_bonus")
 
     async def _notify_promo_activation(
         self,
