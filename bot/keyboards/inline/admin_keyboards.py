@@ -3,6 +3,8 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from typing import Optional, List, Any
 import math
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 from config.settings import Settings
 from bot.middlewares.i18n import JsonI18n
 from db.models import User
@@ -645,3 +647,49 @@ def get_bulk_promo_card_keyboard(
 
     builder.adjust(1)
     return builder.as_markup()
+
+def get_promo_type_keyboard():
+    """Выбор типа промокода: скидка или бонусные дни."""
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="💸 Скидка",
+                callback_data="promo_type:discount"
+            ),
+            InlineKeyboardButton(
+                text="🎁 Бонусные дни",
+                callback_data="promo_type:bonus"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="⬅️ Отмена",
+                callback_data="promo_cancel"
+            )
+        ]
+    ])
+    return kb
+
+
+def get_cancel_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="⬅️ Отмена", callback_data="promo_cancel"
+            )
+        ]
+    ])
+
+
+def get_promo_confirm_keyboard():
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✅ Создать", callback_data="promo_confirm"
+            ),
+            InlineKeyboardButton(
+                text="❌ Отмена", callback_data="promo_cancel"
+            )
+        ]
+    ])
+    return kb
