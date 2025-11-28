@@ -494,5 +494,11 @@
   "admin_promo_card_discount": "📉 Discount: <b>{percent}%</b>",
   "admin_promo_card_discount_plan": "📉 Discount: <b>{percent}%</b> for <b>{months}</b> months",
   "admin_promo_applicable_to_all": "Applies to all subscription plans",
-  "admin_promo_applicable_to_plan": "Applies to: {months}-month plan"
+  "admin_promo_applicable_to_plan": "Applies to: {months}-month plan",
+  "admin_promo_create_step1": "Choose promo code type:",
+  "admin_promo_create_step2": "Enter value:\nBonus days — number of days.\nDiscount — percent (e.g., 25).",
+  "admin_promo_create_step3": "Enter activation limit (0 = unlimited):",
+  "admin_promo_create_step4": "Enter promo code validity in days:",
+  "promo_type_bonus": "Bonus days",
+  "promo_type_discount": "Discount"
 }
