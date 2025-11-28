@@ -79,9 +79,6 @@ async def admin_panel_actions_callback_handler(
     elif action == "broadcast":
         await admin_broadcast_handlers.broadcast_message_prompt_handler(
             callback, state, i18n_data, settings, session)
-    elif action == "create_promo":
-        await admin_promo_create_handlers.create_promo_prompt_handler(
-            callback, state, i18n_data, settings, session)
     elif action == "create_bulk_promo":
         await admin_promo_bulk_handlers.create_bulk_promo_prompt_handler(
             callback, state, i18n_data, settings, session)
