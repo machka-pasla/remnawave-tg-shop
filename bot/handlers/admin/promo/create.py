@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
 
-from bot.handlers.admin.states import AdminStates
+from bot.states.admin_states import AdminStates
 from bot.keyboards.inline.admin_keyboards import (
     get_promo_type_keyboard,
     get_back_to_admin_menu_keyboard,
