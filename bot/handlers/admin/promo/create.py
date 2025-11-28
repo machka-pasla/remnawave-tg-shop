@@ -1,141 +1,178 @@
 import logging
-from aiogram import Router, types, F
+from datetime import datetime, timezone, timedelta
+from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.states.admin_states import AdminStates
-from bot.middlewares.i18n import JsonI18n
-from config.settings import Settings
+from bot.handlers.admin.states import AdminStates
+from bot.keyboards.inline.admin_keyboards import (
+    get_promo_type_keyboard,
+    get_back_to_admin_menu_keyboard,
+)
 from db.dal import promo_code_dal
-from bot.keyboards.inline.admin_keyboards import get_back_to_admin_panel_keyboard
 
-router = Router(name="promo_create_router")
+router = Router()
 
-# -------------------------------
-# 1) ПЕРВЫЙ ЭТАП — запросить тип
-# -------------------------------
+# -----------------------------------------------------------------------------
+# 1. ENTER CREATE PROMO FLOW
+# -----------------------------------------------------------------------------
+
 @router.callback_query(F.data == "admin_action:create_promo")
-async def create_promo_prompt_handler(callback: types.CallbackQuery,
-                                      state: FSMContext,
-                                      i18n_data: dict,
-                                      settings: Settings,
-                                      session: AsyncSession):
-    i18n = i18n_data.get("i18n_instance")
-    lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+async def create_promo_start(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
 
+    await callback.message.edit_text(
+        "Выберите тип промокода:",
+        reply_markup=get_promo_type_keyboard()
+    )
     await state.set_state(AdminStates.promo_waiting_type)
-
-    text = i18n.gettext(lang, "admin_promo_create_step1",
-                        default="Выберите тип промокода:")
-
-    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        [
-            types.InlineKeyboardButton(
-                text="💸 Скидка", callback_data="promo_type:discount"),
-            types.InlineKeyboardButton(
-                text="🎁 Бонус дни", callback_data="promo_type:bonus")
-        ],
-        [types.InlineKeyboardButton(
-            text="⬅️ Назад", callback_data="admin_action:main")]
-    ])
-
-    await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()
 
 
-# -------------------------------
-# 2) Выбор типа промокода
-# -------------------------------
-@router.callback_query(F.data.startswith("promo_type:"))
-async def promo_type_selected(callback: types.CallbackQuery,
-                              state: FSMContext,
-                              i18n_data: dict,
-                              settings: Settings,
-                              session: AsyncSession):
+# -----------------------------------------------------------------------------
+# 2. CHOOSE PROMO TYPE (discount / bonus days)
+# -----------------------------------------------------------------------------
 
-    promo_type = callback.data.split(":")[1]
+@router.callback_query(F.data.startswith("promo_type:"), AdminStates.promo_waiting_type)
+async def promo_choose_type(callback: types.CallbackQuery, state: FSMContext):
+    promo_type = callback.data.split(":")[1]  # discount / bonus
+
     await state.update_data(promo_type=promo_type)
-    await state.set_state(AdminStates.promo_waiting_code)
 
-    i18n = i18n_data.get("i18n_instance")
-    lang = i18n_data.get("current_language")
+    if promo_type == "discount":
+        text = "Введите размер скидки в процентах (например: 10):"
+    else:
+        text = "Введите количество бонусных дней (например: 7):"
 
-    text = i18n.gettext(lang,
-                        "admin_promo_create_step2",
-                        default="Введите код промокода (только латиница и цифры):")
-
-    await callback.message.edit_text(text)
+    await callback.message.edit_text(
+        text,
+        reply_markup=get_back_to_admin_menu_keyboard()
+    )
+    await state.set_state(AdminStates.promo_waiting_value)
     await callback.answer()
 
 
-# -------------------------------
-# 3) Ввод кода
-# -------------------------------
-@router.message(AdminStates.promo_waiting_code)
-async def promo_enter_code(message: types.Message,
-                           state: FSMContext,
-                           settings: Settings,
-                           i18n_data: dict):
-    code = message.text.strip().upper()
+# -----------------------------------------------------------------------------
+# 3. ENTER VALUE: percent OR bonus_days
+# -----------------------------------------------------------------------------
 
-    if not code.isalnum():
-        await message.answer("❌ Код должен содержать только буквы/цифры.")
-        return
-
-    await state.update_data(code=code)
-    await state.set_state(AdminStates.promo_waiting_value)
-
-    await message.answer("Введите % скидки или количество бонусных дней:")
-
-
-# -------------------------------
-# 4) Ввод значения
-# -------------------------------
 @router.message(AdminStates.promo_waiting_value)
-async def promo_enter_value(message: types.Message,
-                            state: FSMContext,
-                            settings: Settings,
-                            session: AsyncSession,
-                            i18n_data: dict):
-
+async def promo_enter_value(message: types.Message, state: FSMContext, session):
     data = await state.get_data()
     promo_type = data["promo_type"]
-    code = data["code"]
 
+    # Validate number
     try:
         value = int(message.text.strip())
-    except:
-        await message.answer("Введите целое число.")
-        return
+        if value <= 0:
+            raise ValueError
+    except Exception:
+        return await message.answer("Введите корректное число > 0.")
 
-    if value <= 0:
-        await message.answer("Число должно быть больше нуля.")
-        return
-
-    # Создаём промокод
+    # Store value
     if promo_type == "discount":
-        new_promo = await promo_code_dal.create_promo_code(
-            session,
-            code=code,
-            discount_percent=value,
-            bonus_days=None,
-            created_by_admin_id=message.from_user.id
-        )
+        await state.update_data(discount_percent=value, bonus_days=None)
     else:
-        new_promo = await promo_code_dal.create_promo_code(
-            session,
-            code=code,
-            bonus_days=value,
-            discount_percent=None,
-            created_by_admin_id=message.from_user.id
-        )
+        await state.update_data(discount_percent=None, bonus_days=value)
 
+    await message.answer(
+        "Введите максимальное количество активаций (например: 100):",
+        reply_markup=get_back_to_admin_menu_keyboard()
+    )
+
+    await state.set_state(AdminStates.promo_waiting_limit)
+
+
+# -----------------------------------------------------------------------------
+# 4. ENTER MAX ACTIVATIONS
+# -----------------------------------------------------------------------------
+
+@router.message(AdminStates.promo_waiting_limit)
+async def promo_enter_limit(message: types.Message, state: FSMContext):
+    try:
+        limit = int(message.text.strip())
+        if limit <= 0:
+            raise ValueError
+    except:
+        return await message.answer("Введите корректное число (>0).")
+
+    await state.update_data(max_activations=limit)
+
+    await message.answer(
+        "Введите срок действия промокода в днях (например: 30):",
+        reply_markup=get_back_to_admin_menu_keyboard()
+    )
+
+    await state.set_state(AdminStates.promo_waiting_expire)
+
+
+# -----------------------------------------------------------------------------
+# 5. ENTER EXPIRATION DAYS
+# -----------------------------------------------------------------------------
+
+@router.message(AdminStates.promo_waiting_expire)
+async def promo_enter_expire(message: types.Message, state: FSMContext):
+    try:
+        days = int(message.text.strip())
+        if days <= 0:
+            raise ValueError
+    except:
+        return await message.answer("Введите корректное число (>0).")
+
+    expire_date = datetime.now(timezone.utc) + timedelta(days=days)
+    await state.update_data(valid_until=expire_date)
+
+    await message.answer(
+        "Введите текст промокода (например: SUPER2024):",
+        reply_markup=get_back_to_admin_menu_keyboard()
+    )
+
+    await state.set_state(AdminStates.promo_waiting_code)
+
+
+# -----------------------------------------------------------------------------
+# 6. ENTER PROMO CODE TEXT
+# -----------------------------------------------------------------------------
+
+@router.message(AdminStates.promo_waiting_code)
+async def promo_enter_code(message: types.Message, state: FSMContext, session):
+    code_raw = message.text.strip().upper()
+
+    # Validate length
+    if len(code_raw) < 3:
+        return await message.answer("Минимальная длина промокода — 3 символа.")
+
+    # Check if exists
+    existing = await promo_code_dal.get_promo_code_by_code(session, code_raw)
+    if existing:
+        return await message.answer("Такой промокод уже существует, выберите другой.")
+
+    data = await state.get_data()
+
+    # BUILD CORRECT PAYLOAD FOR DAL
+    promo_data = {
+        "code": code_raw,
+        "promo_type": data["promo_type"],
+        "discount_percent": data.get("discount_percent"),
+        "bonus_days": data.get("bonus_days"),
+        "max_activations": data["max_activations"],
+        "current_activations": 0,
+        "valid_until": data["valid_until"],
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    new_promo = await promo_code_dal.create_promo_code(session, promo_data)
     await session.commit()
     await state.clear()
 
     await message.answer(
-        f"🎉 Промокод <b>{code}</b> создан!",
-        reply_markup=get_back_to_admin_panel_keyboard(
-            i18n_data["current_language"], i18n_data["i18n_instance"]),
-        parse_mode="HTML"
+        f"✅ Промокод создан!\n\n"
+        f"Код: <b>{new_promo.code}</b>\n"
+        f"Тип: {new_promo.promo_type}\n"
+        f"Скидка: {new_promo.discount_percent}%\n"
+        f"Бонус дней: {new_promo.bonus_days}\n"
+        f"Макс. активаций: {new_promo.max_activations}\n"
+        f"Действует до: {new_promo.valid_until.strftime('%Y-%m-%d')}",
+        parse_mode="HTML",
+        reply_markup=get_back_to_admin_menu_keyboard()
     )
