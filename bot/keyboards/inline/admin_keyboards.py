@@ -649,25 +649,40 @@ def get_bulk_promo_card_keyboard(
     return builder.as_markup()
 
 def get_promo_type_keyboard():
-    """Выбор типа промокода: скидка или бонусные дни."""
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="💸 Скидка",
-                callback_data="promo_type:discount"
-            ),
-            InlineKeyboardButton(
-                text="🎁 Бонусные дни",
-                callback_data="promo_type:bonus"
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="⬅️ Отмена",
-                callback_data="promo_cancel"
-            )
+    """
+    Выбор типа промокода:
+    - скидка на все тарифы
+    - скидка на конкретный тариф
+    - бонусные дни
+    """
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="💸 Скидка на все тарифы",
+                    callback_data="promo_type:discount_all",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💸 Скидка на конкретный тариф",
+                    callback_data="promo_type:discount_plan",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🎁 Бонусные дни",
+                    callback_data="promo_type:bonus",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Отмена",
+                    callback_data="promo_cancel",
+                )
+            ],
         ]
-    ])
+    )
     return kb
 
 
@@ -692,4 +707,21 @@ def get_promo_confirm_keyboard():
             )
         ]
     ])
+    return kb
+
+def get_back_to_admin_menu_keyboard() -> InlineKeyboardMarkup:
+    """
+    Клавиатура "Назад в админ-меню" / отмена создания промокода.
+    Используется в admin/promo/create.py
+    """
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⬅️ В админ-меню",
+                    callback_data="admin_action:main",
+                )
+            ]
+        ]
+    )
     return kb
