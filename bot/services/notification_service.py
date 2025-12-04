@@ -3,7 +3,7 @@ import asyncio
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.text_decorations import html_decoration as hd
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import TelegramBadRequest
 from datetime import datetime, timezone
 from typing import Optional, Union, Dict, Any, Callable
 
@@ -14,6 +14,10 @@ from bot.utils.message_queue import get_queue_manager
 from bot.utils.text_sanitizer import (
     display_name_or_fallback,
     username_for_display,
+)
+from bot.utils.telegram_markup import (
+    is_profile_link_error,
+    remove_profile_link_buttons,
 )
 
 
@@ -81,14 +85,42 @@ class NotificationService:
         queue_manager = get_queue_manager()
         if not queue_manager:
             logging.warning("Message queue manager not available, falling back to direct send")
+            final_thread_id = thread_id or self.settings.LOG_THREAD_ID
+
+            def _build_kwargs(markup: Optional[InlineKeyboardMarkup]) -> Dict[str, Any]:
+                kwargs: Dict[str, Any] = {
+                    "chat_id": self.settings.LOG_CHAT_ID,
+                    "text": message,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True,
+                }
+                if markup:
+                    kwargs["reply_markup"] = markup
+                if final_thread_id:
+                    kwargs["message_thread_id"] = final_thread_id
+                return kwargs
+
             try:
-                await self.bot.send_message(
-                    chat_id=self.settings.LOG_CHAT_ID,
-                    text=message,
-                    parse_mode="HTML",
-                    disable_web_page_preview=True,
-                    reply_markup=reply_markup,
-                    message_thread_id=thread_id or self.settings.LOG_THREAD_ID
+                await self.bot.send_message(**_build_kwargs(reply_markup))
+            except TelegramBadRequest as exc:
+                if is_profile_link_error(exc):
+                    fallback_markup = remove_profile_link_buttons(reply_markup)
+                    logging.warning(
+                        "Telegram rejected profile buttons for log chat %s: %s. "
+                        "Retrying without tg:// links.",
+                        self.settings.LOG_CHAT_ID,
+                        getattr(exc, "message", "") or str(exc),
+                    )
+                    try:
+                        await self.bot.send_message(**_build_kwargs(fallback_markup))
+                    except Exception as retry_exc:
+                        logging.error(
+                            "Failed to send notification without profile buttons to log "
+                            f"channel {self.settings.LOG_CHAT_ID}: {retry_exc}"
+                        )
+                    return
+                logging.error(
+                    f"Failed to send notification to log channel {self.settings.LOG_CHAT_ID}: {exc}"
                 )
             except Exception as e:
                 logging.error(f"Failed to send notification to log channel {self.settings.LOG_CHAT_ID}: {e}")

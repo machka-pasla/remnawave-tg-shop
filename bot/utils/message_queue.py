@@ -5,6 +5,12 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import deque
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest
+
+from bot.utils.telegram_markup import (
+    is_profile_link_error,
+    remove_profile_link_buttons,
+)
 
 
 @dataclass
@@ -51,14 +57,31 @@ class MessageQueue:
                 message = self.queue.popleft()
                 try:
                     await self._send_message(message)
-                    self.last_send_times.append(datetime.now())
-                    self.total_sent += 1
+                    self._record_send_time()
                     
-                    # Keep only recent send times (last minute)
-                    cutoff_time = datetime.now() - timedelta(seconds=60)
-                    while self.last_send_times and self.last_send_times[0] < cutoff_time:
-                        self.last_send_times.popleft()
-                        
+                except TelegramBadRequest as exc:
+                    fallback_message = self._build_profile_link_fallback(message, exc)
+                    if fallback_message:
+                        logging.warning(
+                            "Telegram rejected profile buttons for chat %s: %s. "
+                            "Retrying without tg:// links.",
+                            message.chat_id,
+                            getattr(exc, "message", "") or str(exc),
+                        )
+                        try:
+                            await self._send_message(fallback_message)
+                            self._record_send_time()
+                            continue
+                        except Exception as retry_exc:
+                            self.total_failed += 1
+                            logging.error(
+                                f"Failed to send fallback message to {message.chat_id}: {retry_exc}"
+                            )
+                            continue
+                    
+                    self.total_failed += 1
+                    logging.error(f"Failed to send queued message to {message.chat_id}: {exc}")
+                    
                 except Exception as e:
                     self.total_failed += 1
                     logging.error(f"Failed to send queued message to {message.chat_id}: {e}")
@@ -77,6 +100,38 @@ class MessageQueue:
         if time_since_last < self.delay_between_messages:
             wait_time = self.delay_between_messages - time_since_last
             await asyncio.sleep(wait_time)
+
+    def _record_send_time(self) -> None:
+        """Track sent message timestamps and purge old entries for rate limiting."""
+        now = datetime.now()
+        self.last_send_times.append(now)
+        self.total_sent += 1
+
+        cutoff_time = now - timedelta(seconds=60)
+        while self.last_send_times and self.last_send_times[0] < cutoff_time:
+            self.last_send_times.popleft()
+
+    def _build_profile_link_fallback(
+        self, message: QueuedMessage, exc: Exception
+    ) -> Optional[QueuedMessage]:
+        """Create a fallback message without tg://user buttons when Telegram rejects them."""
+        if not is_profile_link_error(exc):
+            return None
+
+        markup = message.kwargs.get("reply_markup")
+        if markup is None:
+            return None
+
+        safe_markup = remove_profile_link_buttons(markup)
+        fallback_kwargs = dict(message.kwargs)
+        fallback_kwargs["reply_markup"] = safe_markup
+
+        return QueuedMessage(
+            chat_id=message.chat_id,
+            method_name=message.method_name,
+            kwargs=fallback_kwargs,
+            callback=message.callback,
+        )
     
     async def _send_message(self, message: QueuedMessage) -> Any:
         """Send a single message - to be implemented by subclass"""

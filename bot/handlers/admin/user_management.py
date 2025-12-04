@@ -24,6 +24,10 @@ from bot.utils.text_sanitizer import (
     sanitize_username,
     username_for_display,
 )
+from bot.utils.telegram_markup import (
+    is_profile_link_error,
+    remove_profile_link_buttons,
+)
 
 router = Router(name="admin_user_management_router")
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_]{5,32}$")
@@ -174,27 +178,6 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str,
     return builder
 
 
-def _remove_profile_link_buttons(
-        markup: Optional[types.InlineKeyboardMarkup]) -> Optional[types.InlineKeyboardMarkup]:
-    """Drop buttons that rely on tg://user links to avoid BUTTON_USER_INVALID errors."""
-    if not markup or not markup.inline_keyboard:
-        return None
-
-    cleaned_rows = []
-    for row in markup.inline_keyboard:
-        filtered_row = [
-            button for button in row
-            if not (getattr(button, "url", None) and button.url.startswith("tg://user?id="))
-        ]
-        if filtered_row:
-            cleaned_rows.append(filtered_row)
-
-    if not cleaned_rows:
-        return None
-
-    return types.InlineKeyboardMarkup(inline_keyboard=cleaned_rows)
-
-
 async def _send_with_profile_link_fallback(
         sender: Callable[..., Awaitable[Any]],
         *,
@@ -210,16 +193,15 @@ async def _send_with_profile_link_fallback(
     try:
         await sender(**send_kwargs)
     except TelegramBadRequest as exc:
-        message = getattr(exc, "message", "") or str(exc)
-        if "BUTTON_USER_INVALID" not in message:
+        if not is_profile_link_error(exc):
             raise
 
         logging.warning(
             "Telegram rejected profile buttons for user %s: %s. Retrying without tg:// links.",
             user_id,
-            message,
+            getattr(exc, "message", "") or str(exc),
         )
-        fallback_markup = _remove_profile_link_buttons(markup)
+        fallback_markup = remove_profile_link_buttons(markup)
         send_kwargs["reply_markup"] = fallback_markup
         await sender(**send_kwargs)
 
