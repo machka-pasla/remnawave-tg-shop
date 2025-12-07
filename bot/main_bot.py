@@ -207,6 +207,7 @@ async def on_shutdown_configured(dispatcher: Dispatcher):
         "stars_service",
         "subscription_service",
         "referral_service",
+        "platega_service",
     ):
         await close_service(service_key)
 

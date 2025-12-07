@@ -37,6 +37,7 @@
   "back_to_autopay_method_choice_button": "⬅️ Back",
   "yookassa_autopay_charge_initiated": "Charge request sent to the selected card. We'll notify you once the payment completes.",
   "pay_with_sbp_button": "📱 SBP",
+  "pay_with_platega_button": "💳 Platega (SBP/Cards)",
   "back_to_payment_methods_button": "⬅️ Back",
   "pay_with_cryptopay_button": "💎 CryptoBot",
   "pay_with_tribute_button": "❤️ Tribute",

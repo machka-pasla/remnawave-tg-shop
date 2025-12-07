@@ -37,6 +37,7 @@
   "back_to_autopay_method_choice_button": "⬅️ Назад",
   "yookassa_autopay_charge_initiated": "Запрос на списание с выбранной карты отправлен. Сообщим, как только платёж завершится.",
   "pay_with_sbp_button": "📱 СБП",
+  "pay_with_platega_button": "💳 Platega (СБП/карты)",
   "back_to_payment_methods_button": "⬅️ Назад",
   "pay_with_cryptopay_button": "💎 CryptoBot",
   "pay_with_tribute_button": "❤️ Tribute",

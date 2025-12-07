@@ -121,6 +121,9 @@ def get_payment_method_keyboard(months: int, price: float,
     if settings.FREEKASSA_ENABLED:
         builder.button(text=_("pay_with_sbp_button"),
                        callback_data=f"pay_fk:{months}:{price}")
+    if settings.PLATEGA_ENABLED:
+        builder.button(text=_("pay_with_platega_button"),
+                       callback_data=f"pay_platega:{months}:{price}")
     if settings.YOOKASSA_ENABLED:
         builder.button(text=_("pay_with_yookassa_button"),
                        callback_data=f"pay_yk:{months}:{price}")

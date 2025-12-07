@@ -240,7 +240,8 @@ class NotificationService:
             "freekassa": "💳",
             "cryptopay": "₿",
             "stars": "⭐",
-            "tribute": "💎"
+            "tribute": "💎",
+            "platega": "💳",
         }.get(payment_provider.lower(), "💰")
         
         message = _(

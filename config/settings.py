@@ -53,6 +53,15 @@ class Settings(BaseSettings):
     CRYPTOPAY_CURRENCY_TYPE: str = Field(default="fiat")
     CRYPTOPAY_ASSET: str = Field(default="RUB")
     CRYPTOPAY_ENABLED: bool = Field(default=True)
+    PLATEGA_ENABLED: bool = Field(default=False)
+    PLATEGA_BASE_URL: str = Field(default="https://app.platega.io")
+    PLATEGA_MERCHANT_ID: Optional[str] = None
+    PLATEGA_SECRET: Optional[str] = None
+    PLATEGA_PAYMENT_METHOD: int = Field(
+        default=2, description="Platega payment method ID (e.g., 2 for SBP QR)"
+    )
+    PLATEGA_RETURN_URL: Optional[str] = Field(default=None)
+    PLATEGA_FAILED_URL: Optional[str] = Field(default=None)
 
     FREEKASSA_ENABLED: bool = Field(default=False)
     FREEKASSA_MERCHANT_ID: Optional[str] = None
@@ -294,6 +303,19 @@ class Settings(BaseSettings):
             return f"{base.rstrip('/')}{self.freekassa_webhook_path}"
         return None
 
+    @computed_field
+    @property
+    def platega_webhook_path(self) -> str:
+        return "/webhook/platega"
+
+    @computed_field
+    @property
+    def platega_full_webhook_url(self) -> Optional[str]:
+        base = self.WEBHOOK_BASE_URL
+        if base:
+            return f"{base.rstrip('/')}{self.platega_webhook_path}"
+        return None
+
     # Computed YooKassa receipt fields based on recurring toggle
     @computed_field
     @property
@@ -390,7 +412,12 @@ class Settings(BaseSettings):
             return None
         return v
 
-    @field_validator('REQUIRED_CHANNEL_LINK', mode='before')
+    @field_validator(
+        'REQUIRED_CHANNEL_LINK',
+        'PLATEGA_RETURN_URL',
+        'PLATEGA_FAILED_URL',
+        mode='before',
+    )
     @classmethod
     def sanitize_optional_link(cls, v):
         if isinstance(v, str) and not v.strip():
@@ -455,6 +482,15 @@ def get_settings() -> Settings:
                 if not _settings_instance.subscription_options:
                     logging.warning(
                         "CRITICAL: FreeKassa is enabled but no subscription prices are configured (RUB_PRICE_*). Users will not see payment buttons."
+                    )
+
+            if _settings_instance.PLATEGA_ENABLED:
+                if (
+                    not _settings_instance.PLATEGA_MERCHANT_ID
+                    or not _settings_instance.PLATEGA_SECRET
+                ):
+                    logging.warning(
+                        "CRITICAL: Platega is enabled but merchant credentials (PLATEGA_MERCHANT_ID/PLATEGA_SECRET) are missing. Platega payments will not work."
                     )
 
         except ValidationError as e:
