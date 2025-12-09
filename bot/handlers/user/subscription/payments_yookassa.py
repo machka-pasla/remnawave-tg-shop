@@ -340,7 +340,7 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
     months, price_rub = parsed
     user_id = callback.from_user.id
     currency_code_for_yk = "RUB"
-    autopay_enabled = bool(getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False))
+    autopay_enabled = bool(settings.yookassa_autopayments_active)
     autopay_require_binding = bool(
         getattr(settings, 'YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING', True)
     )
@@ -455,7 +455,7 @@ async def pay_yk_new_card_handler(callback: types.CallbackQuery, settings: Setti
     months, price_rub = parsed
     user_id = callback.from_user.id
     currency_code_for_yk = "RUB"
-    autopay_enabled = bool(getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False))
+    autopay_enabled = bool(settings.yookassa_autopayments_active)
     autopay_require_binding = bool(
         getattr(settings, 'YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING', True)
     )
@@ -494,7 +494,7 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
             pass
         return
 
-    autopay_enabled = bool(getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False))
+    autopay_enabled = bool(settings.yookassa_autopayments_active)
     if not autopay_enabled:
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)
@@ -633,7 +633,7 @@ async def pay_yk_use_saved_handler(callback: types.CallbackQuery, settings: Sett
             pass
         return
 
-    autopay_enabled = bool(getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False))
+    autopay_enabled = bool(settings.yookassa_autopayments_active)
     if not autopay_enabled:
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)

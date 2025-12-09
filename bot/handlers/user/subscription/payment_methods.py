@@ -22,7 +22,7 @@ router = Router(name="user_subscription_payment_methods_router")
 async def payment_methods_manage(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -75,7 +75,7 @@ async def payment_methods_manage(callback: types.CallbackQuery, settings: Settin
 async def payment_method_bind(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession, yookassa_service: YooKassaService):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -109,7 +109,7 @@ async def payment_method_bind(callback: types.CallbackQuery, settings: Settings,
 async def payment_method_delete_confirm(callback: types.CallbackQuery, settings: Settings, i18n_data: dict):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -130,7 +130,7 @@ async def payment_method_delete_confirm(callback: types.CallbackQuery, settings:
 async def payment_method_delete(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -204,7 +204,7 @@ async def payment_method_delete(callback: types.CallbackQuery, settings: Setting
 async def payment_method_view(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -325,7 +325,7 @@ async def payment_method_view(callback: types.CallbackQuery, settings: Settings,
 async def payment_method_history(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession, yookassa_service: YooKassaService):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)

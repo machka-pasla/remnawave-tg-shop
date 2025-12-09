@@ -139,7 +139,7 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         # Try to capture and save payment method for future charges if available
         try:
             payment_method = payment_info_from_webhook.get("payment_method")
-            if getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False) and isinstance(payment_method, dict) and payment_method.get("saved", False):
+            if settings.yookassa_autopayments_active and isinstance(payment_method, dict) and payment_method.get("saved", False):
                 pm_id = payment_method.get("id")
                 pm_type = payment_method.get("type")
                 title = payment_method.get("title")
@@ -499,7 +499,7 @@ async def yookassa_webhook_route(request: web.Request):
                     elif notification_object.event == YOOKASSA_EVENT_PAYMENT_WAITING_FOR_CAPTURE:
                         # Bind-only flow: save method and cancel auth if metadata has bind_only
                         metadata = payment_dict_for_processing.get("metadata", {}) or {}
-                        if getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False) and metadata.get("bind_only") == "1":
+                        if settings.yookassa_autopayments_active and metadata.get("bind_only") == "1":
                             try:
                                 user_id_str = metadata.get("user_id")
                                 if user_id_str and user_id_str.isdigit():

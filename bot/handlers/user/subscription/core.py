@@ -225,7 +225,7 @@ async def my_subscription_command_handler(
             ])
 
         # 2) Auto-renew toggle (if supported and not tribute)
-        if local_sub and local_sub.provider != "tribute" and getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+        if local_sub and local_sub.provider != "tribute" and settings.yookassa_autopayments_active:
             toggle_text = (
                 get_text("autorenew_disable_button") if local_sub.auto_renew_enabled else get_text("autorenew_enable_button")
             )
@@ -237,7 +237,7 @@ async def my_subscription_command_handler(
             ])
 
         # 3) Payment methods management (when autopayments enabled)
-        if getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+        if settings.yookassa_autopayments_active:
             prepend_rows.append([
                 InlineKeyboardButton(text=get_text("payment_methods_manage_button"), callback_data="pm:manage")
             ])

@@ -501,10 +501,7 @@ class SubscriptionService:
         )
 
         auto_renew_should_enable = False
-        if (
-            provider == "yookassa"
-            and getattr(self.settings, "YOOKASSA_AUTOPAYMENTS_ENABLED", False)
-        ):
+        if provider == "yookassa" and self.settings.yookassa_autopayments_active:
             auto_renew_should_enable = await user_billing_dal.user_has_saved_payment_method(
                 session, user_id
             )
@@ -829,7 +826,7 @@ class SubscriptionService:
         if not sub.auto_renew_enabled:
             return True
         # If autopayments are disabled globally, skip charging attempts
-        if not getattr(self.settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+        if not self.settings.yookassa_autopayments_active:
             return True
         if sub.provider == "tribute":
             # Tribute is paid externally; we do not auto-charge here

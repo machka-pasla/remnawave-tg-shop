@@ -429,6 +429,12 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
+    def yookassa_autopayments_active(self) -> bool:
+        """Autopay features are available only when YooKassa itself is enabled."""
+        return bool(self.YOOKASSA_ENABLED and self.YOOKASSA_AUTOPAYMENTS_ENABLED)
+
+    @computed_field
+    @property
     def payment_methods_order(self) -> List[str]:
         """
         Ordered list of payment providers to show in the subscription payment keyboard.
