@@ -717,7 +717,8 @@ class SubscriptionService:
             update_payload_local = {}
             panel_status = panel_user_data.get("status", "UNKNOWN").upper()
             panel_expire_at_str = panel_user_data.get("expireAt")
-            panel_traffic_used = panel_user_data.get("usedTrafficBytes")
+            traffic_stats = panel_user_data.get("userTraffic") or {}
+            panel_traffic_used = traffic_stats.get("usedTrafficBytes")
             panel_traffic_limit = panel_user_data.get("trafficLimitBytes")
             panel_sub_uuid_from_panel = panel_user_data.get(
                 "subscriptionUuid"
@@ -781,7 +782,7 @@ class SubscriptionService:
             "status_from_panel": panel_user_data.get("status", "UNKNOWN").upper(),
             "config_link": panel_user_data.get("subscriptionUrl"),
             "traffic_limit_bytes": panel_user_data.get("trafficLimitBytes"),
-            "traffic_used_bytes": panel_user_data.get("usedTrafficBytes"),
+            "traffic_used_bytes": (panel_user_data.get("userTraffic") or {}).get("usedTrafficBytes"),
             "user_bot_username": db_user.username,
             "is_panel_data": True,
             "max_devices": hwid_limit,
