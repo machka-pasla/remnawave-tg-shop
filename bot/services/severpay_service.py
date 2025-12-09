@@ -84,9 +84,9 @@ class SeverPayService:
         provided_sign = str(payload.get("sign") or "")
         if not provided_sign or not self.token:
             return False
+        # Webhook signatures are calculated on the original payload order (without sorting).
         data = {k: v for k, v in payload.items() if k != "sign"}
-        sorted_body = dict(sorted(data.items()))
-        expected_sign = self._sign_payload(sorted_body)
+        expected_sign = self._sign_payload(data)
         return hmac.compare_digest(provided_sign, expected_sign)
 
     async def create_payment(
