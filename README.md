@@ -77,39 +77,39 @@
 
     | Переменная | Описание |
     | --- | --- |
-| `WEBHOOK_BASE_URL`| **Обязательно.** Базовый URL для вебхуков, например `https://your.domain.com`. |
-| `WEB_SERVER_HOST` | Хост для веб-сервера. | `0.0.0.0` |
-| `WEB_SERVER_PORT` | Порт для веб-сервера. | `8080` |
-| `PAYMENT_METHODS_ORDER` | (Опционально) Порядок отображения кнопок оплаты через запятую. Поддерживаемые ключи: `severpay`, `freekassa`, `platega`, `yookassa`, `tribute`, `stars`, `cryptopay`. Первый будет сверху. |
-| `YOOKASSA_ENABLED` | Включить/выключить YooKassa (`true`/`false`). |
-| `YOOKASSA_SHOP_ID` | ID вашего магазина в YooKassa. |
-| `YOOKASSA_SECRET_KEY`| Секретный ключ магазина YooKassa. |
-| `YOOKASSA_AUTOPAYMENTS_ENABLED` | Включить автопродление (сохранение карт, автосписания, управление способами оплаты). |
-| `YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING` | Требовать обязательную привязку карты при оплате с автосписанием. Установите `false`, чтобы пользователю показывался чекбокс «Сохранить карту». |
-| `CRYPTOPAY_ENABLED` | Включить/выключить CryptoPay (`true`/`false`). |
-| `CRYPTOPAY_TOKEN` | Токен из вашего CryptoPay App. |
-| `FREEKASSA_ENABLED` | Включить/выключить FreeKassa (`true`/`false`). |
-| `FREEKASSA_MERCHANT_ID` | ID вашего магазина в FreeKassa. |
-| `FREEKASSA_API_KEY` | API-ключ для запросов к FreeKassa REST API. |
-| `FREEKASSA_SECOND_SECRET` | Секретное слово №2 — используется для проверки уведомлений от FreeKassa. |
-| `FREEKASSA_PAYMENT_URL` | (Опционально, legacy SCI) Базовый URL платёжной формы FreeKassa. По умолчанию `https://pay.freekassa.ru/`. |
-| `FREEKASSA_PAYMENT_IP` | Внешний IP вашего сервера, который будет передаваться в запрос оплаты. |
-| `FREEKASSA_PAYMENT_METHOD_ID` | ID метода оплаты через магазин FreeKassa. По умолчанию `44`. |
-| `STARS_ENABLED` | Включить/выключить Telegram Stars (`true`/`false`). |
-| `TRIBUTE_ENABLED`| Включить/выключить Tribute (`true`/`false`). |
-| `PLATEGA_ENABLED`| Включить/выключить Platega (`true`/`false`). |
-| `PLATEGA_MERCHANT_ID`| MerchantId из личного кабинета Platega. |
-| `PLATEGA_SECRET`| API секрет для запросов Platega. |
-| `PLATEGA_PAYMENT_METHOD`| ID способа оплаты (2 — SBP QR, 10 — РФ карты, 12 — международные карты, 13 — crypto). |
-| `PLATEGA_RETURN_URL`| (Опционально) URL редиректа после успешной оплаты. По умолчанию ссылка на бота. |
-| `PLATEGA_FAILED_URL`| (Опционально) URL редиректа при ошибке/отмене. По умолчанию как `PLATEGA_RETURN_URL`. |
-| `SEVERPAY_ENABLED` | Включить/выключить SeverPay (`true`/`false`). |
-| `SEVERPAY_MID` | MID магазина в SeverPay. |
-| `SEVERPAY_TOKEN` | Секрет/токен для подписи запросов SeverPay. |
-| `SEVERPAY_BASE_URL` | (Опционально) Базовый URL API SeverPay. По умолчанию `https://severpay.io/api/merchant`. |
-| `SEVERPAY_RETURN_URL` | (Опционально) URL редиректа после оплаты (по умолчанию ссылка на бота). |
-| `SEVERPAY_LIFETIME_MINUTES` | (Опционально) Время жизни платежной ссылки в минутах (30–4320). |
-</details>
+    | `WEBHOOK_BASE_URL`| **Обязательно.** Базовый URL для вебхуков, например `https://your.domain.com`. |
+    | `WEB_SERVER_HOST` | Хост для веб-сервера. | `0.0.0.0` |
+    | `WEB_SERVER_PORT` | Порт для веб-сервера. | `8080` |
+    | `PAYMENT_METHODS_ORDER` | (Опционально) Порядок отображения кнопок оплаты через запятую. Поддерживаемые ключи: `severpay`, `freekassa`, `platega`, `yookassa`, `tribute`, `stars`, `cryptopay`. Первый будет сверху. |
+    | `YOOKASSA_ENABLED` | Включить/выключить YooKassa (`true`/`false`). |
+    | `YOOKASSA_SHOP_ID` | ID вашего магазина в YooKassa. |
+    | `YOOKASSA_SECRET_KEY`| Секретный ключ магазина YooKassa. |
+    | `YOOKASSA_AUTOPAYMENTS_ENABLED` | Включить автопродление (сохранение карт, автосписания, управление способами оплаты). |
+    | `YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING` | Требовать обязательную привязку карты при оплате с автосписанием. Установите `false`, чтобы пользователю показывался чекбокс «Сохранить карту». |
+    | `CRYPTOPAY_ENABLED` | Включить/выключить CryptoPay (`true`/`false`). |
+    | `CRYPTOPAY_TOKEN` | Токен из вашего CryptoPay App. |
+    | `FREEKASSA_ENABLED` | Включить/выключить FreeKassa (`true`/`false`). |
+    | `FREEKASSA_MERCHANT_ID` | ID вашего магазина в FreeKassa. |
+    | `FREEKASSA_API_KEY` | API-ключ для запросов к FreeKassa REST API. |
+    | `FREEKASSA_SECOND_SECRET` | Секретное слово №2 — используется для проверки уведомлений от FreeKassa. |
+    | `FREEKASSA_PAYMENT_URL` | (Опционально, legacy SCI) Базовый URL платёжной формы FreeKassa. По умолчанию `https://pay.freekassa.ru/`. |
+    | `FREEKASSA_PAYMENT_IP` | Внешний IP вашего сервера, который будет передаваться в запрос оплаты. |
+    | `FREEKASSA_PAYMENT_METHOD_ID` | ID метода оплаты через магазин FreeKassa. По умолчанию `44`. |
+    | `STARS_ENABLED` | Включить/выключить Telegram Stars (`true`/`false`). |
+    | `TRIBUTE_ENABLED`| Включить/выключить Tribute (`true`/`false`). |
+    | `PLATEGA_ENABLED`| Включить/выключить Platega (`true`/`false`). |
+    | `PLATEGA_MERCHANT_ID`| MerchantId из личного кабинета Platega. |
+    | `PLATEGA_SECRET`| API секрет для запросов Platega. |
+    | `PLATEGA_PAYMENT_METHOD`| ID способа оплаты (2 — SBP QR, 10 — РФ карты, 12 — международные карты, 13 — crypto). |
+    | `PLATEGA_RETURN_URL`| (Опционально) URL редиректа после успешной оплаты. По умолчанию ссылка на бота. |
+    | `PLATEGA_FAILED_URL`| (Опционально) URL редиректа при ошибке/отмене. По умолчанию как `PLATEGA_RETURN_URL`. |
+    | `SEVERPAY_ENABLED` | Включить/выключить SeverPay (`true`/`false`). |
+    | `SEVERPAY_MID` | MID магазина в SeverPay. |
+    | `SEVERPAY_TOKEN` | Секрет/токен для подписи запросов SeverPay. |
+    | `SEVERPAY_BASE_URL` | (Опционально) Базовый URL API SeverPay. По умолчанию `https://severpay.io/api/merchant`. |
+    | `SEVERPAY_RETURN_URL` | (Опционально) URL редиректа после оплаты (по умолчанию ссылка на бота). |
+    | `SEVERPAY_LIFETIME_MINUTES` | (Опционально) Время жизни платежной ссылки в минутах (30–4320). |
+    </details>
 
     <details>
     <summary><b>Настройки подписок</b></summary>
@@ -136,7 +136,7 @@
     | `USER_HWID_DEVICE_LIMIT`| Лимит устройств (HWID) для новых пользователей (0 - безлимит). |
 
     > Раздел "Мои устройства" становится доступен пользователям только при включении `MY_DEVICES_SECTION_ENABLED`. Значение лимита устройств при создании записей в панели берётся из `USER_HWID_DEVICE_LIMIT`.
-    </gidetails>
+    </details>
 
     <details>
     <summary><b>Настройки пробного периода</b></summary>
