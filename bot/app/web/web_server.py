@@ -32,6 +32,7 @@ async def build_and_start_web_app(
         "tribute_service",
         "panel_webhook_service",
         "platega_service",
+        "severpay_service",
     ):
         # Access dispatcher workflow_data directly to avoid sequence protocol issues
         if hasattr(dp, "workflow_data") and key in dp.workflow_data:  # type: ignore
@@ -54,6 +55,7 @@ async def build_and_start_web_app(
     from bot.services.panel_webhook_service import panel_webhook_route
     from bot.services.freekassa_service import freekassa_webhook_route
     from bot.services.platega_service import platega_webhook_route
+    from bot.services.severpay_service import severpay_webhook_route
 
     tribute_path = settings.tribute_webhook_path
     if tribute_path.startswith("/"):
@@ -74,6 +76,11 @@ async def build_and_start_web_app(
     if pg_path.startswith("/"):
         app.router.add_post(pg_path, platega_webhook_route)
         logging.info(f"Platega webhook route configured at: [POST] {pg_path}")
+
+    sp_path = settings.severpay_webhook_path
+    if sp_path.startswith("/"):
+        app.router.add_post(sp_path, severpay_webhook_route)
+        logging.info(f"SeverPay webhook route configured at: [POST] {sp_path}")
 
     # YooKassa webhook (register only when base URL present and path configured)
     yk_path = settings.yookassa_webhook_path

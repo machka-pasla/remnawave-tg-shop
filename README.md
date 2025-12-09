@@ -11,7 +11,7 @@
 -   **Пробная подписка:** Система пробных подписок для новых пользователей (активируется вручную по кнопке).
 -   **Промокоды:** Возможность применять промокоды для получения скидок или бонусных дней.
 -   **Реферальная программа:** Пользователи могут приглашать друзей и получать за это бонусные дни подписки.
--   **Оплата:** Поддержка оплаты через YooKassa, FreeKassa (REST API), Platega, CryptoPay, Telegram Stars и Tribute.
+    -   **Оплата:** Поддержка оплаты через YooKassa, FreeKassa (REST API), Platega, SeverPay, CryptoPay, Telegram Stars и Tribute.
 
 ### Для администраторов:
 -   **Защищенная админ-панель:** Доступ только для администраторов, указанных в `ADMIN_IDS`.
@@ -28,7 +28,7 @@
 -   **Aiogram 3.x:** Асинхронный фреймворк для Telegram ботов.
 -   **aiohttp:** Для запуска веб-сервера (вебхуки).
 -   **SQLAlchemy 2.x & asyncpg:** Асинхронная работа с базой данных PostgreSQL.
--   **YooKassa, FreeKassa API, Platega, aiocryptopay:** Интеграции с платежными системами.
+-   **YooKassa, FreeKassa API, Platega, SeverPay, aiocryptopay:** Интеграции с платежными системами.
 -   **Pydantic:** Для управления настройками из `.env` файла.
 -   **Docker & Docker Compose:** Для контейнеризации и развертывания.
 
@@ -77,14 +77,15 @@
 
     | Переменная | Описание |
     | --- | --- |
-    | `WEBHOOK_BASE_URL`| **Обязательно.** Базовый URL для вебхуков, например `https://your.domain.com`. |
-    | `WEB_SERVER_HOST` | Хост для веб-сервера. | `0.0.0.0` |
-    | `WEB_SERVER_PORT` | Порт для веб-сервера. | `8080` |
-    | `YOOKASSA_ENABLED` | Включить/выключить YooKassa (`true`/`false`). |
-    | `YOOKASSA_SHOP_ID` | ID вашего магазина в YooKassa. |
-    | `YOOKASSA_SECRET_KEY`| Секретный ключ магазина YooKassa. |
-    | `YOOKASSA_AUTOPAYMENTS_ENABLED` | Включить автопродление (сохранение карт, автосписания, управление способами оплаты). |
-    | `YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING` | Требовать обязательную привязку карты при оплате с автосписанием. Установите `false`, чтобы пользователю показывался чекбокс «Сохранить карту». |
+| `WEBHOOK_BASE_URL`| **Обязательно.** Базовый URL для вебхуков, например `https://your.domain.com`. |
+| `WEB_SERVER_HOST` | Хост для веб-сервера. | `0.0.0.0` |
+| `WEB_SERVER_PORT` | Порт для веб-сервера. | `8080` |
+| `PAYMENT_METHODS_ORDER` | (Опционально) Порядок отображения кнопок оплаты через запятую. Поддерживаемые ключи: `severpay`, `freekassa`, `platega`, `yookassa`, `tribute`, `stars`, `cryptopay`. Первый будет сверху. |
+| `YOOKASSA_ENABLED` | Включить/выключить YooKassa (`true`/`false`). |
+| `YOOKASSA_SHOP_ID` | ID вашего магазина в YooKassa. |
+| `YOOKASSA_SECRET_KEY`| Секретный ключ магазина YooKassa. |
+| `YOOKASSA_AUTOPAYMENTS_ENABLED` | Включить автопродление (сохранение карт, автосписания, управление способами оплаты). |
+| `YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING` | Требовать обязательную привязку карты при оплате с автосписанием. Установите `false`, чтобы пользователю показывался чекбокс «Сохранить карту». |
 | `CRYPTOPAY_ENABLED` | Включить/выключить CryptoPay (`true`/`false`). |
 | `CRYPTOPAY_TOKEN` | Токен из вашего CryptoPay App. |
 | `FREEKASSA_ENABLED` | Включить/выключить FreeKassa (`true`/`false`). |
@@ -102,6 +103,12 @@
 | `PLATEGA_PAYMENT_METHOD`| ID способа оплаты (2 — SBP QR, 10 — РФ карты, 12 — международные карты, 13 — crypto). |
 | `PLATEGA_RETURN_URL`| (Опционально) URL редиректа после успешной оплаты. По умолчанию ссылка на бота. |
 | `PLATEGA_FAILED_URL`| (Опционально) URL редиректа при ошибке/отмене. По умолчанию как `PLATEGA_RETURN_URL`. |
+| `SEVERPAY_ENABLED` | Включить/выключить SeverPay (`true`/`false`). |
+| `SEVERPAY_MID` | MID магазина в SeverPay. |
+| `SEVERPAY_TOKEN` | Секрет/токен для подписи запросов SeverPay. |
+| `SEVERPAY_BASE_URL` | (Опционально) Базовый URL API SeverPay. По умолчанию `https://severpay.io/api/merchant`. |
+| `SEVERPAY_RETURN_URL` | (Опционально) URL редиректа после оплаты (по умолчанию ссылка на бота). |
+| `SEVERPAY_LIFETIME_MINUTES` | (Опционально) Время жизни платежной ссылки в минутах (30–4320). |
 </details>
 
     <details>
@@ -156,6 +163,7 @@
     -   `https://<ваш_домен>/webhook/yookassa` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/yookassa`
     -   `https://<ваш_домен>/webhook/freekassa` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/freekassa`
     -   `https://<ваш_домен>/webhook/platega` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/platega`
+    -   `https://<ваш_домен>/webhook/severpay` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/severpay`
     -   `https://<ваш_домен>/webhook/cryptopay` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/cryptopay`
     -   `https://<ваш_домен>/webhook/tribute` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/tribute`
     -   `https://<ваш_домен>/webhook/panel` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/panel`

@@ -242,6 +242,7 @@ class NotificationService:
             "stars": "⭐",
             "tribute": "💎",
             "platega": "💳",
+            "severpay": "💳",
         }.get(payment_provider.lower(), "💰")
         
         message = _(

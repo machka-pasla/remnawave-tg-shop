@@ -118,23 +118,39 @@ def get_payment_method_keyboard(months: int, price: float,
                                 i18n_instance, settings: Settings) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
-    if settings.FREEKASSA_ENABLED:
-        builder.button(text=_("pay_with_sbp_button"),
-                       callback_data=f"pay_fk:{months}:{price}")
-    if settings.PLATEGA_ENABLED:
-        builder.button(text=_("pay_with_platega_button"),
-                       callback_data=f"pay_platega:{months}:{price}")
-    if settings.YOOKASSA_ENABLED:
-        builder.button(text=_("pay_with_yookassa_button"),
-                       callback_data=f"pay_yk:{months}:{price}")
-    if settings.TRIBUTE_ENABLED and tribute_url:
-        builder.button(text=_("pay_with_tribute_button"), url=tribute_url)
-    if settings.STARS_ENABLED and stars_price is not None:
-        builder.button(text=_("pay_with_stars_button"),
-                       callback_data=f"pay_stars:{months}:{stars_price}")
-    if settings.CRYPTOPAY_ENABLED:
-        builder.button(text=_("pay_with_cryptopay_button"),
-                       callback_data=f"pay_crypto:{months}:{price}")
+    for method in settings.payment_methods_order:
+        if method == "severpay" and getattr(settings, "SEVERPAY_ENABLED", False):
+            builder.button(
+                text=_("pay_with_severpay_button"),
+                callback_data=f"pay_severpay:{months}:{price}",
+            )
+        elif method == "freekassa" and settings.FREEKASSA_ENABLED:
+            builder.button(
+                text=_("pay_with_sbp_button"),
+                callback_data=f"pay_fk:{months}:{price}",
+            )
+        elif method == "platega" and settings.PLATEGA_ENABLED:
+            builder.button(
+                text=_("pay_with_platega_button"),
+                callback_data=f"pay_platega:{months}:{price}",
+            )
+        elif method == "yookassa" and settings.YOOKASSA_ENABLED:
+            builder.button(
+                text=_("pay_with_yookassa_button"),
+                callback_data=f"pay_yk:{months}:{price}",
+            )
+        elif method == "tribute" and settings.TRIBUTE_ENABLED and tribute_url:
+            builder.button(text=_("pay_with_tribute_button"), url=tribute_url)
+        elif method == "stars" and settings.STARS_ENABLED and stars_price is not None:
+            builder.button(
+                text=_("pay_with_stars_button"),
+                callback_data=f"pay_stars:{months}:{stars_price}",
+            )
+        elif method == "cryptopay" and settings.CRYPTOPAY_ENABLED:
+            builder.button(
+                text=_("pay_with_cryptopay_button"),
+                callback_data=f"pay_crypto:{months}:{price}",
+            )
     builder.button(text=_(key="cancel_button"),
                    callback_data="main_action:subscribe")
     builder.adjust(1)

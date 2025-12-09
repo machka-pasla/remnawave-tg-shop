@@ -72,9 +72,23 @@ class Settings(BaseSettings):
     FREEKASSA_PAYMENT_IP: Optional[str] = None
     FREEKASSA_PAYMENT_METHOD_ID: Optional[int] = None
 
+    SEVERPAY_ENABLED: bool = Field(default=False)
+    SEVERPAY_MID: Optional[int] = None
+    SEVERPAY_TOKEN: Optional[str] = None
+    SEVERPAY_RETURN_URL: Optional[str] = None
+    SEVERPAY_BASE_URL: str = Field(default="https://severpay.io/api/merchant")
+    SEVERPAY_LIFETIME_MINUTES: Optional[int] = Field(
+        default=None,
+        description="Lifetime of the payment link in minutes (30-4320, defaults to provider value)",
+    )
+
     YOOKASSA_ENABLED: bool = Field(default=True)
     STARS_ENABLED: bool = Field(default=True)
     TRIBUTE_ENABLED: bool = Field(default=True)
+    PAYMENT_METHODS_ORDER: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of payment methods to show (e.g., severpay,freekassa,yookassa,platega,stars,cryptopay,tribute)",
+    )
 
     MONTH_1_ENABLED: bool = Field(default=True, alias="1_MONTH_ENABLED")
     MONTH_3_ENABLED: bool = Field(default=True, alias="3_MONTHS_ENABLED")
@@ -305,6 +319,19 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
+    def severpay_webhook_path(self) -> str:
+        return "/webhook/severpay"
+
+    @computed_field
+    @property
+    def severpay_full_webhook_url(self) -> Optional[str]:
+        base = self.WEBHOOK_BASE_URL
+        if base:
+            return f"{base.rstrip('/')}{self.severpay_webhook_path}"
+        return None
+
+    @computed_field
+    @property
     def platega_webhook_path(self) -> str:
         return "/webhook/platega"
 
@@ -399,6 +426,30 @@ class Settings(BaseSettings):
         if self.REFERRAL_BONUS_DAYS_REFEREE_12_MONTHS is not None:
             bonuses[12] = self.REFERRAL_BONUS_DAYS_REFEREE_12_MONTHS
         return bonuses
+
+    @computed_field
+    @property
+    def payment_methods_order(self) -> List[str]:
+        """
+        Ordered list of payment providers to show in the subscription payment keyboard.
+        """
+        default_order = [
+            "freekassa",
+            "platega",
+            "severpay",
+            "yookassa",
+            "tribute",
+            "stars",
+            "cryptopay",
+        ]
+        if not self.PAYMENT_METHODS_ORDER:
+            return default_order
+        methods = []
+        for item in self.PAYMENT_METHODS_ORDER.split(","):
+            slug = item.strip().lower()
+            if slug:
+                methods.append(slug)
+        return methods or default_order
     
     # Logging Configuration
     LOG_CHAT_ID: Optional[int] = Field(default=None, description="Telegram chat/group ID for sending notifications")
@@ -416,6 +467,7 @@ class Settings(BaseSettings):
         'REQUIRED_CHANNEL_LINK',
         'PLATEGA_RETURN_URL',
         'PLATEGA_FAILED_URL',
+        'SEVERPAY_RETURN_URL',
         mode='before',
     )
     @classmethod
@@ -424,7 +476,7 @@ class Settings(BaseSettings):
             return None
         return v
     
-    @field_validator('USER_HWID_DEVICE_LIMIT', mode='before')
+    @field_validator('USER_HWID_DEVICE_LIMIT', 'SEVERPAY_MID', 'SEVERPAY_LIFETIME_MINUTES', mode='before')
     @classmethod
     def validate_optional_int(cls, v):
         if isinstance(v, str):
@@ -491,6 +543,11 @@ def get_settings() -> Settings:
                 ):
                     logging.warning(
                         "CRITICAL: Platega is enabled but merchant credentials (PLATEGA_MERCHANT_ID/PLATEGA_SECRET) are missing. Platega payments will not work."
+                    )
+            if _settings_instance.SEVERPAY_ENABLED:
+                if not _settings_instance.SEVERPAY_MID or not _settings_instance.SEVERPAY_TOKEN:
+                    logging.warning(
+                        "CRITICAL: SeverPay is enabled but MID or TOKEN is missing. SeverPay payments will not work."
                     )
 
         except ValidationError as e:
