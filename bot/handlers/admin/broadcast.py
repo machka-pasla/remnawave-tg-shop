@@ -122,7 +122,6 @@ async def process_broadcast_message_handler(
         await message.answer(
             _(
                 "admin_broadcast_invalid_html",
-                default="❌ Некорректный HTML в сообщении. Пожалуйста, отправьте корректный HTML (поддерживаются теги Telegram) или уберите теги.\nОшибка: {error}",
                 error=str(e),
             )
         )
@@ -347,15 +346,6 @@ async def confirm_broadcast_callback_handler(
             total_failed = failed_count + dynamic_failed
             return _(
                 "broadcast_queue_result",
-                default=(
-                    "🚀 Рассылка поставлена в очередь!\n"
-                    "📤 В очередь добавлено: {sent_count}\n"
-                    "❌ Ошибок: {failed_count}\n\n"
-                    "📊 Статус очередей:\n"
-                    "👥 Очередь пользователей: {user_queue_size} сообщений\n"
-                    "📢 Очередь групп: {group_queue_size} сообщений\n\n"
-                    "ℹ️ Сообщения будут отправлены автоматически с соблюдением лимитов Telegram."
-                ),
                 sent_count=sent_count,
                 failed_count=total_failed,
                 user_queue_size=stats["user_queue_size"],

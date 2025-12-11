@@ -51,9 +51,9 @@ async def payment_methods_manage(callback: types.CallbackQuery, settings: Settin
                 return get_text("payment_method_wallet_title", last4=l4)
             return get_text("payment_method_wallet_title", last4="****")
         if last4:
-            network_name = network or get_text("payment_network_card", default="Card")
+            network_name = network or get_text("payment_network_card")
             return get_text("payment_method_card_title", network=network_name, last4=last4)
-        network_name = network or get_text("payment_network_generic", default="Payment method")
+        network_name = network or get_text("payment_network_generic")
         return get_text("payment_method_generic_title", network=network_name)
 
     for m in methods:
@@ -177,9 +177,9 @@ async def payment_method_delete(callback: types.CallbackQuery, settings: Setting
                         return _("payment_method_wallet_title", last4=l4)
                     return _("payment_method_wallet_title", last4="****")
                 if last4:
-                    network_name = network or _("payment_network_card", default="Card")
+                    network_name = network or _("payment_network_card")
                     return _("payment_method_card_title", network=network_name, last4=last4)
-                network_name = network or _("payment_network_generic", default="Payment method")
+                network_name = network or _("payment_network_generic")
                 return _("payment_method_generic_title", network=network_name)
             title = _format_pm_title(m.card_network, m.card_last4)
             cards.append((str(m.method_id), title if not m.is_default else f"⭐ {title}"))
@@ -239,9 +239,9 @@ async def payment_method_view(callback: types.CallbackQuery, settings: Settings,
                     return _("payment_method_wallet_title", last4=l4)
                 return _("payment_method_wallet_title", last4="****")
             if last4:
-                network_name = network or _("payment_network_card", default="Card")
+                network_name = network or _("payment_network_card")
                 return _("payment_method_card_title", network=network_name, last4=last4)
-            network_name = network or _("payment_network_generic", default="Payment method")
+            network_name = network or _("payment_network_generic")
             return _("payment_method_generic_title", network=network_name)
 
         title = _format_pm_title(sel.card_network, sel.card_last4)
@@ -307,9 +307,9 @@ async def payment_method_view(callback: types.CallbackQuery, settings: Settings,
                 return _("payment_method_wallet_title", last4=l4)
             return _("payment_method_wallet_title", last4="****")
         if last4:
-            network_name = network or _("payment_network_card", default="Card")
+            network_name = network or _("payment_network_card")
             return _("payment_method_card_title", network=network_name, last4=last4)
-        network_name = network or _("payment_network_generic", default="Payment method")
+        network_name = network or _("payment_network_generic")
         return _("payment_method_generic_title", network=network_name)
 
     title = _format_pm_title(billing.card_network, billing.card_last4)
@@ -440,9 +440,9 @@ async def payment_methods_list(callback: types.CallbackQuery, settings: Settings
                     return get_text("payment_method_wallet_title", last4=l4)
                 return get_text("payment_method_wallet_title", last4="****")
             if last4:
-                network_name = network or get_text("payment_network_card", default="Card")
+                network_name = network or get_text("payment_network_card")
                 return get_text("payment_method_card_title", network=network_name, last4=last4)
-            network_name = network or get_text("payment_network_generic", default="Payment method")
+            network_name = network or get_text("payment_network_generic")
             return get_text("payment_method_generic_title", network=network_name)
         title = _format_pm_title(m.card_network, m.card_last4)
         cards.append((str(m.method_id), title if not m.is_default else f"⭐ {title}"))

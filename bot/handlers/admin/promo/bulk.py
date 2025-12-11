@@ -34,8 +34,7 @@ async def create_bulk_promo_prompt_handler(callback: types.CallbackQuery,
 
     # Step 1: Ask for quantity
     prompt_text = _(
-        "admin_bulk_promo_step1_quantity",
-        default="🎟 <b>Массовое создание промокодов</b>\n\n<b>Шаг 1 из 4:</b> Количество\n\nВведите количество промокодов для создания (1-100):"
+        "admin_bulk_promo_step1_quantity"
     )
 
     try:
@@ -77,8 +76,7 @@ async def process_bulk_promo_quantity_handler(message: types.Message,
         quantity = int(message.text.strip())
         if not (1 <= quantity <= 100):
             await message.answer(_(
-                "admin_bulk_promo_invalid_quantity",
-                default="❌ Количество промокодов должно быть от 1 до 100"
+                "admin_bulk_promo_invalid_quantity"
             ))
             return
         
@@ -87,7 +85,6 @@ async def process_bulk_promo_quantity_handler(message: types.Message,
         # Step 2: Ask for bonus days
         prompt_text = _(
             "admin_bulk_promo_step2_bonus_days",
-            default="🎟 <b>Массовое создание промокодов</b>\n\n<b>Шаг 2 из 4:</b> Бонусные дни\n\nКоличество: <b>{quantity}</b>\n\nВведите количество бонусных дней для каждого промокода (1-365):",
             quantity=quantity
         )
         
@@ -100,8 +97,7 @@ async def process_bulk_promo_quantity_handler(message: types.Message,
         
     except ValueError:
         await message.answer(_(
-            "admin_promo_invalid_number",
-            default="❌ Введите корректное число"
+            "admin_promo_invalid_number"
         ))
     except Exception as e:
         logging.error(f"Error processing bulk promo quantity: {e}")
@@ -125,8 +121,7 @@ async def process_bulk_promo_bonus_days_handler(message: types.Message,
         bonus_days = int(message.text.strip())
         if not (1 <= bonus_days <= 365):
             await message.answer(_(
-                "admin_promo_invalid_bonus_days",
-                default="❌ Количество бонусных дней должно быть от 1 до 365"
+                "admin_promo_invalid_bonus_days"
             ))
             return
         
@@ -136,7 +131,6 @@ async def process_bulk_promo_bonus_days_handler(message: types.Message,
         data = await state.get_data()
         prompt_text = _(
             "admin_bulk_promo_step3_max_activations",
-            default="🎟 <b>Массовое создание промокодов</b>\n\n<b>Шаг 3 из 4:</b> Лимит активаций\n\nКоличество: <b>{quantity}</b>\nБонусные дни: <b>{bonus_days}</b>\n\nВведите максимальное количество активаций для каждого промокода (1-10000):",
             quantity=data.get("quantity"),
             bonus_days=bonus_days
         )
@@ -150,8 +144,7 @@ async def process_bulk_promo_bonus_days_handler(message: types.Message,
         
     except ValueError:
         await message.answer(_(
-            "admin_promo_invalid_number",
-            default="❌ Введите корректное число"
+            "admin_promo_invalid_number"
         ))
     except Exception as e:
         logging.error(f"Error processing bulk promo bonus days: {e}")
@@ -175,8 +168,7 @@ async def process_bulk_promo_max_activations_handler(message: types.Message,
         max_activations = int(message.text.strip())
         if not (1 <= max_activations <= 10000):
             await message.answer(_(
-                "admin_promo_invalid_max_activations",
-                default="❌ Максимальное количество активаций должно быть от 1 до 10000"
+                "admin_promo_invalid_max_activations"
             ))
             return
         
@@ -186,7 +178,6 @@ async def process_bulk_promo_max_activations_handler(message: types.Message,
         data = await state.get_data()
         prompt_text = _(
             "admin_bulk_promo_step4_validity",
-            default="🎟 <b>Массовое создание промокодов</b>\n\n<b>Шаг 4 из 4:</b> Срок действия\n\nКоличество: <b>{quantity}</b>\nБонусные дни: <b>{bonus_days}</b>\nМакс. активаций: <b>{max_activations}</b>\n\nВыберите срок действия промокодов:",
             quantity=data.get("quantity"),
             bonus_days=data.get("bonus_days"),
             max_activations=max_activations
@@ -196,19 +187,19 @@ async def process_bulk_promo_max_activations_handler(message: types.Message,
         builder = InlineKeyboardBuilder()
         builder.row(
             InlineKeyboardButton(
-                text=_("admin_promo_unlimited_validity", default="🔄 Без ограничений"),
+                text=_("admin_promo_unlimited_validity"),
                 callback_data="bulk_promo_unlimited_validity"
             )
         )
         builder.row(
             InlineKeyboardButton(
-                text=_("admin_promo_set_validity_days", default="📅 Указать дни"),
+                text=_("admin_promo_set_validity_days"),
                 callback_data="bulk_promo_set_validity"
             )
         )
         builder.row(
             InlineKeyboardButton(
-                text=_("admin_back_to_panel", default="🔙 В админ панель"),
+                text=_("admin_back_to_panel"),
                 callback_data="admin_action:main"
             )
         )
@@ -222,8 +213,7 @@ async def process_bulk_promo_max_activations_handler(message: types.Message,
         
     except ValueError:
         await message.answer(_(
-            "admin_promo_invalid_number",
-            default="❌ Введите корректное число"
+            "admin_promo_invalid_number"
         ))
     except Exception as e:
         logging.error(f"Error processing bulk promo max activations: {e}")
@@ -257,7 +247,6 @@ async def process_bulk_promo_set_validity(callback: types.CallbackQuery,
     data = await state.get_data()
     prompt_text = _(
         "admin_bulk_promo_enter_validity_days",
-        default="🎟 <b>Массовое создание промокодов</b>\n\n<b>Шаг 4 из 4:</b> Срок действия\n\nКоличество: <b>{quantity}</b>\nБонусные дни: <b>{bonus_days}</b>\nМакс. активаций: <b>{max_activations}</b>\n\nВведите количество дней действия промокодов (1-365):",
         quantity=data.get("quantity"),
         bonus_days=data.get("bonus_days"),
         max_activations=data.get("max_activations")
@@ -296,8 +285,7 @@ async def process_bulk_promo_validity_days_handler(message: types.Message,
         validity_days = int(message.text.strip())
         if not (1 <= validity_days <= 365):
             await message.answer(_(
-                "admin_promo_invalid_validity_days",
-                default="❌ Срок действия должен быть от 1 до 365 дней"
+                "admin_promo_invalid_validity_days"
             ))
             return
         
@@ -306,8 +294,7 @@ async def process_bulk_promo_validity_days_handler(message: types.Message,
         
     except ValueError:
         await message.answer(_(
-            "admin_promo_invalid_number",
-            default="❌ Введите корректное число"
+            "admin_promo_invalid_number"
         ))
     except Exception as e:
         logging.error(f"Error processing bulk promo validity days: {e}")
@@ -333,7 +320,6 @@ async def create_bulk_promo_codes_final(callback_or_message,
         # Show progress message
         progress_text = _(
             "admin_bulk_promo_creating",
-            default="🔄 Создание {quantity} промокодов...",
             quantity=quantity
         )
         
@@ -395,12 +381,10 @@ async def create_bulk_promo_codes_final(callback_or_message,
         # Success message
         success_lines = [
             _(
-                "admin_bulk_promo_created_title",
-                default="✅ <b>Массовое создание завершено!</b>\n"
+                "admin_bulk_promo_created_title"
             ),
             _(
                 "admin_bulk_promo_created_stats",
-                default="📊 Создано: <b>{created}</b> из <b>{total}</b>",
                 created=len(created_codes),
                 total=quantity
             )
@@ -409,14 +393,11 @@ async def create_bulk_promo_codes_final(callback_or_message,
         if data.get("validity_days"):
             validity_text = f"{data['validity_days']} дней"
         else:
-            validity_text = _("admin_promo_unlimited", default="Без ограничений")
+            validity_text = _("admin_promo_unlimited")
         
         success_lines.append(
             _(
                 "admin_bulk_promo_settings",
-                default="🎁 Бонусные дни: <b>{bonus_days}</b>\n"
-                       "📊 Макс. активаций: <b>{max_activations}</b>\n"
-                       "⏰ Срок действия: <b>{validity}</b>",
                 bonus_days=data["bonus_days"],
                 max_activations=data["max_activations"],
                 validity=validity_text
@@ -521,7 +502,7 @@ async def create_bulk_promo_codes_final(callback_or_message,
         
     except Exception as e:
         logging.error(f"Error creating bulk promo codes: {e}")
-        error_text = _("error_occurred_try_again", default="❌ Произошла ошибка. Попробуйте снова.")
+        error_text = _("error_occurred_try_again")
         
         if hasattr(callback_or_message, 'message'):  # CallbackQuery
             await callback_or_message.message.answer(error_text)
@@ -564,5 +545,5 @@ async def cancel_bulk_promo_creation_state_to_menu(callback: types.CallbackQuery
             reply_markup=get_admin_panel_keyboard(i18n, current_lang, settings)
         )
     
-    await callback.answer(_("admin_bulk_promo_creation_cancelled", default="Массовое создание промокодов отменено"))
+    await callback.answer(_("admin_bulk_promo_creation_cancelled"))
     await state.clear()

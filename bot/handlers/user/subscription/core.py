@@ -40,17 +40,29 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
         return
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
-    traffic_mode = bool(getattr(settings, "traffic_sale_mode", False))
-    options = settings.traffic_packages if traffic_mode else settings.subscription_options
-    text_content = (
-        get_text("select_traffic_package") if traffic_mode else get_text("select_subscription_period")
-    ) if options else get_text("no_subscription_options_available")
+    traffic_packages = getattr(settings, "traffic_packages", {}) or {}
+    stars_traffic_packages = getattr(settings, "stars_traffic_packages", {}) or {}
+    traffic_mode = bool(getattr(settings, "traffic_sale_mode", False) or stars_traffic_packages)
 
-    reply_markup = (
-        get_subscription_options_keyboard(options, currency_symbol_val, current_lang, i18n, traffic_mode=traffic_mode)
-        if options
-        else get_back_to_main_menu_markup(current_lang, i18n)
-    )
+    if traffic_mode:
+        if traffic_packages:
+            options = traffic_packages
+        elif stars_traffic_packages:
+            options = stars_traffic_packages
+            currency_symbol_val = "⭐"
+        else:
+            options = {}
+    else:
+        options = settings.subscription_options
+
+    if options:
+        text_content = get_text("select_traffic_package") if traffic_mode else get_text("select_subscription_period")
+        reply_markup = get_subscription_options_keyboard(
+            options, currency_symbol_val, current_lang, i18n, traffic_mode=traffic_mode
+        )
+    else:
+        text_content = get_text("no_subscription_options_available")
+        reply_markup = get_back_to_main_menu_markup(current_lang, i18n)
 
     target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
     if not target_message_obj:
@@ -108,7 +120,7 @@ async def my_subscription_command_handler(
         text = get_text("subscription_not_active")
 
         buy_button = InlineKeyboardButton(
-            text=get_text("menu_subscribe_inline", default="Купить"), callback_data="main_action:subscribe"
+            text=get_text("menu_subscribe_inline"), callback_data="main_action:subscribe"
         )
         back_markup = get_back_to_main_menu_markup(current_lang, i18n)
 

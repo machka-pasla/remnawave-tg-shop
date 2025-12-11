@@ -56,7 +56,6 @@ async def users_list_handler(callback: types.CallbackQuery,
         # Format message
         header_text = _(
             "admin_users_list_header",
-            default="👥 <b>Список пользователей</b>\n\nСтраница {current}/{total} ({total_users} пользователей)",
             current=page + 1,
             total=total_pages,
             total_users=total_users
@@ -88,8 +87,7 @@ async def user_search_prompt_handler(callback: types.CallbackQuery,
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
     prompt_text = _(
-        "admin_user_management_prompt",
-        default="👤 Управление пользователями\n\nВведите ID пользователя или @username для поиска:"
+        "admin_user_management_prompt"
     )
 
     try:
@@ -116,56 +114,54 @@ def get_user_card_keyboard(user_id: int, i18n_instance, lang: str,
     
     # Row 1: Trial and Subscription actions
     builder.button(
-        text=_(key="admin_user_reset_trial_button", default="🔄 Сбросить триал"),
+        text=_(key="admin_user_reset_trial_button"),
         callback_data=f"user_action:reset_trial:{user_id}"
     )
     builder.button(
-        text=_(key="admin_user_add_subscription_button", default="➕ Добавить дни"),
+        text=_(key="admin_user_add_subscription_button"),
         callback_data=f"user_action:add_subscription:{user_id}"
     )
     
     # Row 2: Block/Unblock and Message
     builder.button(
-        text=_(key="admin_user_toggle_ban_button", default="🚫 Заблокировать/Разблокировать"),
+        text=_(key="admin_user_toggle_ban_button"),
         callback_data=f"user_action:toggle_ban:{user_id}"
     )
     builder.button(
-        text=_(key="admin_user_send_message_button", default="✉️ Отправить сообщение"),
+        text=_(key="admin_user_send_message_button"),
         callback_data=f"user_action:send_message:{user_id}"
     )
     
     # Row 3: View actions
     builder.button(
-        text=_(key="admin_user_view_logs_button", default="📜 Действия пользователя"),
+        text=_(key="admin_user_view_logs_button"),
         callback_data=f"user_action:view_logs:{user_id}"
     )
     builder.button(
-        text=_(key="admin_user_refresh_button", default="🔄 Обновить"),
+        text=_(key="admin_user_refresh_button"),
         callback_data=f"user_action:refresh:{user_id}"
     )
 
     # Row 4: Quick links
     builder.button(
-        text=_(key="user_card_open_profile_button",
-               default="👤 Открыть профиль"),
+        text=_(key="user_card_open_profile_button"),
         url=f"tg://user?id={user_id}"
     )
     if referrer_id:
         builder.button(
-            text=_(key="user_card_open_referrer_profile_button",
-                   default="👤 Открыть профиль пригласившего"),
+            text=_(key="user_card_open_referrer_profile_button"),
             url=f"tg://user?id={referrer_id}"
         )
 
     # Row 5: Destructive action
     builder.button(
-        text=_(key="admin_user_delete_button", default="❌ Удалить пользователя"),
+        text=_(key="admin_user_delete_button"),
         callback_data=f"user_action:delete_user:{user_id}"
     )
     
     # Row 6: Navigation
     builder.button(
-        text=_(key="admin_user_search_new_button", default="🔍 Найти другого"),
+        text=_(key="admin_user_search_new_button"),
         callback_data="admin_action:users_management"
     )
     builder.button(
@@ -215,10 +211,10 @@ async def format_user_card(user: User, session: AsyncSession,
     
     # Basic user info
     card_parts = []
-    card_parts.append(f"👤 <b>{_('admin_user_card_title', default='Карточка пользователя')}</b>\n")
+    card_parts.append(f"👤 <b>{_('admin_user_card_title')}</b>\n")
     
     # User details
-    na_value = _("admin_user_na_value", default="N/A")
+    na_value = _("admin_user_na_value")
     safe_first_name = sanitize_display_name(user.first_name) if user.first_name else None
     user_name = safe_first_name or na_value
     if user.username:
@@ -231,23 +227,23 @@ async def format_user_card(user: User, session: AsyncSession,
         username_display = na_value
     registration_date = user.registration_date.strftime('%Y-%m-%d %H:%M') if user.registration_date else na_value
     
-    card_parts.append(f"{_('admin_user_id_label', default='🆔 <b>ID:</b>')} {hcode(str(user.user_id))}")
-    card_parts.append(f"{_('admin_user_name_label', default='👤 <b>Имя:</b>')} {hcode(user_name)}")
-    card_parts.append(f"{_('admin_user_username_label', default='📱 <b>Username:</b>')} {hcode(username_display)}")
-    card_parts.append(f"{_('admin_user_language_label', default='🌍 <b>Язык:</b>')} {hcode(user.language_code or na_value)}")
-    card_parts.append(f"{_('admin_user_registration_label', default='📅 <b>Регистрация:</b>')} {hcode(registration_date)}")
+    card_parts.append(f"{_('admin_user_id_label')} {hcode(str(user.user_id))}")
+    card_parts.append(f"{_('admin_user_name_label')} {hcode(user_name)}")
+    card_parts.append(f"{_('admin_user_username_label')} {hcode(username_display)}")
+    card_parts.append(f"{_('admin_user_language_label')} {hcode(user.language_code or na_value)}")
+    card_parts.append(f"{_('admin_user_registration_label')} {hcode(registration_date)}")
     
     # Ban status
-    ban_status = _("admin_user_status_banned", default="🚫 Заблокирован") if user.is_banned else _("admin_user_status_active", default="✅ Активен")
-    card_parts.append(f"{_('admin_user_status_label', default='🛡 <b>Статус:</b>')} {ban_status}")
+    ban_status = _("admin_user_status_banned") if user.is_banned else _("admin_user_status_active")
+    card_parts.append(f"{_('admin_user_status_label')} {ban_status}")
     
     # Referral info
     if user.referred_by_id:
-        card_parts.append(f"{_('admin_user_referral_label', default='🎁 <b>Привлечен по реферальной программе от:</b>')} {hcode(str(user.referred_by_id))}")
+        card_parts.append(f"{_('admin_user_referral_label')} {hcode(str(user.referred_by_id))}")
     
     # Panel info
     if user.panel_user_uuid:
-        card_parts.append(f"{_('admin_user_panel_uuid_label', default='🔗 <b>Panel UUID:</b>')} {hcode(user.panel_user_uuid[:8] + '...' if len(user.panel_user_uuid) > 8 else user.panel_user_uuid)}")
+        card_parts.append(f"{_('admin_user_panel_uuid_label')} {hcode(user.panel_user_uuid[:8] + '...' if len(user.panel_user_uuid) > 8 else user.panel_user_uuid)}")
     
     card_parts.append("")  # Empty line
     
@@ -255,38 +251,38 @@ async def format_user_card(user: User, session: AsyncSession,
     try:
         subscription_details = await subscription_service.get_active_subscription_details(session, user.user_id)
         if subscription_details:
-            card_parts.append(f"💳 <b>{_('admin_user_subscription_info', default='Информация о подписке:')}</b>")
+            card_parts.append(f"💳 <b>{_('admin_user_subscription_info')}</b>")
             
             end_date = subscription_details.get('end_date')
             if end_date:
                 end_date_str = end_date.strftime('%Y-%m-%d %H:%M') if isinstance(end_date, datetime) else str(end_date)
-                card_parts.append(f"{_('admin_user_subscription_active_until', default='⏰ <b>Действует до:</b>')} {hcode(end_date_str)}")
+                card_parts.append(f"{_('admin_user_subscription_active_until')} {hcode(end_date_str)}")
             
             status = subscription_details.get('status_from_panel', 'UNKNOWN')
-            card_parts.append(f"{_('admin_user_panel_status_label', default='📊 <b>Статус на панели:</b>')} {hcode(status)}")
+            card_parts.append(f"{_('admin_user_panel_status_label')} {hcode(status)}")
             
             traffic_limit = subscription_details.get('traffic_limit_bytes')
             traffic_used = subscription_details.get('traffic_used_bytes')
             if traffic_limit and traffic_used is not None:
                 traffic_limit_gb = traffic_limit / (1024**3)
                 traffic_used_gb = traffic_used / (1024**3)
-                card_parts.append(f"{_('admin_user_traffic_label', default='📊 <b>Трафик:</b>')} {hcode(f'{traffic_used_gb:.2f}GB / {traffic_limit_gb:.2f}GB')}")
+                card_parts.append(f"{_('admin_user_traffic_label')} {hcode(f'{traffic_used_gb:.2f}GB / {traffic_limit_gb:.2f}GB')}")
         else:
-            card_parts.append(f"{_('admin_user_subscription_label', default='💼 <b>Подписка:</b>')} {hcode(_('admin_user_subscription_none', default='Нет активной подписки'))}")
+            card_parts.append(f"{_('admin_user_subscription_label')} {hcode(_('admin_user_subscription_none'))}")
     except Exception as e:
         logging.error(f"Error getting subscription details for user {user.user_id}: {e}")
-        card_parts.append(f"{_('admin_user_subscription_label', default='💼 <b>Подписка:</b>')} {hcode(_('admin_user_subscription_error', default='Ошибка загрузки'))}")
+        card_parts.append(f"{_('admin_user_subscription_label')} {hcode(_('admin_user_subscription_error'))}")
     
     # Statistics
     try:
         # Count user logs
         logs_count = await message_log_dal.count_user_message_logs(session, user.user_id)
-        card_parts.append(f"{_('admin_user_actions_count_label', default='📜 <b>Всего действий:</b>')} {hcode(str(logs_count))}")
+        card_parts.append(f"{_('admin_user_actions_count_label')} {hcode(str(logs_count))}")
         
         # Check if user had any subscriptions
         had_subscriptions = await subscription_service.has_had_any_subscription(session, user.user_id)
-        trial_status = _("admin_user_trial_used", default="Использовал") if had_subscriptions else _("admin_user_trial_not_used", default="Не использовал")
-        card_parts.append(f"{_('admin_user_trial_label', default='🏡 <b>Триал:</b>')} {hcode(trial_status)}")
+        trial_status = _("admin_user_trial_used") if had_subscriptions else _("admin_user_trial_not_used")
+        card_parts.append(f"{_('admin_user_trial_label')} {hcode(trial_status)}")
 
         # Financial analytics (admin-only)
         try:
@@ -294,11 +290,11 @@ async def format_user_card(user: User, session: AsyncSession,
             
             # Total amount paid by this user
             total_paid = await payment_dal.get_user_total_paid(session, user.user_id)
-            card_parts.append(f"{_('admin_user_total_paid_label', default='💰 <b>Всего оплачено:</b>')} {hcode(f'{total_paid:.2f} RUB')}")
+            card_parts.append(f"{_('admin_user_total_paid_label')} {hcode(f'{total_paid:.2f} RUB')}")
             
             # Total revenue from referrals
             referral_revenue = await payment_dal.get_referral_revenue(session, user.user_id)
-            card_parts.append(f"{_('admin_user_referral_revenue_label', default='💸 <b>Доход по рефералам:</b>')} {hcode(f'{referral_revenue:.2f} RUB')}")
+            card_parts.append(f"{_('admin_user_referral_revenue_label')} {hcode(f'{referral_revenue:.2f} RUB')}")
         except Exception as e_fin:
             logging.error(f"Failed to build financial analytics for admin card {user.user_id}: {e_fin}")
 
@@ -308,8 +304,8 @@ async def format_user_card(user: User, session: AsyncSession,
                 stats = await referral_service.get_referral_stats(session, user.user_id)
                 invited_count = stats.get('invited_count', 0)
                 purchased_count = stats.get('purchased_count', 0)
-                card_parts.append(f"{_('admin_user_invited_friends_label', default='👥 <b>Приглашено друзей:</b>')} {hcode(str(invited_count))}")
-                card_parts.append(f"{_('admin_user_ref_purchased_label', default='💳 <b>Купили подписку:</b>')} {hcode(str(purchased_count))}")
+                card_parts.append(f"{_('admin_user_invited_friends_label')} {hcode(str(invited_count))}")
+                card_parts.append(f"{_('admin_user_ref_purchased_label')} {hcode(str(purchased_count))}")
             except Exception as e_rs:
                 logging.error(f"Failed to build referral stats for admin card {user.user_id}: {e_rs}")
         
@@ -349,7 +345,6 @@ async def process_user_search_handler(message: types.Message, state: FSMContext,
     if not user_model:
         await message.answer(_(
             "admin_user_not_found",
-            default="❌ Пользователь не найден: {input}",
             input=hcode(input_text)
         ))
         return
@@ -379,8 +374,7 @@ async def process_user_search_handler(message: types.Message, state: FSMContext,
     except Exception as e:
         logging.error(f"Error displaying user card for {user_model.user_id}: {e}")
         await message.answer(_(
-            "admin_user_card_error",
-            default="❌ Ошибка отображения карточки пользователя"
+            "admin_user_card_error"
         ))
 
 
@@ -410,8 +404,7 @@ async def user_action_handler(callback: types.CallbackQuery, state: FSMContext,
     user = await user_dal.get_user_by_id(session, user_id)
     if not user:
         await callback.answer(_(
-            "admin_user_not_found_action",
-            default="Пользователь не найден"
+            "admin_user_not_found_action"
         ), show_alert=True)
         return
 
@@ -447,8 +440,7 @@ async def handle_reset_trial(callback: types.CallbackQuery, user: User,
         await session.commit()
         
         await callback.answer(_(
-            "admin_user_trial_reset_success",
-            default="✅ Триал сброшен! Пользователь может активировать триал заново."
+            "admin_user_trial_reset_success"
         ), show_alert=True)
         
         # Refresh user card
@@ -458,8 +450,7 @@ async def handle_reset_trial(callback: types.CallbackQuery, user: User,
         logging.error(f"Error resetting trial for user {user.user_id}: {e}")
         await session.rollback()
         await callback.answer(_(
-            "admin_user_trial_reset_error",
-            default="❌ Ошибка сброса триала"
+            "admin_user_trial_reset_error"
         ), show_alert=True)
 
 
@@ -473,7 +464,6 @@ async def handle_add_subscription_prompt(callback: types.CallbackQuery, state: F
     
     prompt_text = _(
         "admin_user_add_subscription_prompt",
-        default="➕ Добавление дней подписки для пользователя {user_id}\n\nВведите количество дней для добавления:",
         user_id=user.user_id
     )
     
@@ -504,10 +494,9 @@ async def handle_toggle_ban(callback: types.CallbackQuery, user: User,
         
         await session.commit()
         
-        status_text = _("admin_user_ban_action_banned", default="заблокирован") if new_ban_status else _("admin_user_ban_action_unbanned", default="разблокирован")
+        status_text = _("admin_user_ban_action_banned") if new_ban_status else _("admin_user_ban_action_unbanned")
         await callback.answer(_(
             "admin_user_ban_toggle_success",
-            default="✅ Пользователь {status}",
             status=status_text
         ), show_alert=True)
         
@@ -524,8 +513,7 @@ async def handle_toggle_ban(callback: types.CallbackQuery, user: User,
         logging.error(f"Error toggling ban for user {user.user_id}: {e}")
         await session.rollback()
         await callback.answer(_(
-            "admin_user_ban_toggle_error",
-            default="❌ Ошибка изменения статуса блокировки"
+            "admin_user_ban_toggle_error"
         ), show_alert=True)
 
 
@@ -539,7 +527,6 @@ async def handle_send_message_prompt(callback: types.CallbackQuery, state: FSMCo
     
     prompt_text = _(
         "admin_user_send_message_prompt",
-        default="✉️ Отправка сообщения пользователю {user_id}\n\nВведите текст сообщения:",
         user_id=user.user_id
     )
     
@@ -563,13 +550,12 @@ async def handle_view_user_logs(callback: types.CallbackQuery, user: User,
         
         if not logs:
             await callback.answer(_(
-                "admin_user_no_logs",
-                default="📜 У пользователя нет действий"
+                "admin_user_no_logs"
             ), show_alert=True)
             return
         
         logs_text_parts = [
-            f"{_('admin_user_recent_actions_title', default='📜 Последние действия пользователя {user_id}:', user_id=user.user_id)}\n"
+            f"{_('admin_user_recent_actions_title', user_id=user.user_id)}\n"
         ]
         
         for log in logs:
@@ -587,11 +573,11 @@ async def handle_view_user_logs(callback: types.CallbackQuery, user: User,
         # Create inline keyboard for full logs
         builder = InlineKeyboardBuilder()
         builder.button(
-            text=_(key="admin_user_view_all_logs_button", default="📋 Все действия"),
+            text=_(key="admin_user_view_all_logs_button"),
             callback_data=f"admin_logs:view_user:{user.user_id}:0"
         )
         builder.button(
-            text=_(key="admin_user_back_to_card_button", default="🔙 К карточке"),
+            text=_(key="admin_user_back_to_card_button"),
             callback_data=f"user_action:refresh:{user.user_id}"
         )
         builder.adjust(1)
@@ -614,8 +600,7 @@ async def handle_view_user_logs(callback: types.CallbackQuery, user: User,
     except Exception as e:
         logging.error(f"Error viewing logs for user {user.user_id}: {e}")
         await callback.answer(_(
-            "admin_user_logs_error",
-            default="❌ Ошибка загрузки действий пользователя"
+            "admin_user_logs_error"
         ), show_alert=True)
 
 
@@ -682,7 +667,6 @@ async def handle_delete_user_prompt(callback: types.CallbackQuery, state: FSMCon
         await callback.answer(
             _(
                 "admin_user_delete_not_allowed",
-                default="❌ У вас нет прав для удаления пользователей.",
             ),
             show_alert=True,
         )
@@ -696,11 +680,6 @@ async def handle_delete_user_prompt(callback: types.CallbackQuery, state: FSMCon
 
     prompt_text = _(
         "admin_user_delete_confirmation_prompt",
-        default=(
-            "⚠️ Вы хотите полностью удалить пользователя {user_id}.\n\n"
-            "Отправьте точный Telegram ID этого пользователя, чтобы подтвердить удаление.\n"
-            "Любой другой ответ отменит операцию."
-        ),
         user_id=hcode(str(user.user_id)),
     )
 
@@ -771,7 +750,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
         await message.answer(
             _(
                 "admin_user_delete_not_allowed",
-                default="❌ У вас нет прав для удаления пользователей.",
             )
         )
         await state.clear()
@@ -783,7 +761,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
         await message.answer(
             _(
                 "admin_user_delete_state_missing",
-                default="⚠️ Нет активной операции удаления. Начните заново.",
             )
         )
         await state.clear()
@@ -794,7 +771,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
         await message.answer(
             _(
                 "admin_user_delete_cancelled",
-                default="Операция удаления отменена по запросу.",
             )
         )
         await state.clear()
@@ -804,7 +780,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
         await message.answer(
             _(
                 "admin_user_delete_mismatch",
-                default="⚠️ ID не совпадает. Удаление отменено.",
             )
         )
         await state.clear()
@@ -815,7 +790,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
         await message.answer(
             _(
                 "admin_user_delete_already_removed",
-                default="ℹ️ Пользователь уже удален.",
             )
         )
         await state.clear()
@@ -830,10 +804,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
                 await message.answer(
                     _(
                         "admin_user_delete_panel_error",
-                        default=(
-                            "❌ Не удалось удалить пользователя на панели. "
-                            "Операция прервана."
-                        ),
                     )
                 )
                 await session.rollback()
@@ -847,7 +817,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
             await message.answer(
                 _(
                     "admin_user_delete_already_removed",
-                    default="ℹ️ Пользователь уже удален.",
                 )
             )
             await state.clear()
@@ -859,7 +828,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
         await message.answer(
             _(
                 "admin_user_delete_success",
-                default="✅ Пользователь {user_id} удален из бота и панели.",
                 user_id=hcode(str(target_user_id)),
             ),
             parse_mode="HTML",
@@ -870,7 +838,6 @@ async def process_delete_user_confirmation_handler(message: types.Message,
         await message.answer(
             _(
                 "admin_user_delete_error",
-                default="❌ Не удалось завершить удаление пользователя. Попробуйте позже.",
             )
         )
     finally:
@@ -903,8 +870,7 @@ async def process_subscription_days_handler(message: types.Message, state: FSMCo
             raise ValueError("Invalid days count")
     except ValueError:
         await message.answer(_(
-            "admin_user_invalid_days",
-            default="❌ Неверное количество дней. Введите число от 1 до 3650."
+            "admin_user_invalid_days"
         ))
         return
 
@@ -918,7 +884,6 @@ async def process_subscription_days_handler(message: types.Message, state: FSMCo
             await session.commit()
             await message.answer(_(
                 "admin_user_subscription_added_success",
-                default="✅ Успешно добавлено {days} дней подписки пользователю {user_id}",
                 days=days_to_add,
                 user_id=target_user_id
             ))
@@ -945,16 +910,14 @@ async def process_subscription_days_handler(message: types.Message, state: FSMCo
         else:
             await session.rollback()
             await message.answer(_(
-                "admin_user_subscription_added_error",
-                default="❌ Ошибка добавления дней подписки"
+                "admin_user_subscription_added_error"
             ))
     
     except Exception as e:
         logging.error(f"Error adding subscription days for user {target_user_id}: {e}")
         await session.rollback()
         await message.answer(_(
-            "admin_user_subscription_added_error",
-            default="❌ Ошибка добавления дней подписки"
+            "admin_user_subscription_added_error"
         ))
     
     await state.clear()
@@ -983,8 +946,7 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
     text = (message.text or message.caption or "").strip()
     if len(text) > 4000:
         await message.answer(_(
-            "admin_user_message_too_long",
-            default="❌ Сообщение слишком длинное (максимум 4000 символов)"
+            "admin_user_message_too_long"
         ))
         return
 
@@ -998,16 +960,14 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
 
         # Prepare admin signature and get content
         admin_signature = _(
-            "admin_direct_message_signature",
-            default="\n\n---\n💬 Сообщение от администратора"
+            "admin_direct_message_signature"
         )
         
         content = get_message_content(message)
 
         if not content.text and not content.file_id:
             await message.answer(_(
-                "admin_direct_empty_message",
-                default="❌ Пустое сообщение. Отправьте текст или медиа."
+                "admin_direct_empty_message"
             ))
             return
 
@@ -1026,7 +986,6 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
         except TelegramBadRequest as e:
             await message.answer(_(
                 "admin_broadcast_invalid_html",
-                default="❌ Некорректный HTML в сообщении. Пожалуйста, отправьте корректный HTML (поддерживаются теги Telegram) или уберите теги.\nОшибка: {error}",
                 error=str(e),
             ))
             return
@@ -1034,7 +993,6 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
         # Confirm to admin
         await message.answer(_(
             "admin_user_message_sent_success",
-            default="✅ Сообщение отправлено пользователю {user_id}",
             user_id=target_user_id
         ))
         
@@ -1062,8 +1020,7 @@ async def process_direct_message_handler(message: types.Message, state: FSMConte
     except Exception as e:
         logging.error(f"Error sending direct message to user {target_user_id}: {e}")
         await message.answer(_(
-            "admin_user_message_sent_error",
-            default="❌ Ошибка отправки сообщения"
+            "admin_user_message_sent_error"
         ))
     
     await state.clear()
@@ -1081,8 +1038,7 @@ async def ban_user_prompt_handler(callback: types.CallbackQuery,
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
     prompt_text = _(
-        "admin_ban_user_prompt",
-        default="🚫 Блокировка пользователя\n\nВведите ID пользователя или @username для блокировки:"
+        "admin_ban_user_prompt"
     )
 
     try:
@@ -1113,8 +1069,7 @@ async def unban_user_prompt_handler(callback: types.CallbackQuery,
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
     prompt_text = _(
-        "admin_unban_user_prompt",
-        default="✅ Разблокировка пользователя\n\nВведите ID пользователя или @username для разблокировки:"
+        "admin_unban_user_prompt"
     )
 
     try:
@@ -1150,8 +1105,7 @@ async def view_banned_users_handler(callback: types.CallbackQuery,
         
         if not banned_users:
             message_text = _(
-                "admin_banned_users_empty",
-                default="📋 Заблокированные пользователи\n\nСписок пуст"
+                "admin_banned_users_empty"
             )
         else:
             user_list = []
@@ -1163,7 +1117,6 @@ async def view_banned_users_handler(callback: types.CallbackQuery,
             
             message_text = _(
                 "admin_banned_users_list",
-                default="📋 Заблокированные пользователи ({count}):\n\n{users}",
                 count=len(banned_users),
                 users="\n".join(user_list)
             )
@@ -1208,7 +1161,6 @@ async def process_ban_user_handler(message: types.Message, state: FSMContext,
     if not user_model:
         await message.answer(_(
             "admin_user_not_found",
-            default="❌ Пользователь не найден: {input}",
             input=hcode(input_text)
         ))
         return
@@ -1217,8 +1169,7 @@ async def process_ban_user_handler(message: types.Message, state: FSMContext,
         # Check if user is already banned
         if user_model.is_banned:
             await message.answer(_(
-                "admin_user_already_banned",
-                default="⚠️ Пользователь уже заблокирован"
+                "admin_user_already_banned"
             ))
             await state.clear()
             return
@@ -1234,7 +1185,6 @@ async def process_ban_user_handler(message: types.Message, state: FSMContext,
         
         await message.answer(_(
             "admin_user_ban_success",
-            default="✅ Пользователь {input} заблокирован",
             input=hcode(input_text)
         ))
         
@@ -1242,8 +1192,7 @@ async def process_ban_user_handler(message: types.Message, state: FSMContext,
         logging.error(f"Error banning user {user_model.user_id}: {e}")
         await session.rollback()
         await message.answer(_(
-            "admin_user_ban_error",
-            default="❌ Ошибка блокировки пользователя"
+            "admin_user_ban_error"
         ))
     
     await state.clear()
@@ -1279,7 +1228,6 @@ async def process_unban_user_handler(message: types.Message, state: FSMContext,
     if not user_model:
         await message.answer(_(
             "admin_user_not_found",
-            default="❌ Пользователь не найден: {input}",
             input=hcode(input_text)
         ))
         return
@@ -1288,8 +1236,7 @@ async def process_unban_user_handler(message: types.Message, state: FSMContext,
         # Check if user is not banned
         if not user_model.is_banned:
             await message.answer(_(
-                "admin_user_not_banned",
-                default="⚠️ Пользователь не заблокирован"
+                "admin_user_not_banned"
             ))
             await state.clear()
             return
@@ -1305,7 +1252,6 @@ async def process_unban_user_handler(message: types.Message, state: FSMContext,
         
         await message.answer(_(
             "admin_user_unban_success",
-            default="✅ Пользователь {input} разблокирован",
             input=hcode(input_text)
         ))
         
@@ -1313,8 +1259,7 @@ async def process_unban_user_handler(message: types.Message, state: FSMContext,
         logging.error(f"Error unbanning user {user_model.user_id}: {e}")
         await session.rollback()
         await message.answer(_(
-            "admin_user_unban_error",
-            default="❌ Ошибка разблокировки пользователя"
+            "admin_user_unban_error"
         ))
     
     await state.clear()
@@ -1357,7 +1302,7 @@ async def user_card_from_list_handler(callback: types.CallbackQuery,
         user.referred_by_id
     )
     keyboard.button(
-        text=_("admin_user_back_to_list_button", default="⬅️ К списку"),
+        text=_("admin_user_back_to_list_button"),
         callback_data=f"admin_action:users_list:{page}"
     )
     quick_links_width = 2 if user.referred_by_id else 1

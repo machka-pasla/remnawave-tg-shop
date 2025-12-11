@@ -423,7 +423,7 @@ class Settings(BaseSettings):
     @property
     def traffic_sale_mode(self) -> bool:
         """When true, the bot sells traffic packages instead of time-based subscriptions."""
-        return bool(self.traffic_packages)
+        return bool(self.traffic_packages or self.stars_traffic_packages)
 
     def referral_bonus_inviter(self) -> Dict[int, int]:
         bonuses: Dict[int, int] = {}

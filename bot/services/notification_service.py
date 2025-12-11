@@ -52,7 +52,6 @@ class NotificationService:
                 InlineKeyboardButton(
                     text=translate(
                         "log_open_profile_link",
-                        default="👤 Открыть профиль",
                     ),
                     url=f"tg://user?id={user_id}",
                 )
@@ -64,7 +63,6 @@ class NotificationService:
                 InlineKeyboardButton(
                     text=translate(
                         "log_open_referrer_profile_button",
-                        default="👤 Открыть профиль пригласившего",
                     ),
                     url=f"tg://user?id={referrer_id}",
                 )
@@ -200,16 +198,11 @@ class NotificationService:
             referrer_link = hd.link(str(referred_by_id), f"tg://user?id={referred_by_id}")
             referral_text = _(
                 "log_referral_suffix",
-                default=" (реферал от {referrer_link})",
                 referrer_link=referrer_link,
             )
         
         message = _(
             "log_new_user_registration",
-            default="👤 <b>Новый пользователь</b>\n\n"
-                   "🆔 ID: <code>{user_id}</code>\n"
-                   "👤 Имя: {user_display}{referral_text}\n"
-                   "📅 Время: {timestamp}",
             user_id=user_id,
             user_display=user_display,
             referral_text=referral_text,
@@ -249,12 +242,6 @@ class NotificationService:
             traffic_label = str(int(traffic_gb)) if float(traffic_gb).is_integer() else f"{traffic_gb:g}"
             message = _(
                 "log_payment_received_traffic",
-                default="{provider_emoji} <b>Получен платеж</b>\n\n"
-                        "👤 Пользователь: {user_display}\n"
-                        "💰 Сумма: <b>{amount} {currency}</b>\n"
-                        "🗂 Трафик: <b>{traffic_gb} GB</b>\n"
-                        "🏦 Провайдер: {payment_provider}\n"
-                        "🕐 Время: {timestamp}",
                 provider_emoji=provider_emoji,
                 user_display=user_display,
                 amount=amount,
@@ -266,12 +253,6 @@ class NotificationService:
         else:
             message = _(
                 "log_payment_received",
-                default="{provider_emoji} <b>Получен платеж</b>\n\n"
-                       "👤 Пользователь: {user_display}\n"
-                       "💰 Сумма: <b>{amount} {currency}</b>\n"
-                       "📅 Период: <b>{months} мес.</b>\n"
-                       "🏦 Провайдер: {payment_provider}\n"
-                       "🕐 Время: {timestamp}",
                 provider_emoji=provider_emoji,
                 user_display=user_display,
                 amount=amount,
@@ -301,11 +282,6 @@ class NotificationService:
         
         message = _(
             "log_promo_activation",
-            default="🎁 <b>Активирован промокод</b>\n\n"
-                   "👤 Пользователь: {user_display}\n"
-                   "🏷 Код: <code>{promo_code}</code>\n"
-                   "🎯 Бонус: <b>+{bonus_days} дн.</b>\n"
-                   "🕐 Время: {timestamp}",
             user_display=user_display,
             promo_code=promo_code,
             bonus_days=bonus_days,
@@ -332,10 +308,6 @@ class NotificationService:
         
         message = _(
             "log_trial_activation",
-            default="🆓 <b>Активирован триал</b>\n\n"
-                   "👤 Пользователь: {user_display}\n"
-                   "⏰ Действует до: <b>{end_date}</b>\n"
-                   "🕐 Время: {timestamp}",
             user_display=user_display,
             end_date=end_date.strftime("%Y-%m-%d %H:%M"),
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -364,12 +336,6 @@ class NotificationService:
         
         message = _(
             "log_panel_sync",
-            default="{status_emoji} <b>Синхронизация с панелью</b>\n\n"
-                   "📊 Статус: <b>{status}</b>\n"
-                   "👥 Обработано пользователей: <b>{users_processed}</b>\n"
-                   "📋 Синхронизировано подписок: <b>{subs_synced}</b>\n"
-                   "🕐 Время: {timestamp}\n\n"
-                   "📝 Детали:\n{details}",
             status_emoji=status_emoji,
             status=status,
             users_processed=users_processed,
@@ -400,11 +366,6 @@ class NotificationService:
 
         message = _(
             "log_suspicious_promo",
-            default="⚠️ <b>Подозрительная попытка ввода промокода</b>\n\n"
-            "👤 Пользователь: {user_display}\n"
-            "🆔 ID: <code>{user_id}</code>\n"
-            "📝 Ввод: <pre>{suspicious_input}</pre>\n"
-            "🕐 Время: {timestamp}",
             user_display=hd.quote(user_display),
             user_id=user_id,
             suspicious_input=hd.quote(suspicious_input),

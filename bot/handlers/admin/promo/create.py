@@ -30,8 +30,7 @@ async def create_promo_prompt_handler(callback: types.CallbackQuery,
 
     # Step 1: Ask for promo code
     prompt_text = _(
-        "admin_promo_step1_code",
-        default="🎟 <b>Создание промокода</b>\n\n<b>Шаг 1 из 4:</b> Код промокода\n\nВведите код промокода (3-30 символов, только буквы и цифры):"
+        "admin_promo_step1_code"
     )
 
     try:
@@ -68,8 +67,7 @@ async def process_promo_code_handler(message: types.Message,
         code_str = message.text.strip().upper()
         if not (3 <= len(code_str) <= 30 and code_str.isalnum()):
             await message.answer(_(
-                "admin_promo_invalid_code_format",
-                default="❌ Код промокода должен содержать 3-30 символов (только буквы и цифры)"
+                "admin_promo_invalid_code_format"
             ))
             return
         
@@ -77,8 +75,7 @@ async def process_promo_code_handler(message: types.Message,
         existing_promo = await promo_code_dal.get_promo_code_by_code(session, code_str)
         if existing_promo:
             await message.answer(_(
-                "admin_promo_code_already_exists",
-                default="❌ Промокод с таким кодом уже существует"
+                "admin_promo_code_already_exists"
             ))
             return
         
@@ -87,7 +84,6 @@ async def process_promo_code_handler(message: types.Message,
         # Step 2: Ask for bonus days
         prompt_text = _(
             "admin_promo_step2_bonus_days",
-            default="🎟 <b>Создание промокода</b>\n\n<b>Шаг 2 из 4:</b> Бонусные дни\n\nКод: <b>{code}</b>\n\nВведите количество бонусных дней (1-365):",
             code=code_str
         )
         
@@ -120,8 +116,7 @@ async def process_promo_bonus_days_handler(message: types.Message,
         bonus_days = int(message.text.strip())
         if not (1 <= bonus_days <= 365):
             await message.answer(_(
-                "admin_promo_invalid_bonus_days",
-                default="❌ Количество бонусных дней должно быть от 1 до 365"
+                "admin_promo_invalid_bonus_days"
             ))
             return
         
@@ -131,7 +126,6 @@ async def process_promo_bonus_days_handler(message: types.Message,
         data = await state.get_data()
         prompt_text = _(
             "admin_promo_step3_max_activations",
-            default="🎟 <b>Создание промокода</b>\n\n<b>Шаг 3 из 4:</b> Лимит активаций\n\nКод: <b>{code}</b>\nБонусные дни: <b>{bonus_days}</b>\n\nВведите максимальное количество активаций (1-10000):",
             code=data.get("promo_code"),
             bonus_days=bonus_days
         )
@@ -145,8 +139,7 @@ async def process_promo_bonus_days_handler(message: types.Message,
         
     except ValueError:
         await message.answer(_(
-            "admin_promo_invalid_number",
-            default="❌ Введите корректное число"
+            "admin_promo_invalid_number"
         ))
     except Exception as e:
         logging.error(f"Error processing promo bonus days: {e}")
@@ -170,8 +163,7 @@ async def process_promo_max_activations_handler(message: types.Message,
         max_activations = int(message.text.strip())
         if not (1 <= max_activations <= 10000):
             await message.answer(_(
-                "admin_promo_invalid_max_activations",
-                default="❌ Максимальное количество активаций должно быть от 1 до 10000"
+                "admin_promo_invalid_max_activations"
             ))
             return
         
@@ -181,7 +173,6 @@ async def process_promo_max_activations_handler(message: types.Message,
         data = await state.get_data()
         prompt_text = _(
             "admin_promo_step4_validity",
-            default="🎟 <b>Создание промокода</b>\n\n<b>Шаг 4 из 4:</b> Срок действия\n\nКод: <b>{code}</b>\nБонусные дни: <b>{bonus_days}</b>\nМакс. активаций: <b>{max_activations}</b>\n\nВыберите срок действия промокода:",
             code=data.get("promo_code"),
             bonus_days=data.get("bonus_days"),
             max_activations=max_activations
@@ -191,19 +182,19 @@ async def process_promo_max_activations_handler(message: types.Message,
         builder = InlineKeyboardBuilder()
         builder.row(
             InlineKeyboardButton(
-                text=_("admin_promo_unlimited_validity", default="🔄 Без ограничений"),
+                text=_("admin_promo_unlimited_validity"),
                 callback_data="promo_unlimited_validity"
             )
         )
         builder.row(
             InlineKeyboardButton(
-                text=_("admin_promo_set_validity_days", default="📅 Указать дни"),
+                text=_("admin_promo_set_validity_days"),
                 callback_data="promo_set_validity"
             )
         )
         builder.row(
             InlineKeyboardButton(
-                text=_("admin_back_to_panel", default="🔙 В админ панель"),
+                text=_("admin_back_to_panel"),
                 callback_data="admin_action:main"
             )
         )
@@ -217,8 +208,7 @@ async def process_promo_max_activations_handler(message: types.Message,
         
     except ValueError:
         await message.answer(_(
-            "admin_promo_invalid_number",
-            default="❌ Введите корректное число"
+            "admin_promo_invalid_number"
         ))
     except Exception as e:
         logging.error(f"Error processing promo max activations: {e}")
@@ -252,7 +242,6 @@ async def process_promo_set_validity(callback: types.CallbackQuery,
     data = await state.get_data()
     prompt_text = _(
         "admin_promo_enter_validity_days",
-        default="🎟 <b>Создание промокода</b>\n\n<b>Шаг 4 из 4:</b> Срок действия\n\nКод: <b>{code}</b>\nБонусные дни: <b>{bonus_days}</b>\nМакс. активаций: <b>{max_activations}</b>\n\nВведите количество дней действия промокода (1-365):",
         code=data.get("promo_code"),
         bonus_days=data.get("bonus_days"),
         max_activations=data.get("max_activations")
@@ -291,8 +280,7 @@ async def process_promo_validity_days_handler(message: types.Message,
         validity_days = int(message.text.strip())
         if not (1 <= validity_days <= 365):
             await message.answer(_(
-                "admin_promo_invalid_validity_days",
-                default="❌ Срок действия должен быть от 1 до 365 дней"
+                "admin_promo_invalid_validity_days"
             ))
             return
         
@@ -301,8 +289,7 @@ async def process_promo_validity_days_handler(message: types.Message,
         
     except ValueError:
         await message.answer(_(
-            "admin_promo_invalid_number",
-            default="❌ Введите корректное число"
+            "admin_promo_invalid_number"
         ))
     except Exception as e:
         logging.error(f"Error processing promo validity days: {e}")
@@ -349,14 +336,9 @@ async def create_promo_code_final(callback_or_message,
         logging.info(f"Promo code '{data['promo_code']}' created with ID {created_promo.promo_code_id}")
         
         # Success message
-        valid_until_str = _("admin_promo_unlimited", default="Без ограничений") if not data.get("validity_days") else f"{data['validity_days']} дней"
+        valid_until_str = _("admin_promo_unlimited") if not data.get("validity_days") else f"{data['validity_days']} дней"
         success_text = _(
             "admin_promo_created_success",
-            default="✅ <b>Промокод успешно создан!</b>\n\n"
-                   "🎟 Код: <code>{code}</code>\n"
-                   "🎁 Бонусные дни: <b>{bonus_days}</b>\n"
-                   "📊 Макс. активаций: <b>{max_activations}</b>\n"
-                   "⏰ Срок действия: <b>{valid_until_str}</b>",
             code=data["promo_code"],
             bonus_days=data["bonus_days"],
             max_activations=data["max_activations"],
@@ -388,7 +370,7 @@ async def create_promo_code_final(callback_or_message,
         
     except Exception as e:
         logging.error(f"Error creating promo code: {e}")
-        error_text = _("error_occurred_try_again", default="❌ Произошла ошибка. Попробуйте снова.")
+        error_text = _("error_occurred_try_again")
         
         if hasattr(callback_or_message, 'message'):  # CallbackQuery
             await callback_or_message.message.answer(error_text)
@@ -432,5 +414,5 @@ async def cancel_promo_creation_state_to_menu(callback: types.CallbackQuery,
             reply_markup=get_admin_panel_keyboard(i18n, current_lang, settings)
         )
     
-    await callback.answer(_("admin_promo_creation_cancelled", default="Создание промокода отменено"))
+    await callback.answer(_("admin_promo_creation_cancelled"))
     await state.clear()

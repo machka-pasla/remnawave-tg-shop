@@ -178,7 +178,7 @@ async def ads_delete_cancel(callback: types.CallbackQuery, settings: Settings, i
 
     camp = await ad_dal.get_campaign_by_id(session, camp_id)
     if not camp:
-        await callback.answer(_("admin_ads_not_found", default="Кампания не найдена."), show_alert=True)
+        await callback.answer(_("admin_ads_not_found"), show_alert=True)
         return
     try:
         stats = await ad_dal.get_campaign_stats(session, camp_id)
@@ -224,7 +224,7 @@ async def ads_delete_confirm(callback: types.CallbackQuery, settings: Settings, 
 
     existed = await ad_dal.delete_campaign(session, camp_id)
     if not existed:
-        await callback.answer(_("admin_ads_not_found", default="Кампания не найдена."), show_alert=True)
+        await callback.answer(_("admin_ads_not_found"), show_alert=True)
         return
     await session.commit()
 
