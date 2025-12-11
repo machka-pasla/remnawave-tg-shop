@@ -29,7 +29,6 @@ async def build_and_start_web_app(
         "stars_service",
         "freekassa_service",
         "cryptopay_service",
-        "tribute_service",
         "panel_webhook_service",
         "platega_service",
         "severpay_service",
@@ -50,17 +49,11 @@ async def build_and_start_web_app(
         )
 
     from bot.handlers.user.payment import yookassa_webhook_route
-    from bot.services.tribute_service import tribute_webhook_route
     from bot.services.crypto_pay_service import cryptopay_webhook_route
     from bot.services.panel_webhook_service import panel_webhook_route
     from bot.services.freekassa_service import freekassa_webhook_route
     from bot.services.platega_service import platega_webhook_route
     from bot.services.severpay_service import severpay_webhook_route
-
-    tribute_path = settings.tribute_webhook_path
-    if tribute_path.startswith("/"):
-        app.router.add_post(tribute_path, tribute_webhook_route)
-        logging.info(f"Tribute webhook route configured at: [POST] {tribute_path}")
 
     cp_path = settings.cryptopay_webhook_path
     if cp_path.startswith("/"):

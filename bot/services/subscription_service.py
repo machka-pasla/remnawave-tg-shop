@@ -517,7 +517,7 @@ class SubscriptionService:
             "status_from_panel": "ACTIVE",
             "traffic_limit_bytes": self.settings.user_traffic_limit_bytes,
             "provider": provider,
-            "skip_notifications": provider == "tribute" and self.settings.TRIBUTE_SKIP_NOTIFICATIONS,
+            "skip_notifications": False,
             "auto_renew_enabled": auto_renew_should_enable,
         }
         try:
@@ -828,8 +828,8 @@ class SubscriptionService:
         # If autopayments are disabled globally, skip charging attempts
         if not self.settings.yookassa_autopayments_active:
             return True
-        if sub.provider == "tribute":
-            # Tribute is paid externally; we do not auto-charge here
+        if sub.provider != "yookassa":
+            logging.info("Auto-renew skipped: provider %s does not support auto-renew", sub.provider)
             return True
 
         from db.dal.user_billing_dal import get_user_default_payment_method

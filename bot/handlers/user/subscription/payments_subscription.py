@@ -52,12 +52,10 @@ async def select_subscription_period_callback_handler(
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
     text_content = get_text("choose_payment_method")
-    tribute_url = settings.tribute_payment_links.get(months)
     stars_price = settings.stars_subscription_options.get(months)
     reply_markup = get_payment_method_keyboard(
         months,
         price_rub,
-        tribute_url,
         stars_price,
         currency_symbol_val,
         current_lang,

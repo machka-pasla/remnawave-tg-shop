@@ -33,7 +33,6 @@ from bot.services.subscription_service import SubscriptionService
 from bot.services.referral_service import ReferralService
 from bot.services.promo_code_service import PromoCodeService
 from bot.services.stars_service import StarsService
-from bot.services.tribute_service import TributeService, tribute_webhook_route
 from bot.services.crypto_pay_service import CryptoPayService, cryptopay_webhook_route
 
 from bot.handlers.user import payment as user_payment_webhook_module
@@ -200,7 +199,6 @@ async def on_shutdown_configured(dispatcher: Dispatcher):
         "panel_service",
         "cryptopay_service",
         "freekassa_service",
-        "tribute_service",
         "panel_webhook_service",
         "yookassa_service",
         "promo_code_service",

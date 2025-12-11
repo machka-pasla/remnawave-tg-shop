@@ -125,17 +125,6 @@ async def my_subscription_command_handler(
 
     end_date = active.get("end_date")
     days_left = (end_date.date() - datetime.now().date()).days if end_date else 0
-    tribute_hint = ""
-    if active.get("status_from_panel", "").lower() == "active":
-        local_sub = await subscription_dal.get_active_subscription_by_user_id(session, event.from_user.id)
-        if local_sub:
-            if local_sub.provider == "tribute":
-                link = None
-                link = settings.tribute_payment_links.get(local_sub.duration_months or 1) if hasattr(settings, "tribute_payment_links") else None
-                tribute_hint = "\n\n" + (
-                    get_text("subscription_tribute_notice_with_link", link=link) if link else get_text("subscription_tribute_notice")
-                )
-
     text = get_text(
         "my_subscription_details",
         end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
@@ -224,8 +213,8 @@ async def my_subscription_command_handler(
                 )
             ])
 
-        # 2) Auto-renew toggle (if supported and not tribute)
-        if local_sub and local_sub.provider != "tribute" and settings.yookassa_autopayments_active:
+        # 2) Auto-renew toggle (YooKassa only)
+        if local_sub and local_sub.provider == "yookassa" and settings.yookassa_autopayments_active:
             toggle_text = (
                 get_text("autorenew_disable_button") if local_sub.auto_renew_enabled else get_text("autorenew_enable_button")
             )
@@ -254,17 +243,17 @@ async def my_subscription_command_handler(
         except Exception:
             pass
         try:
-            await event.message.edit_text(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+            await event.message.edit_text(text, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
         except Exception:
             await bot.send_message(
                 chat_id=target.chat.id,
-                text=text + tribute_hint,
+                text=text,
                 reply_markup=markup,
                 parse_mode="HTML",
                 disable_web_page_preview=True,
             )
     else:
-        await target.answer(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+        await target.answer(text, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
 
 
 @router.callback_query(F.data == "main_action:my_devices")
@@ -452,8 +441,8 @@ async def toggle_autorenew_handler(
     if not sub or sub.user_id != callback.from_user.id:
         await callback.answer(get_text("error_try_again"), show_alert=True)
         return
-    if sub.provider == "tribute":
-        await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
+    if sub.provider != "yookassa":
+        await callback.answer(get_text("error_try_again"), show_alert=True)
         return
     if enable:
         has_saved_card = await user_billing_dal.user_has_saved_payment_method(session, callback.from_user.id)
@@ -510,8 +499,8 @@ async def confirm_autorenew_handler(
     if not sub or sub.user_id != callback.from_user.id:
         await callback.answer(get_text("error_try_again"), show_alert=True)
         return
-    if sub.provider == "tribute":
-        await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
+    if sub.provider != "yookassa":
+        await callback.answer(get_text("error_try_again"), show_alert=True)
         return
     if enable:
         has_saved_card = await user_billing_dal.user_has_saved_payment_method(session, callback.from_user.id)
@@ -549,7 +538,7 @@ async def autorenew_cancel_from_webhook_button(
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
     get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
 
-    # Disable auto-renew on the active subscription (non-tribute)
+    # Disable auto-renew on the active subscription
     from db.dal import subscription_dal
     sub = await subscription_dal.get_active_subscription_by_user_id(session, callback.from_user.id)
     if not sub:
@@ -558,9 +547,9 @@ async def autorenew_cancel_from_webhook_button(
         except Exception:
             pass
         return
-    if sub.provider == "tribute":
+    if sub.provider != "yookassa":
         try:
-            await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
+            await callback.answer(get_text("error_try_again"), show_alert=True)
         except Exception:
             pass
         return

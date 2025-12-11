@@ -84,10 +84,9 @@ class Settings(BaseSettings):
 
     YOOKASSA_ENABLED: bool = Field(default=True)
     STARS_ENABLED: bool = Field(default=True)
-    TRIBUTE_ENABLED: bool = Field(default=True)
     PAYMENT_METHODS_ORDER: Optional[str] = Field(
         default=None,
-        description="Comma-separated list of payment methods to show (e.g., severpay,freekassa,yookassa,platega,stars,cryptopay,tribute)",
+        description="Comma-separated list of payment methods to show (e.g., severpay,freekassa,yookassa,platega,stars,cryptopay)",
     )
 
     MONTH_1_ENABLED: bool = Field(default=True, alias="1_MONTH_ENABLED")
@@ -104,15 +103,6 @@ class Settings(BaseSettings):
     STARS_PRICE_3_MONTHS: Optional[int] = Field(default=None)
     STARS_PRICE_6_MONTHS: Optional[int] = Field(default=None)
     STARS_PRICE_12_MONTHS: Optional[int] = Field(default=None)
-
-
-    TRIBUTE_LINK_1_MONTH: Optional[str] = Field(default=None)
-    TRIBUTE_LINK_3_MONTHS: Optional[str] = Field(default=None)
-    TRIBUTE_LINK_6_MONTHS: Optional[str] = Field(default=None)
-    TRIBUTE_LINK_12_MONTHS: Optional[str] = Field(default=None)
-    TRIBUTE_API_KEY: Optional[str] = Field(default=None)
-    TRIBUTE_SKIP_NOTIFICATIONS: bool = Field(default=True, description="Skip renewal notifications for Tribute payments")
-    TRIBUTE_SKIP_CANCELLATION_NOTIFICATIONS: bool = Field(default=False, description="Skip cancellation notifications for Tribute payments")
     PANEL_WEBHOOK_SECRET: Optional[str] = Field(default=None)
 
     SUBSCRIPTION_NOTIFICATIONS_ENABLED: bool = Field(default=True)
@@ -265,21 +255,6 @@ class Settings(BaseSettings):
             return f"{base.rstrip('/')}{self.yookassa_webhook_path}"
         return None
 
-    @computed_field
-    @property
-    def tribute_webhook_path(self) -> str:
-        return "/webhook/tribute"
-
-    @computed_field
-    @property
-    def tribute_full_webhook_url(self) -> Optional[str]:
-        base = self.WEBHOOK_BASE_URL
-        if base:
-            return f"{base.rstrip('/')}{self.tribute_webhook_path}"
-        return None
-
-    @computed_field
-    @property
     def panel_webhook_path(self) -> str:
         return "/webhook/panel"
 
@@ -385,22 +360,6 @@ class Settings(BaseSettings):
             options[12] = self.STARS_PRICE_12_MONTHS
         return options
 
-    @computed_field
-    @property
-    def tribute_payment_links(self) -> Dict[int, str]:
-        links: Dict[int, str] = {}
-        if self.TRIBUTE_ENABLED and self.MONTH_1_ENABLED and self.TRIBUTE_LINK_1_MONTH:
-            links[1] = self.TRIBUTE_LINK_1_MONTH
-        if self.TRIBUTE_ENABLED and self.MONTH_3_ENABLED and self.TRIBUTE_LINK_3_MONTHS:
-            links[3] = self.TRIBUTE_LINK_3_MONTHS
-        if self.TRIBUTE_ENABLED and self.MONTH_6_ENABLED and self.TRIBUTE_LINK_6_MONTHS:
-            links[6] = self.TRIBUTE_LINK_6_MONTHS
-        if self.TRIBUTE_ENABLED and self.MONTH_12_ENABLED and self.TRIBUTE_LINK_12_MONTHS:
-            links[12] = self.TRIBUTE_LINK_12_MONTHS
-        return links
-
-    @computed_field
-    @property
     def referral_bonus_inviter(self) -> Dict[int, int]:
         bonuses: Dict[int, int] = {}
         if self.REFERRAL_BONUS_DAYS_INVITER_1_MONTH is not None:
@@ -444,7 +403,6 @@ class Settings(BaseSettings):
             "platega",
             "severpay",
             "yookassa",
-            "tribute",
             "stars",
             "cryptopay",
         ]

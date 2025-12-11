@@ -112,7 +112,6 @@ def get_subscription_options_keyboard(subscription_options: Dict[
 
 
 def get_payment_method_keyboard(months: int, price: float,
-                                tribute_url: Optional[str],
                                 stars_price: Optional[int],
                                 currency_symbol_val: str, lang: str,
                                 i18n_instance, settings: Settings) -> InlineKeyboardMarkup:
@@ -139,8 +138,6 @@ def get_payment_method_keyboard(months: int, price: float,
                 text=_("pay_with_yookassa_button"),
                 callback_data=f"pay_yk:{months}:{price}",
             )
-        elif method == "tribute" and settings.TRIBUTE_ENABLED and tribute_url:
-            builder.button(text=_("pay_with_tribute_button"), url=tribute_url)
         elif method == "stars" and settings.STARS_ENABLED and stars_price is not None:
             builder.button(
                 text=_("pay_with_stars_button"),
