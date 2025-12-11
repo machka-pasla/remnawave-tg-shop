@@ -264,6 +264,8 @@ class Settings(BaseSettings):
             return f"{base.rstrip('/')}{self.yookassa_webhook_path}"
         return None
 
+    @computed_field
+    @property
     def panel_webhook_path(self) -> str:
         return "/webhook/panel"
 
