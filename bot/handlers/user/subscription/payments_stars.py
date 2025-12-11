@@ -40,9 +40,10 @@ async def pay_stars_callback_handler(
 
     try:
         _, data_payload = callback.data.split(":", 1)
-        months_str, stars_price_str = data_payload.split(":")
-        months = int(months_str)
-        stars_price = int(stars_price_str)
+        parts = data_payload.split(":")
+        months = float(parts[0])
+        stars_price = int(float(parts[1]))
+        sale_mode = parts[2] if len(parts) > 2 else "subscription"
     except (ValueError, IndexError):
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)
@@ -51,7 +52,12 @@ async def pay_stars_callback_handler(
         return
 
     user_id = callback.from_user.id
-    payment_description = get_text("payment_description_subscription", months=months)
+    human_value = str(int(months)) if float(months).is_integer() else f"{months:g}"
+    payment_description = (
+        get_text("payment_description_traffic", traffic_gb=human_value)
+        if sale_mode == "traffic"
+        else get_text("payment_description_subscription", months=int(months))
+    )
 
     payment_db_id = await stars_service.create_invoice(
         session=session,
@@ -59,16 +65,21 @@ async def pay_stars_callback_handler(
         months=months,
         stars_price=stars_price,
         description=payment_description,
+        sale_mode=sale_mode,
     )
 
     if payment_db_id:
         try:
             await callback.message.edit_text(
-                get_text("payment_invoice_sent_message", months=months),
+                get_text(
+                    "payment_invoice_sent_message_traffic" if sale_mode == "traffic" else "payment_invoice_sent_message",
+                    months=int(months),
+                    traffic_gb=human_value,
+                ),
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(
                         text=get_text("back_to_payment_methods_button"),
-                        callback_data=f"subscribe_period:{months}",
+                        callback_data=f"subscribe_period:{human_value}",
                     )]
                 ]),
             )
@@ -106,9 +117,10 @@ async def handle_successful_stars_payment(
     payload = (message.successful_payment.invoice_payload
                if message and message.successful_payment else "")
     try:
-        payment_db_id_str, months_str = (payload or "").split(":", 1)
-        payment_db_id = int(payment_db_id_str)
-        months = int(months_str)
+        parts = (payload or "").split(":")
+        payment_db_id = int(parts[0])
+        months = float(parts[1]) if len(parts) > 1 else 0
+        sale_mode = parts[2] if len(parts) > 2 else "subscription"
     except Exception:
         return
 
@@ -120,4 +132,5 @@ async def handle_successful_stars_payment(
         months=months,
         stars_amount=stars_amount,
         i18n_data=i18n_data,
+        sale_mode=sale_mode,
     )

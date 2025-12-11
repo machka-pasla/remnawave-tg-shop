@@ -284,23 +284,28 @@ class FreeKassaService:
                 )
 
                 months = payment.subscription_duration_months or 1
+                sale_mode = "traffic" if self.settings.traffic_sale_mode else "subscription"
 
                 activation = await self.subscription_service.activate_subscription(
                     session,
                     payment.user_id,
-                    months,
+                    int(months) if sale_mode != "traffic" else 0,
                     float(payment.amount),
                     payment.payment_id,
                     provider="freekassa",
+                    sale_mode=sale_mode,
+                    traffic_gb=months if sale_mode == "traffic" else None,
                 )
 
-                referral_bonus = await self.referral_service.apply_referral_bonuses_for_payment(
-                    session,
-                    payment.user_id,
-                    months,
-                    current_payment_db_id=payment.payment_id,
-                    skip_if_active_before_payment=False,
-                )
+                referral_bonus = None
+                if sale_mode != "traffic":
+                    referral_bonus = await self.referral_service.apply_referral_bonuses_for_payment(
+                        session,
+                        payment.user_id,
+                        int(months),
+                        current_payment_db_id=payment.payment_id,
+                        skip_if_active_before_payment=False,
+                    )
 
                 await session.commit()
             except Exception as e:
@@ -315,6 +320,7 @@ class FreeKassaService:
             config_link = None
             final_end = None
             months = payment.subscription_duration_months or 1
+            sale_mode = "traffic" if self.settings.traffic_sale_mode else "subscription"
             if activation:
                 config_link = activation.get("subscription_url")
                 final_end = activation.get("end_date")
@@ -334,7 +340,14 @@ class FreeKassaService:
             else:
                 end_date_str = _("config_link_not_available")
 
-            if applied_days:
+            traffic_label = str(int(months)) if float(months).is_integer() else f"{months:g}"
+
+            if sale_mode == "traffic":
+                text = _("payment_successful_traffic_full",
+                         traffic_gb=traffic_label,
+                         end_date=end_date_str if final_end else "",
+                         config_link=config_link)
+            elif applied_days:
                 inviter_name_display = _("friend_placeholder")
                 if db_user and db_user.referred_by_id:
                     inviter = await user_dal.get_user_by_id(session, db_user.referred_by_id)
@@ -392,7 +405,8 @@ class FreeKassaService:
                     user_id=payment.user_id,
                     amount=float(payment.amount),
                     currency=self.default_currency,
-                    months=months,
+                    months=int(months) if sale_mode != "traffic" else 0,
+                    traffic_gb=months if sale_mode == "traffic" else None,
                     payment_provider="freekassa",
                     username=db_user.username if db_user else None,
                 )

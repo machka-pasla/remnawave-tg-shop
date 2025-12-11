@@ -63,6 +63,7 @@ class CryptoPayService:
         months: int,
         amount: float,
         description: str,
+        sale_mode: str = "subscription",
     ) -> Optional[str]:
         if not self.configured or not self.client:
             logging.error("CryptoPayService not configured")
@@ -78,7 +79,7 @@ class CryptoPayService:
                     "currency": self.settings.CRYPTOPAY_ASSET,
                     "status": "pending_cryptopay",
                     "description": description,
-                    "subscription_duration_months": months,
+                    "subscription_duration_months": int(months),
                     "provider": "cryptopay",
                 },
             )
@@ -94,6 +95,8 @@ class CryptoPayService:
             "user_id": str(user_id),
             "subscription_months": str(months),
             "payment_db_id": str(payment_record.payment_id),
+            "sale_mode": sale_mode,
+            "traffic_gb": str(months) if sale_mode == "traffic" else None,
         })
         try:
             invoice = await self.client.create_invoice(
@@ -132,8 +135,10 @@ class CryptoPayService:
         try:
             meta = json.loads(invoice.payload)
             user_id = int(meta["user_id"])
-            months = int(meta["subscription_months"])
+            months = float(meta.get("subscription_months") or 0)
             payment_db_id = int(meta["payment_db_id"])
+            sale_mode = meta.get("sale_mode") or ("traffic" if self.settings.traffic_sale_mode else "subscription")
+            traffic_gb = float(meta.get("traffic_gb")) if meta.get("traffic_gb") else months
         except Exception as e:
             logging.error(f"Failed to parse CryptoPay payload: {e}")
             return
@@ -156,18 +161,22 @@ class CryptoPayService:
                 activation = await subscription_service.activate_subscription(
                     session,
                     user_id,
-                    months,
+                    int(months) if sale_mode != "traffic" else 0,
                     float(invoice.amount),
                     payment_db_id,
                     provider="cryptopay",
+                    sale_mode=sale_mode,
+                    traffic_gb=traffic_gb if sale_mode == "traffic" else None,
                 )
-                referral_bonus = await referral_service.apply_referral_bonuses_for_payment(
-                    session,
-                    user_id,
-                    months,
-                    current_payment_db_id=payment_db_id,
-                    skip_if_active_before_payment=False,
-                )
+                referral_bonus = None
+                if sale_mode != "traffic":
+                    referral_bonus = await referral_service.apply_referral_bonuses_for_payment(
+                        session,
+                        user_id,
+                        int(months) or 1,
+                        current_payment_db_id=payment_db_id,
+                        skip_if_active_before_payment=False,
+                    )
                 await session.commit()
             except Exception as e:
                 await session.rollback()
@@ -186,7 +195,12 @@ class CryptoPayService:
                 final_end = referral_bonus["referee_new_end_date"]
                 applied_days = referral_bonus.get("referee_bonus_applied_days", 0)
 
-            if applied_days:
+            if sale_mode == "traffic":
+                text = _("payment_successful_traffic_full",
+                         traffic_gb=str(int(traffic_gb)) if float(traffic_gb).is_integer() else f"{traffic_gb:g}",
+                         end_date=final_end.strftime('%Y-%m-%d') if final_end else "—",
+                         config_link=config_link)
+            elif applied_days:
                 inviter_name_display = _("friend_placeholder")
                 if db_user and db_user.referred_by_id:
                     inviter = await user_dal.get_user_by_id(session, db_user.referred_by_id)
@@ -197,7 +211,7 @@ class CryptoPayService:
                         elif inviter.username:
                             inviter_name_display = username_for_display(inviter.username, with_at=False)
                 text = _("payment_successful_with_referral_bonus_full",
-                         months=months,
+                         months=int(months),
                          base_end_date=activation["end_date"].strftime('%Y-%m-%d'),
                          bonus_days=applied_days,
                          final_end_date=final_end.strftime('%Y-%m-%d'),
@@ -205,8 +219,8 @@ class CryptoPayService:
                          config_link=config_link)
             else:
                 text = _("payment_successful_full",
-                         months=months,
-                         end_date=final_end.strftime('%Y-%m-%d'),
+                         months=int(months),
+                         end_date=final_end.strftime('%Y-%m-%d') if final_end else "—",
                          config_link=config_link)
 
             markup = get_connect_and_main_keyboard(
@@ -231,7 +245,8 @@ class CryptoPayService:
                     user_id=user_id,
                     amount=float(invoice.amount),
                     currency=invoice.asset or settings.DEFAULT_CURRENCY_SYMBOL,
-                    months=months,
+                    months=int(months) if sale_mode != "traffic" else 0,
+                    traffic_gb=traffic_gb if sale_mode == "traffic" else None,
                     payment_provider="crypto_pay",
                     username=user.username if user else None
                 )

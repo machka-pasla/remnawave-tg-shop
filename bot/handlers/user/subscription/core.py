@@ -40,11 +40,15 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
         return
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
-    text_content = get_text("select_subscription_period") if settings.subscription_options else get_text("no_subscription_options_available")
+    traffic_mode = bool(getattr(settings, "traffic_sale_mode", False))
+    options = settings.traffic_packages if traffic_mode else settings.subscription_options
+    text_content = (
+        get_text("select_traffic_package") if traffic_mode else get_text("select_subscription_period")
+    ) if options else get_text("no_subscription_options_available")
 
     reply_markup = (
-        get_subscription_options_keyboard(settings.subscription_options, currency_symbol_val, current_lang, i18n)
-        if settings.subscription_options
+        get_subscription_options_keyboard(options, currency_symbol_val, current_lang, i18n, traffic_mode=traffic_mode)
+        if options
         else get_back_to_main_menu_markup(current_lang, i18n)
     )
 
@@ -125,17 +129,50 @@ async def my_subscription_command_handler(
 
     end_date = active.get("end_date")
     days_left = (end_date.date() - datetime.now().date()).days if end_date else 0
-    text = get_text(
-        "my_subscription_details",
-        end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
-        days_left=max(0, days_left),
-        status=active.get("status_from_panel", get_text("status_active")).capitalize(),
-        config_link=active.get("config_link") or get_text("config_link_not_available"),
-        traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
-        traffic_used=(
-            f"{active['traffic_used_bytes'] / 2**30:.2f} GB" if active.get("traffic_used_bytes") is not None else get_text("traffic_na")
-        ),
-    )
+    traffic_mode = bool(getattr(settings, "traffic_sale_mode", False))
+    def _fmt_gb(val: Optional[float]) -> str:
+        if val is None:
+            return get_text("traffic_na")
+        try:
+            if isinstance(val, (int, float)):
+                val_gb = float(val) / (2**30)
+                return f"{val_gb:.2f} GB"
+        except Exception:
+            pass
+        return str(val)
+
+    if traffic_mode:
+        limit_display = _fmt_gb(active.get("traffic_limit_bytes"))
+        used_display = _fmt_gb(active.get("traffic_used_bytes"))
+        remaining_display = get_text("traffic_na")
+        try:
+            limit_val = active.get("traffic_limit_bytes") or 0
+            used_val = active.get("traffic_used_bytes") or 0
+            remaining_val = max(0, float(limit_val) - float(used_val))
+            remaining_display = _fmt_gb(remaining_val)
+        except Exception:
+            pass
+        text = get_text(
+            "my_traffic_details",
+            status=active.get("status_from_panel", get_text("status_active")).capitalize(),
+            end_date=end_date.strftime("%Y-%m-%d") if end_date else get_text("traffic_no_expiry"),
+            traffic_limit=limit_display,
+            traffic_used=used_display,
+            traffic_left=remaining_display,
+            config_link=active.get("config_link") or get_text("config_link_not_available"),
+        )
+    else:
+        text = get_text(
+            "my_subscription_details",
+            end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
+            days_left=max(0, days_left),
+            status=active.get("status_from_panel", get_text("status_active")).capitalize(),
+            config_link=active.get("config_link") or get_text("config_link_not_available"),
+            traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
+            traffic_used=(
+                f"{active['traffic_used_bytes'] / 2**30:.2f} GB" if active.get("traffic_used_bytes") is not None else get_text("traffic_na")
+            ),
+        )
 
     base_markup = get_back_to_main_menu_markup(current_lang, i18n)
     kb = base_markup.inline_keyboard
@@ -214,7 +251,7 @@ async def my_subscription_command_handler(
             ])
 
         # 2) Auto-renew toggle (YooKassa only)
-        if local_sub and local_sub.provider == "yookassa" and settings.yookassa_autopayments_active:
+        if not traffic_mode and local_sub and local_sub.provider == "yookassa" and settings.yookassa_autopayments_active:
             toggle_text = (
                 get_text("autorenew_disable_button") if local_sub.auto_renew_enabled else get_text("autorenew_enable_button")
             )
@@ -226,7 +263,7 @@ async def my_subscription_command_handler(
             ])
 
         # 3) Payment methods management (when autopayments enabled)
-        if settings.yookassa_autopayments_active:
+        if not traffic_mode and settings.yookassa_autopayments_active:
             prepend_rows.append([
                 InlineKeyboardButton(text=get_text("payment_methods_manage_button"), callback_data="pm:manage")
             ])

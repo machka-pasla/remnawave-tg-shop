@@ -29,8 +29,9 @@ async def select_subscription_period_callback_handler(
             pass
         return
 
+    traffic_mode = bool(getattr(settings, "traffic_sale_mode", False))
     try:
-        months = int(callback.data.split(":")[-1])
+        months = float(callback.data.split(":")[-1])
     except (ValueError, IndexError):
         logging.error(f"Invalid subscription period in callback_data: {callback.data}")
         try:
@@ -39,10 +40,13 @@ async def select_subscription_period_callback_handler(
             pass
         return
 
-    price_rub = settings.subscription_options.get(months)
+    price_source = settings.traffic_packages if traffic_mode else settings.subscription_options
+    stars_price_source = settings.stars_traffic_packages if traffic_mode else settings.stars_subscription_options
+
+    price_rub = price_source.get(months)
     if price_rub is None:
         logging.error(
-            f"Price not found for {months} months subscription period in settings.subscription_options."
+            f"Price not found for option {months} using {'traffic_packages' if traffic_mode else 'subscription_options'}."
         )
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)
@@ -51,8 +55,8 @@ async def select_subscription_period_callback_handler(
         return
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
-    text_content = get_text("choose_payment_method")
-    stars_price = settings.stars_subscription_options.get(months)
+    text_content = get_text("choose_payment_method_traffic") if traffic_mode else get_text("choose_payment_method")
+    stars_price = stars_price_source.get(months)
     reply_markup = get_payment_method_keyboard(
         months,
         price_rub,
@@ -61,6 +65,7 @@ async def select_subscription_period_callback_handler(
         current_lang,
         i18n,
         settings,
+        sale_mode="traffic" if traffic_mode else "subscription",
     )
 
     try:

@@ -222,7 +222,8 @@ class NotificationService:
     
     async def notify_payment_received(self, user_id: int, amount: float, currency: str,
                                     months: int, payment_provider: str, 
-                                    username: Optional[str] = None):
+                                    username: Optional[str] = None,
+                                    traffic_gb: Optional[float] = None):
         """Send notification about successful payment"""
         if not self.settings.LOG_PAYMENTS:
             return
@@ -243,23 +244,42 @@ class NotificationService:
             "platega": "💳",
             "severpay": "💳",
         }.get(payment_provider.lower(), "💰")
-        
-        message = _(
-            "log_payment_received",
-            default="{provider_emoji} <b>Получен платеж</b>\n\n"
-                   "👤 Пользователь: {user_display}\n"
-                   "💰 Сумма: <b>{amount} {currency}</b>\n"
-                   "📅 Период: <b>{months} мес.</b>\n"
-                   "🏦 Провайдер: {payment_provider}\n"
-                   "🕐 Время: {timestamp}",
-            provider_emoji=provider_emoji,
-            user_display=user_display,
-            amount=amount,
-            currency=currency,
-            months=months,
-            payment_provider=payment_provider,
-            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        )
+
+        if traffic_gb is not None:
+            traffic_label = str(int(traffic_gb)) if float(traffic_gb).is_integer() else f"{traffic_gb:g}"
+            message = _(
+                "log_payment_received_traffic",
+                default="{provider_emoji} <b>Получен платеж</b>\n\n"
+                        "👤 Пользователь: {user_display}\n"
+                        "💰 Сумма: <b>{amount} {currency}</b>\n"
+                        "🗂 Трафик: <b>{traffic_gb} GB</b>\n"
+                        "🏦 Провайдер: {payment_provider}\n"
+                        "🕐 Время: {timestamp}",
+                provider_emoji=provider_emoji,
+                user_display=user_display,
+                amount=amount,
+                currency=currency,
+                traffic_gb=traffic_label,
+                payment_provider=payment_provider,
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+        else:
+            message = _(
+                "log_payment_received",
+                default="{provider_emoji} <b>Получен платеж</b>\n\n"
+                       "👤 Пользователь: {user_display}\n"
+                       "💰 Сумма: <b>{amount} {currency}</b>\n"
+                       "📅 Период: <b>{months} мес.</b>\n"
+                       "🏦 Провайдер: {payment_provider}\n"
+                       "🕐 Время: {timestamp}",
+                provider_emoji=provider_emoji,
+                user_display=user_display,
+                amount=amount,
+                currency=currency,
+                months=months,
+                payment_provider=payment_provider,
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
         
         # Send to log channel
         profile_keyboard = self._build_profile_keyboard(_, user_id)

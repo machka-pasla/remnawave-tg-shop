@@ -105,6 +105,15 @@ class Settings(BaseSettings):
     STARS_PRICE_12_MONTHS: Optional[int] = Field(default=None)
     PANEL_WEBHOOK_SECRET: Optional[str] = Field(default=None)
 
+    TRAFFIC_PACKAGES: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of traffic packages in the format '<GB>:<price>', e.g. '10:199,50:799'",
+    )
+    STARS_TRAFFIC_PACKAGES: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of traffic packages priced in Stars, e.g. '5:500,20:1500'",
+    )
+
     SUBSCRIPTION_NOTIFICATIONS_ENABLED: bool = Field(default=True)
     SUBSCRIPTION_NOTIFY_ON_EXPIRE: bool = Field(default=True)
     SUBSCRIPTION_NOTIFY_AFTER_EXPIRE: bool = Field(default=True)
@@ -359,6 +368,62 @@ class Settings(BaseSettings):
         if self.STARS_ENABLED and self.MONTH_12_ENABLED and self.STARS_PRICE_12_MONTHS is not None:
             options[12] = self.STARS_PRICE_12_MONTHS
         return options
+
+    @computed_field
+    @property
+    def traffic_packages(self) -> Dict[float, float]:
+        """
+        Mapping of traffic size in GB to price in the default currency.
+        """
+        packages: Dict[float, float] = {}
+        raw = (self.TRAFFIC_PACKAGES or "").strip()
+        if not raw:
+            return packages
+        for part in raw.split(","):
+            chunk = part.strip()
+            if not chunk or ":" not in chunk:
+                continue
+            size_str, price_str = chunk.split(":", 1)
+            try:
+                size_gb = float(size_str.strip())
+                price_val = float(price_str.strip())
+                if size_gb > 0 and price_val >= 0:
+                    packages[size_gb] = price_val
+            except ValueError:
+                logging.warning("Invalid TRAFFIC_PACKAGES entry skipped: %s", chunk)
+                continue
+        return packages
+
+    @computed_field
+    @property
+    def stars_traffic_packages(self) -> Dict[float, int]:
+        """
+        Mapping of traffic size in GB to price in Telegram Stars.
+        """
+        packages: Dict[float, int] = {}
+        raw = (self.STARS_TRAFFIC_PACKAGES or "").strip()
+        if not raw:
+            return packages
+        for part in raw.split(","):
+            chunk = part.strip()
+            if not chunk or ":" not in chunk:
+                continue
+            size_str, price_str = chunk.split(":", 1)
+            try:
+                size_gb = float(size_str.strip())
+                price_val = int(float(price_str.strip()))
+                if size_gb > 0 and price_val >= 0:
+                    packages[size_gb] = price_val
+            except ValueError:
+                logging.warning("Invalid STARS_TRAFFIC_PACKAGES entry skipped: %s", chunk)
+                continue
+        return packages
+
+    @computed_field
+    @property
+    def traffic_sale_mode(self) -> bool:
+        """When true, the bot sells traffic packages instead of time-based subscriptions."""
+        return bool(self.traffic_packages)
 
     def referral_bonus_inviter(self) -> Dict[int, int]:
         bonuses: Dict[int, int] = {}

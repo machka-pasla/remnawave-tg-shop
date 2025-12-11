@@ -157,6 +157,7 @@ class PlategaService:
                 return web.Response(text="ok")
 
             payment_months = payment.subscription_duration_months or 1
+            sale_mode = "traffic" if self.settings.traffic_sale_mode else "subscription"
 
             if status == "CONFIRMED":
                 if amount_raw is not None:
@@ -184,19 +185,23 @@ class PlategaService:
                     activation = await self.subscription_service.activate_subscription(
                         session,
                         payment.user_id,
-                        payment_months,
+                        int(payment_months) if sale_mode != "traffic" else 0,
                         float(payment.amount),
                         payment.payment_id,
                         provider="platega",
+                        sale_mode=sale_mode,
+                        traffic_gb=payment_months if sale_mode == "traffic" else None,
                     )
 
-                    referral_bonus = await self.referral_service.apply_referral_bonuses_for_payment(
-                        session,
-                        payment.user_id,
-                        payment_months,
-                        current_payment_db_id=payment.payment_id,
-                        skip_if_active_before_payment=False,
-                    )
+                    referral_bonus = None
+                    if sale_mode != "traffic":
+                        referral_bonus = await self.referral_service.apply_referral_bonuses_for_payment(
+                            session,
+                            payment.user_id,
+                            int(payment_months),
+                            current_payment_db_id=payment.payment_id,
+                            skip_if_active_before_payment=False,
+                        )
 
                     await session.commit()
                 except Exception as exc:
@@ -221,7 +226,16 @@ class PlategaService:
                     final_end = referral_bonus["referee_new_end_date"]
                     applied_days = referral_bonus.get("referee_bonus_applied_days", 0)
 
-                if applied_days:
+                traffic_label = str(int(payment_months)) if float(payment_months).is_integer() else f"{payment_months:g}"
+
+                if sale_mode == "traffic":
+                    text = _(
+                        "payment_successful_traffic_full",
+                        traffic_gb=traffic_label,
+                        end_date=final_end.strftime("%Y-%m-%d") if final_end else "",
+                        config_link=config_link,
+                    )
+                elif applied_days:
                     inviter_name_display = _("friend_placeholder")
                     if db_user and db_user.referred_by_id:
                         inviter = await user_dal.get_user_by_id(session, db_user.referred_by_id)
@@ -281,7 +295,8 @@ class PlategaService:
                         user_id=payment.user_id,
                         amount=float(payment.amount),
                         currency=currency,
-                        months=payment_months,
+                        months=int(payment_months) if sale_mode != "traffic" else 0,
+                        traffic_gb=payment_months if sale_mode == "traffic" else None,
                         payment_provider="platega",
                         username=db_user.username if db_user else None,
                     )

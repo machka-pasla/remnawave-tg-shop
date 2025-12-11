@@ -34,7 +34,7 @@ async def get_payments_with_pagination(session: AsyncSession, page: int = 0,
     return payments, total_count
 
 
-def format_payment_text(payment: Payment, i18n: JsonI18n, lang: str) -> str:
+def format_payment_text(payment: Payment, i18n: JsonI18n, lang: str, settings: Settings) -> str:
     """Format single payment info as text."""
     _ = lambda key, **kwargs: i18n.gettext(lang, key, **kwargs)
     
@@ -66,12 +66,21 @@ def format_payment_text(payment: Payment, i18n: JsonI18n, lang: str) -> str:
         'severpay': 'SeverPay',
         'platega': 'Platega',
     }.get(payment.provider, payment.provider or 'Unknown')
+
+    traffic_mode = getattr(settings, "traffic_sale_mode", False)
+    if traffic_mode:
+        traffic_val = payment.subscription_duration_months or 0
+        traffic_display = str(int(traffic_val)) if float(traffic_val).is_integer() else f"{traffic_val:g}"
+        period_line = _("admin_payment_traffic_label", default="🗂 Трафик: <b>{traffic_gb} GB</b>", traffic_gb=traffic_display)
+    else:
+        period_line = _("admin_payment_months_label", default="📅 Период: <b>{months} мес.</b>", months=payment.subscription_duration_months or 0)
     
     return (
         f"{status_emoji} <b>{payment.amount} {payment.currency}</b>\n"
         f"👤 {user_info}\n"
         f"💳 {provider_text}\n"
         f"📅 {payment_date}\n"
+        f"{period_line}\n"
         f"📋 {payment.status}\n"
         f"📝 {payment.description or 'N/A'}"
     )
@@ -109,7 +118,7 @@ async def view_payments_handler(callback: types.CallbackQuery, i18n_data: dict,
                        total_pages=total_pages) + "\n")
     
     for i, payment in enumerate(payments, 1):
-        text_parts.append(f"<b>{page * page_size + i}.</b> {format_payment_text(payment, i18n, current_lang)}")
+        text_parts.append(f"<b>{page * page_size + i}.</b> {format_payment_text(payment, i18n, current_lang, settings)}")
         text_parts.append("")  # Empty line between payments
 
     # Build keyboard with pagination and export
@@ -202,13 +211,21 @@ async def export_payments_csv_handler(callback: types.CallbackQuery, i18n_data: 
             _("admin_csv_provider", default="Provider"),
             _("admin_csv_status", default="Status"),
             _("admin_csv_description", default="Description"),
-            _("admin_csv_months", default="Months"),
+            _("admin_csv_units", default="Months/GB"),
             _("admin_csv_created_at", default="Created At"),
             _("admin_csv_provider_payment_id", default="Provider Payment ID")
         ])
+
+        traffic_mode = getattr(settings, "traffic_sale_mode", False)
         
         # Write payment data
         for payment in all_payments:
+            units_val = payment.subscription_duration_months or ""
+            if traffic_mode and units_val not in ("", None):
+                try:
+                    units_val = str(int(units_val)) if float(units_val).is_integer() else f"{units_val:g}"
+                except Exception:
+                    units_val = payment.subscription_duration_months or ""
             writer.writerow([
                 payment.payment_id,
                 payment.user_id,
@@ -219,7 +236,7 @@ async def export_payments_csv_handler(callback: types.CallbackQuery, i18n_data: 
                 payment.provider or "",
                 payment.status,
                 payment.description or "",
-                payment.subscription_duration_months or "",
+                units_val,
                 payment.created_at.strftime('%Y-%m-%d %H:%M:%S') if payment.created_at else "",
                 payment.provider_payment_id or ""
             ])

@@ -18,10 +18,17 @@ from db.dal import payment_dal, user_billing_dal
 router = Router(name="user_subscription_payments_yookassa_router")
 
 
-def _parse_months_and_price(payload: str) -> Optional[Tuple[int, float]]:
+def _format_value(val: float) -> str:
+    return str(int(val)) if float(val).is_integer() else f"{val:g}"
+
+
+def _parse_offer_payload(payload: str) -> Optional[Tuple[float, float, str]]:
     try:
-        months_str, price_str = payload.split(":")
-        return int(months_str), float(price_str)
+        parts = payload.split(":")
+        value = float(parts[0])
+        price = float(parts[1])
+        sale_mode = parts[2] if len(parts) > 2 else "subscription"
+        return value, price, sale_mode
     except (ValueError, IndexError):
         return None
 
@@ -64,19 +71,24 @@ async def _initiate_yk_payment(
     back_callback: str,
     payment_method_id: Optional[str] = None,
     selected_method_internal_id: Optional[int] = None,
+    sale_mode: str = "subscription",
 ) -> bool:
     """Create payment record and initiate YooKassa payment (new card or saved card)."""
     if not callback.message:
         return False
 
-    payment_description = get_text("payment_description_subscription", months=months)
+    payment_description = (
+        get_text("payment_description_traffic", traffic_gb=_format_value(months))
+        if sale_mode == "traffic"
+        else get_text("payment_description_subscription", months=int(months))
+    )
     payment_record_data = {
         "user_id": user_id,
         "amount": price_rub,
         "currency": currency_code_for_yk,
         "status": "pending_yookassa",
         "description": payment_description,
-        "subscription_duration_months": months,
+        "subscription_duration_months": int(months),
     }
 
     db_payment_record = None
@@ -109,7 +121,10 @@ async def _initiate_yk_payment(
         "user_id": str(user_id),
         "subscription_months": str(months),
         "payment_db_id": str(db_payment_record.payment_id),
+        "sale_mode": sale_mode,
     }
+    if sale_mode == "traffic":
+        yookassa_metadata["traffic_gb"] = str(months)
     if payment_method_id:
         yookassa_metadata["used_saved_payment_method_id"] = payment_method_id
 
@@ -198,7 +213,11 @@ async def _initiate_yk_payment(
 
         try:
             await callback.message.edit_text(
-                get_text(key="payment_link_message", months=months),
+                get_text(
+                    key="payment_link_message_traffic" if sale_mode == "traffic" else "payment_link_message",
+                    months=int(months),
+                    traffic_gb=_format_value(months),
+                ),
                 reply_markup=get_payment_url_keyboard(
                     payment_response_yk["confirmation_url"],
                     current_lang,
@@ -214,7 +233,11 @@ async def _initiate_yk_payment(
             )
             try:
                 await callback.message.answer(
-                    get_text(key="payment_link_message", months=months),
+                    get_text(
+                        key="payment_link_message_traffic" if sale_mode == "traffic" else "payment_link_message",
+                        months=int(months),
+                        traffic_gb=_format_value(months),
+                    ),
                     reply_markup=get_payment_url_keyboard(
                         payment_response_yk["confirmation_url"],
                         current_lang,
@@ -328,7 +351,7 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
             pass
         return
 
-    parsed = _parse_months_and_price(data_payload)
+    parsed = _parse_offer_payload(data_payload)
     if not parsed:
         logging.error(f"Invalid pay_yk payload structure: {callback.data}")
         try:
@@ -337,10 +360,10 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
             pass
         return
 
-    months, price_rub = parsed
+    months, price_rub, sale_mode = parsed
     user_id = callback.from_user.id
     currency_code_for_yk = "RUB"
-    autopay_enabled = bool(settings.yookassa_autopayments_active)
+    autopay_enabled = bool(settings.yookassa_autopayments_active and sale_mode != "traffic" and not settings.traffic_sale_mode)
     autopay_require_binding = bool(
         getattr(settings, 'YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING', True)
     )
@@ -364,6 +387,7 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
                     current_lang,
                     i18n,
                     has_saved_cards=True,
+                    sale_mode=sale_mode,
                 ),
             )
         except Exception as e_edit:
@@ -377,6 +401,7 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
                         current_lang,
                         i18n,
                         has_saved_cards=True,
+                        sale_mode=sale_mode,
                     ),
                 )
             except Exception:
@@ -400,7 +425,8 @@ async def pay_yk_callback_handler(callback: types.CallbackQuery, settings: Setti
         price_rub=price_rub,
         currency_code_for_yk=currency_code_for_yk,
         save_payment_method=autopay_enabled and autopay_require_binding,
-        back_callback=f"subscribe_period:{months}",
+        back_callback=f"subscribe_period:{_format_value(months)}",
+        sale_mode=sale_mode,
     )
     try:
         await callback.answer()
@@ -443,7 +469,7 @@ async def pay_yk_new_card_handler(callback: types.CallbackQuery, settings: Setti
             pass
         return
 
-    parsed = _parse_months_and_price(data_payload)
+    parsed = _parse_offer_payload(data_payload)
     if not parsed:
         logging.error(f"Invalid pay_yk_new payload structure: {callback.data}")
         try:
@@ -452,10 +478,10 @@ async def pay_yk_new_card_handler(callback: types.CallbackQuery, settings: Setti
             pass
         return
 
-    months, price_rub = parsed
+    months, price_rub, sale_mode = parsed
     user_id = callback.from_user.id
     currency_code_for_yk = "RUB"
-    autopay_enabled = bool(settings.yookassa_autopayments_active)
+    autopay_enabled = bool(settings.yookassa_autopayments_active and sale_mode != "traffic" and not settings.traffic_sale_mode)
     autopay_require_binding = bool(
         getattr(settings, 'YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING', True)
     )
@@ -473,7 +499,8 @@ async def pay_yk_new_card_handler(callback: types.CallbackQuery, settings: Setti
         price_rub=price_rub,
         currency_code_for_yk=currency_code_for_yk,
         save_payment_method=autopay_enabled and autopay_require_binding,
-        back_callback=f"subscribe_period:{months}",
+        back_callback=f"subscribe_period:{_format_value(months)}",
+        sale_mode=sale_mode,
     )
     try:
         await callback.answer()
@@ -490,14 +517,6 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
     if not i18n or not callback.message:
         try:
             await callback.answer(get_text("error_occurred_try_again"), show_alert=True)
-        except Exception:
-            pass
-        return
-
-    autopay_enabled = bool(settings.yookassa_autopayments_active)
-    if not autopay_enabled:
-        try:
-            await callback.answer(get_text("error_try_again"), show_alert=True)
         except Exception:
             pass
         return
@@ -522,11 +541,20 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
         return
 
     try:
-        months = int(parts[0])
+        months = float(parts[0])
         price_rub = float(parts[1])
         page = int(parts[2]) if len(parts) > 2 else 0
+        sale_mode = parts[3] if len(parts) > 3 else "subscription"
     except (ValueError, IndexError):
         logging.error(f"pay_yk_saved_list payload parsing error: {callback.data}")
+        try:
+            await callback.answer(get_text("error_try_again"), show_alert=True)
+        except Exception:
+            pass
+        return
+
+    autopay_enabled = bool(settings.yookassa_autopayments_active and sale_mode != "traffic" and not settings.traffic_sale_mode)
+    if not autopay_enabled:
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)
         except Exception:
@@ -552,6 +580,7 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
                     current_lang,
                     i18n,
                     has_saved_cards=False,
+                    sale_mode=sale_mode,
                 ),
             )
         except Exception as e_edit:
@@ -565,6 +594,7 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
                         current_lang,
                         i18n,
                         has_saved_cards=False,
+                        sale_mode=sale_mode,
                     ),
                 )
             except Exception:
@@ -596,6 +626,7 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
                 current_lang,
                 i18n,
                 page=page,
+                sale_mode=sale_mode,
             ),
         )
     except Exception as e_edit:
@@ -610,6 +641,7 @@ async def pay_yk_saved_list_handler(callback: types.CallbackQuery, settings: Set
                     current_lang,
                     i18n,
                     page=page,
+                    sale_mode=sale_mode,
                 ),
             )
         except Exception:
@@ -629,14 +661,6 @@ async def pay_yk_use_saved_handler(callback: types.CallbackQuery, settings: Sett
     if not i18n or not callback.message:
         try:
             await callback.answer(get_text("error_occurred_try_again"), show_alert=True)
-        except Exception:
-            pass
-        return
-
-    autopay_enabled = bool(settings.yookassa_autopayments_active)
-    if not autopay_enabled:
-        try:
-            await callback.answer(get_text("error_try_again"), show_alert=True)
         except Exception:
             pass
         return
@@ -673,10 +697,19 @@ async def pay_yk_use_saved_handler(callback: types.CallbackQuery, settings: Sett
         return
 
     try:
-        months = int(parts[0])
+        months = float(parts[0])
         price_rub = float(parts[1])
+        sale_mode = parts[3] if len(parts) > 3 else "subscription"
     except (ValueError, IndexError):
         logging.error(f"pay_yk_use_saved months/price parsing error: {callback.data}")
+        try:
+            await callback.answer(get_text("error_try_again"), show_alert=True)
+        except Exception:
+            pass
+        return
+
+    autopay_enabled = bool(settings.yookassa_autopayments_active and sale_mode != "traffic" and not settings.traffic_sale_mode)
+    if not autopay_enabled:
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)
         except Exception:
@@ -727,9 +760,10 @@ async def pay_yk_use_saved_handler(callback: types.CallbackQuery, settings: Sett
         price_rub=price_rub,
         currency_code_for_yk=currency_code_for_yk,
         save_payment_method=False,
-        back_callback=f"pay_yk_saved_list:{months}:{price_rub}",
+        back_callback=f"pay_yk_saved_list:{_format_value(months)}:{price_rub}:{sale_mode}",
         payment_method_id=selected_method.provider_payment_method_id,
         selected_method_internal_id=selected_method.method_id,
+        sale_mode=sale_mode,
     )
     try:
         await callback.answer()
