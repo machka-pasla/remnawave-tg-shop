@@ -23,6 +23,7 @@ from config.settings import Settings
 from bot.services.notification_service import NotificationService
 from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
+from bot.utils.config_link import prepare_config_links
 
 payment_processing_lock = asyncio.Lock()
 
@@ -252,6 +253,10 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         traffic_label = (
             str(int(traffic_amount_gb)) if float(traffic_amount_gb).is_integer() else f"{traffic_amount_gb:g}"
         )
+        config_link_display, connect_button_url = prepare_config_links(
+            settings, activation_details.get("subscription_url") if activation_details else None
+        )
+        config_link_text = config_link_display or _("config_link_not_available")
         # For auto-renew charges, avoid re-sending config link; send concise message
         if sale_mode != "traffic" and is_auto_renew and final_end_date_for_user:
             details_message = _(
@@ -261,21 +266,21 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
             )
             details_markup = None
         elif sale_mode == "traffic":
-            config_link = activation_details.get("subscription_url") or _("config_link_not_available")
             details_message = _(
                 "payment_successful_traffic_full",
                 traffic_gb=traffic_label,
                 end_date=final_end_date_for_user.strftime('%Y-%m-%d') if final_end_date_for_user else "—",
-                config_link=config_link,
+                config_link=config_link_text,
             )
             details_markup = get_connect_and_main_keyboard(
-                user_lang, i18n, settings, config_link, preserve_message=True
+                user_lang,
+                i18n,
+                settings,
+                config_link_display,
+                connect_button_url=connect_button_url,
+                preserve_message=True,
             )
         else:
-            config_link = activation_details.get("subscription_url") or _(
-                "config_link_not_available"
-            )
-
             if applied_referee_bonus_days_from_referral and final_end_date_for_user:
                 inviter_name_display = _("friend_placeholder")
                 if db_user and db_user.referred_by_id:
@@ -295,7 +300,7 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                     bonus_days=applied_referee_bonus_days_from_referral,
                     final_end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
                     inviter_name=inviter_name_display,
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             elif applied_promo_bonus_days > 0 and final_end_date_for_user:
                 details_message = _(
@@ -303,14 +308,14 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                     months=int(subscription_months),
                     bonus_days=applied_promo_bonus_days,
                     end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             elif final_end_date_for_user:
                 details_message = _(
                     "payment_successful_full",
                     months=int(subscription_months),
                     end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             else:
                 logging.error(
@@ -319,7 +324,12 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                 details_message = _("payment_successful_error_details")
 
             details_markup = get_connect_and_main_keyboard(
-                user_lang, i18n, settings, config_link, preserve_message=True
+                user_lang,
+                i18n,
+                settings,
+                config_link_display,
+                connect_button_url=connect_button_url,
+                preserve_message=True,
             )
         try:
             await bot.send_message(

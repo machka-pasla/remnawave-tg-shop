@@ -13,6 +13,7 @@ from bot.middlewares.i18n import JsonI18n
 from .notification_service import NotificationService
 from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
+from bot.utils.config_link import prepare_config_links
 
 
 class StarsService:
@@ -121,16 +122,16 @@ class StarsService:
         i18n: JsonI18n = i18n_data.get("i18n_instance")
         _ = lambda k, **kw: i18n.gettext(current_lang, k, **kw) if i18n else k
 
-        config_link = activation_details.get("subscription_url") or _(
-            "config_link_not_available"
-        )
+        raw_config_link = activation_details.get("subscription_url") if activation_details else None
+        config_link_display, connect_button_url = prepare_config_links(self.settings, raw_config_link)
+        config_link_text = config_link_display or _("config_link_not_available")
 
         if sale_mode == "traffic":
             success_msg = _(
                 "payment_successful_traffic_full",
                 traffic_gb=str(int(months)) if float(months).is_integer() else f"{months:g}",
                 end_date=final_end.strftime('%Y-%m-%d'),
-                config_link=config_link,
+                config_link=config_link_text,
             )
         elif applied_days:
             inviter_name_display = _("friend_placeholder")
@@ -150,17 +151,22 @@ class StarsService:
                 bonus_days=applied_days,
                 final_end_date=final_end.strftime('%Y-%m-%d'),
                 inviter_name=inviter_name_display,
-                config_link=config_link,
+                config_link=config_link_text,
             )
         else:
             success_msg = _(
                 "payment_successful_full",
                 months=months,
                 end_date=final_end.strftime('%Y-%m-%d'),
-                config_link=config_link,
+                config_link=config_link_text,
             )
         markup = get_connect_and_main_keyboard(
-            current_lang, i18n, self.settings, config_link, preserve_message=True
+            current_lang,
+            i18n,
+            self.settings,
+            config_link_display,
+            connect_button_url=connect_button_url,
+            preserve_message=True,
         )
         try:
             await self.bot.send_message(

@@ -142,6 +142,9 @@ async def my_subscription_command_handler(
     end_date = active.get("end_date")
     days_left = (end_date.date() - datetime.now().date()).days if end_date else 0
     traffic_mode = bool(getattr(settings, "traffic_sale_mode", False))
+    config_link_display = active.get("config_link")
+    connect_button_url = active.get("connect_button_url")
+    config_link_value = config_link_display or get_text("config_link_not_available")
     def _fmt_gb(val: Optional[float]) -> str:
         if val is None:
             return get_text("traffic_na")
@@ -171,7 +174,7 @@ async def my_subscription_command_handler(
             traffic_limit=limit_display,
             traffic_used=used_display,
             traffic_left=remaining_display,
-            config_link=active.get("config_link") or get_text("config_link_not_available"),
+            config_link=config_link_value,
         )
     else:
         text = get_text(
@@ -179,7 +182,7 @@ async def my_subscription_command_handler(
             end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
             days_left=max(0, days_left),
             status=active.get("status_from_panel", get_text("status_active")).capitalize(),
-            config_link=active.get("config_link") or get_text("config_link_not_available"),
+            config_link=config_link_value,
             traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
             traffic_used=(
                 f"{active['traffic_used_bytes'] / 2**30:.2f} GB" if active.get("traffic_used_bytes") is not None else get_text("traffic_na")
@@ -202,7 +205,7 @@ async def my_subscription_command_handler(
                 )
             ])
         else:
-            cfg_link_val = (active or {}).get("config_link")
+            cfg_link_val = connect_button_url or config_link_display
             if cfg_link_val:
                 prepend_rows.append([
                     InlineKeyboardButton(

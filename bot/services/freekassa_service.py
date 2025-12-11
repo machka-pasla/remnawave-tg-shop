@@ -20,6 +20,7 @@ from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.services.notification_service import NotificationService
 from db.dal import payment_dal, user_dal
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
+from bot.utils.config_link import prepare_config_links
 
 
 class FreeKassaService:
@@ -317,13 +318,12 @@ class FreeKassaService:
             lang = db_user.language_code if db_user and db_user.language_code else self.settings.DEFAULT_LANGUAGE
             _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw) if self.i18n else k
 
-            config_link = None
-            final_end = None
+            raw_config_link = activation.get("subscription_url") if activation else None
+            config_link_display, connect_button_url = prepare_config_links(self.settings, raw_config_link)
+            config_link_text = config_link_display or _("config_link_not_available")
+            final_end = activation.get("end_date") if activation else None
             months = payment.subscription_duration_months or 1
             sale_mode = "traffic" if self.settings.traffic_sale_mode else "subscription"
-            if activation:
-                config_link = activation.get("subscription_url")
-                final_end = activation.get("end_date")
 
             applied_days = 0
             if referral_bonus and referral_bonus.get("referee_new_end_date"):
@@ -333,8 +333,6 @@ class FreeKassaService:
             if not final_end and activation and activation.get("end_date"):
                 final_end = activation["end_date"]
 
-            if not config_link:
-                config_link = _("config_link_not_available")
             if final_end:
                 end_date_str = final_end.strftime("%Y-%m-%d")
             else:
@@ -346,7 +344,7 @@ class FreeKassaService:
                 text = _("payment_successful_traffic_full",
                          traffic_gb=traffic_label,
                          end_date=end_date_str if final_end else "",
-                         config_link=config_link)
+                         config_link=config_link_text)
             elif applied_days:
                 inviter_name_display = _("friend_placeholder")
                 if db_user and db_user.referred_by_id:
@@ -364,14 +362,14 @@ class FreeKassaService:
                     bonus_days=applied_days,
                     final_end_date=end_date_str,
                     inviter_name=inviter_name_display,
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             else:
                 text = _(
                     "payment_successful_full",
                     months=months,
                     end_date=end_date_str,
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             if provider_payment_id:
                 order_info_text = _(
@@ -385,7 +383,8 @@ class FreeKassaService:
                 lang,
                 self.i18n,
                 self.settings,
-                config_link,
+                config_link_display,
+                connect_button_url=connect_button_url,
                 preserve_message=True,
             )
             try:

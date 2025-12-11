@@ -375,10 +375,12 @@ def get_connect_and_main_keyboard(
         i18n_instance,
         settings: Settings,
         config_link: Optional[str],
+        connect_button_url: Optional[str] = None,
         preserve_message: bool = False) -> InlineKeyboardMarkup:
     """Keyboard with a connect button and a back to main menu button."""
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+    button_target = connect_button_url or config_link
 
     if settings.SUBSCRIPTION_MINI_APP_URL:
         builder.row(
@@ -387,9 +389,9 @@ def get_connect_and_main_keyboard(
                 web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL),
             )
         )
-    elif config_link:
+    elif button_target:
         builder.row(
-            InlineKeyboardButton(text=_("connect_button"), url=config_link)
+            InlineKeyboardButton(text=_("connect_button"), url=button_target)
         )
     else:
         builder.row(

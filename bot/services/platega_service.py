@@ -15,6 +15,7 @@ from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.services.notification_service import NotificationService
 from db.dal import payment_dal, user_dal
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
+from bot.utils.config_link import prepare_config_links
 
 
 class PlategaService:
@@ -213,11 +214,9 @@ class PlategaService:
                 lang = db_user.language_code if db_user and db_user.language_code else self.settings.DEFAULT_LANGUAGE
                 _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw) if self.i18n else k
 
-                config_link = (
-                    activation.get("subscription_url")
-                    if activation
-                    else None
-                ) or _("config_link_not_available")
+                raw_config_link = activation.get("subscription_url") if activation else None
+                config_link_display, connect_button_url = prepare_config_links(self.settings, raw_config_link)
+                config_link_text = config_link_display or _("config_link_not_available")
                 final_end = activation.get("end_date") if activation else None
                 applied_days = 0
                 applied_promo_days = activation.get("applied_promo_bonus_days", 0) if activation else 0
@@ -233,7 +232,7 @@ class PlategaService:
                         "payment_successful_traffic_full",
                         traffic_gb=traffic_label,
                         end_date=final_end.strftime("%Y-%m-%d") if final_end else "",
-                        config_link=config_link,
+                        config_link=config_link_text,
                     )
                 elif applied_days:
                     inviter_name_display = _("friend_placeholder")
@@ -253,7 +252,7 @@ class PlategaService:
                         bonus_days=applied_days,
                         final_end_date=final_end.strftime("%Y-%m-%d") if final_end else "",
                         inviter_name=inviter_name_display,
-                        config_link=config_link,
+                        config_link=config_link_text,
                     )
                 elif applied_promo_days and final_end:
                     text = _(
@@ -261,21 +260,22 @@ class PlategaService:
                         months=payment_months,
                         bonus_days=applied_promo_days,
                         end_date=final_end.strftime("%Y-%m-%d"),
-                        config_link=config_link,
+                        config_link=config_link_text,
                     )
                 else:
                     text = _(
                         "payment_successful_full",
                         months=payment_months,
                         end_date=final_end.strftime("%Y-%m-%d") if final_end else "",
-                        config_link=config_link,
+                        config_link=config_link_text,
                     )
 
                 markup = get_connect_and_main_keyboard(
                     lang,
                     self.i18n,
                     self.settings,
-                    config_link,
+                    config_link_display,
+                    connect_button_url=connect_button_url,
                     preserve_message=True,
                 )
                 try:

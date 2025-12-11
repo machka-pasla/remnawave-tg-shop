@@ -164,6 +164,9 @@ class Settings(BaseSettings):
     TRIAL_DURATION_DAYS: int = Field(default=3)
     TRIAL_TRAFFIC_LIMIT_GB: Optional[float] = Field(default=5.0)
 
+    CRYPT4_ENABLED: bool = Field(default=False, description="Enable happ crypt4 encryption for subscription URLs")
+    CRYPT4_REDIRECT_URL: Optional[str] = Field(default=None, description="Base redirect URL used for the connect button when crypt4 is enabled")
+
     WEB_SERVER_HOST: str = Field(default="0.0.0.0")
     WEB_SERVER_PORT: int = Field(default=8080)
     LOGS_PAGE_SIZE: int = Field(default=10)
@@ -499,6 +502,7 @@ class Settings(BaseSettings):
         'PLATEGA_RETURN_URL',
         'PLATEGA_FAILED_URL',
         'SEVERPAY_RETURN_URL',
+        'CRYPT4_REDIRECT_URL',
         mode='before',
     )
     @classmethod

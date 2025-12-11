@@ -7,6 +7,7 @@ from bot.middlewares.i18n import JsonI18n
 
 from db.dal import user_dal, subscription_dal, promo_code_dal, payment_dal, user_billing_dal
 from bot.utils.date_utils import add_months
+from bot.utils.config_link import prepare_config_links
 from db.models import User, Subscription
 
 from config.settings import Settings
@@ -900,6 +901,8 @@ class SubscriptionService:
             if panel_user_data.get("expireAt")
             else None
         )
+        config_link_raw = panel_user_data.get("subscriptionUrl")
+        display_link, connect_button_url = prepare_config_links(self.settings, config_link_raw)
         hwid_limit = panel_user_data.get("hwidDeviceLimit")
         if hwid_limit is None:
             hwid_limit = self.settings.USER_HWID_DEVICE_LIMIT
@@ -908,7 +911,8 @@ class SubscriptionService:
             "user_id": panel_user_data.get("uuid"),
             "end_date": panel_end_date,
             "status_from_panel": panel_user_data.get("status", "UNKNOWN").upper(),
-            "config_link": panel_user_data.get("subscriptionUrl"),
+            "config_link": display_link,
+            "connect_button_url": connect_button_url,
             "traffic_limit_bytes": panel_user_data.get("trafficLimitBytes"),
             "traffic_used_bytes": (panel_user_data.get("userTraffic") or {}).get("usedTrafficBytes"),
             "user_bot_username": db_user.username,

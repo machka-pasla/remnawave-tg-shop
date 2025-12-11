@@ -17,6 +17,7 @@ from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.services.notification_service import NotificationService
 from db.dal import payment_dal, user_dal
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
+from bot.utils.config_link import prepare_config_links
 
 
 class CryptoPayService:
@@ -188,7 +189,9 @@ class CryptoPayService:
             lang = db_user.language_code if db_user and db_user.language_code else settings.DEFAULT_LANGUAGE
             _ = lambda k, **kw: i18n.gettext(lang, k, **kw)
 
-            config_link = activation.get("subscription_url") or _("config_link_not_available")
+            raw_config_link = activation.get("subscription_url") if activation else None
+            display_link, button_link = prepare_config_links(settings, raw_config_link)
+            config_link_text = display_link or _("config_link_not_available")
             final_end = activation.get("end_date")
             applied_days = 0
             if referral_bonus and referral_bonus.get("referee_new_end_date"):
@@ -199,7 +202,7 @@ class CryptoPayService:
                 text = _("payment_successful_traffic_full",
                          traffic_gb=str(int(traffic_gb)) if float(traffic_gb).is_integer() else f"{traffic_gb:g}",
                          end_date=final_end.strftime('%Y-%m-%d') if final_end else "—",
-                         config_link=config_link)
+                         config_link=config_link_text)
             elif applied_days:
                 inviter_name_display = _("friend_placeholder")
                 if db_user and db_user.referred_by_id:
@@ -216,15 +219,20 @@ class CryptoPayService:
                          bonus_days=applied_days,
                          final_end_date=final_end.strftime('%Y-%m-%d'),
                          inviter_name=inviter_name_display,
-                         config_link=config_link)
+                         config_link=config_link_text)
             else:
                 text = _("payment_successful_full",
                          months=int(months),
                          end_date=final_end.strftime('%Y-%m-%d') if final_end else "—",
-                         config_link=config_link)
+                         config_link=config_link_text)
 
             markup = get_connect_and_main_keyboard(
-                lang, i18n, settings, config_link, preserve_message=True
+                lang,
+                i18n,
+                settings,
+                display_link,
+                connect_button_url=button_link,
+                preserve_message=True,
             )
             try:
                 await bot.send_message(
