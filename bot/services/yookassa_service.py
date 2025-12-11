@@ -114,10 +114,12 @@ class YooKassaService:
                 capture = False
                 amount = max(amount, 1.00)
             builder.set_capture(capture)
-            builder.set_confirmation({
-                "type": ConfirmationType.REDIRECT,
-                "return_url": self.return_url
-            })
+            if not payment_method_id:
+                # Saved payment_method_id charges must omit confirmation per YooKassa API
+                builder.set_confirmation({
+                    "type": ConfirmationType.REDIRECT,
+                    "return_url": self.return_url
+                })
             builder.set_description(description)
             builder.set_metadata(metadata)
             if save_payment_method:
