@@ -36,7 +36,7 @@ def _encrypt_raw_link(raw_link: str) -> Optional[str]:
 
     try:
         encrypted = public_key.encrypt(raw_link.encode("utf-8"), padding.PKCS1v15())
-        return base64.urlsafe_b64encode(encrypted).decode("utf-8")
+        return base64.b64encode(encrypted).decode("utf-8")
     except Exception as exc:
         logging.error("Failed to encrypt config link with crypt4: %s", exc, exc_info=True)
         return None
