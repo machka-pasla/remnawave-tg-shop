@@ -11,7 +11,7 @@
 -   **Пробная подписка:** Система пробных подписок для новых пользователей (активируется вручную по кнопке).
 -   **Промокоды:** Возможность применять промокоды для получения скидок или бонусных дней.
 -   **Реферальная программа:** Пользователи могут приглашать друзей и получать за это бонусные дни подписки.
--   **Оплата:** Поддержка оплаты через YooKassa, FreeKassa (REST API), CryptoPay, Telegram Stars и Tribute.
+    -   **Оплата:** Поддержка оплаты через YooKassa, FreeKassa (REST API), Platega, SeverPay, CryptoPay и Telegram Stars.
 
 ### Для администраторов:
 -   **Защищенная админ-панель:** Доступ только для администраторов, указанных в `ADMIN_IDS`.
@@ -28,7 +28,7 @@
 -   **Aiogram 3.x:** Асинхронный фреймворк для Telegram ботов.
 -   **aiohttp:** Для запуска веб-сервера (вебхуки).
 -   **SQLAlchemy 2.x & asyncpg:** Асинхронная работа с базой данных PostgreSQL.
--   **YooKassa, FreeKassa API, aiocryptopay:** Интеграции с платежными системами.
+-   **YooKassa, FreeKassa API, Platega, SeverPay, aiocryptopay:** Интеграции с платежными системами.
 -   **Pydantic:** Для управления настройками из `.env` файла.
 -   **Docker & Docker Compose:** Для контейнеризации и развертывания.
 
@@ -80,6 +80,7 @@
     | `WEBHOOK_BASE_URL`| **Обязательно.** Базовый URL для вебхуков, например `https://your.domain.com`. |
     | `WEB_SERVER_HOST` | Хост для веб-сервера. | `0.0.0.0` |
     | `WEB_SERVER_PORT` | Порт для веб-сервера. | `8080` |
+    | `PAYMENT_METHODS_ORDER` | (Опционально) Порядок отображения кнопок оплаты через запятую. Поддерживаемые ключи: `severpay`, `freekassa`, `platega`, `yookassa`, `stars`, `cryptopay`. Первый будет сверху. |
     | `YOOKASSA_ENABLED` | Включить/выключить YooKassa (`true`/`false`). |
     | `YOOKASSA_SHOP_ID` | ID вашего магазина в YooKassa. |
     | `YOOKASSA_SECRET_KEY`| Секретный ключ магазина YooKassa. |
@@ -95,7 +96,18 @@
     | `FREEKASSA_PAYMENT_IP` | Внешний IP вашего сервера, который будет передаваться в запрос оплаты. |
     | `FREEKASSA_PAYMENT_METHOD_ID` | ID метода оплаты через магазин FreeKassa. По умолчанию `44`. |
     | `STARS_ENABLED` | Включить/выключить Telegram Stars (`true`/`false`). |
-    | `TRIBUTE_ENABLED`| Включить/выключить Tribute (`true`/`false`). |
+    | `PLATEGA_ENABLED`| Включить/выключить Platega (`true`/`false`). |
+    | `PLATEGA_MERCHANT_ID`| MerchantId из личного кабинета Platega. |
+    | `PLATEGA_SECRET`| API секрет для запросов Platega. |
+    | `PLATEGA_PAYMENT_METHOD`| ID способа оплаты (2 — SBP QR, 10 — РФ карты, 12 — международные карты, 13 — crypto). |
+    | `PLATEGA_RETURN_URL`| (Опционально) URL редиректа после успешной оплаты. По умолчанию ссылка на бота. |
+    | `PLATEGA_FAILED_URL`| (Опционально) URL редиректа при ошибке/отмене. По умолчанию как `PLATEGA_RETURN_URL`. |
+    | `SEVERPAY_ENABLED` | Включить/выключить SeverPay (`true`/`false`). |
+    | `SEVERPAY_MID` | MID магазина в SeverPay. |
+    | `SEVERPAY_TOKEN` | Секрет/токен для подписи запросов SeverPay. |
+    | `SEVERPAY_BASE_URL` | (Опционально) Базовый URL API SeverPay. По умолчанию `https://severpay.io/api/merchant`. |
+    | `SEVERPAY_RETURN_URL` | (Опционально) URL редиректа после оплаты (по умолчанию ссылка на бота). |
+    | `SEVERPAY_LIFETIME_MINUTES` | (Опционально) Время жизни платежной ссылки в минутах (30–4320). |
     </details>
 
     <details>
@@ -105,7 +117,6 @@
     - `1_MONTH_ENABLED`: `true` или `false`
     - `RUB_PRICE_1_MONTH`: Цена в рублях
     - `STARS_PRICE_1_MONTH`: Цена в Telegram Stars
-    - `TRIBUTE_LINK_1_MONTH`: Ссылка для оплаты через Tribute
     Аналогичные переменные есть для `3_MONTHS`, `6_MONTHS`, `12_MONTHS`.
     </details>
 
@@ -123,7 +134,7 @@
     | `USER_HWID_DEVICE_LIMIT`| Лимит устройств (HWID) для новых пользователей (0 - безлимит). |
 
     > Раздел "Мои устройства" становится доступен пользователям только при включении `MY_DEVICES_SECTION_ENABLED`. Значение лимита устройств при создании записей в панели берётся из `USER_HWID_DEVICE_LIMIT`.
-    </gidetails>
+    </details>
 
     <details>
     <summary><b>Настройки пробного периода</b></summary>
@@ -142,15 +153,16 @@
     Эта команда скачает образ и запустит сервис в фоновом режиме.
 
 4.  **Настройка вебхуков (Обязательно):**
-    Вебхуки являются **обязательным** компонентом для работы бота, так как они используются для получения уведомлений от платежных систем (YooKassa, FreeKassa, CryptoPay, Tribute) и панели Remnawave.
+    Вебхуки являются **обязательным** компонентом для работы бота, так как они используются для получения уведомлений от платежных систем (YooKassa, FreeKassa, CryptoPay, Platega, SeverPay) и панели Remnawave.
 
     Вам понадобится обратный прокси (например, Nginx) для обработки HTTPS-трафика и перенаправления запросов на контейнер с ботом.
 
     **Пути для перенаправления:**
     -   `https://<ваш_домен>/webhook/yookassa` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/yookassa`
     -   `https://<ваш_домен>/webhook/freekassa` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/freekassa`
+    -   `https://<ваш_домен>/webhook/platega` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/platega`
+    -   `https://<ваш_домен>/webhook/severpay` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/severpay`
     -   `https://<ваш_домен>/webhook/cryptopay` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/cryptopay`
-    -   `https://<ваш_домен>/webhook/tribute` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/tribute`
     -   `https://<ваш_домен>/webhook/panel` → `http://remnawave-tg-shop:<WEB_SERVER_PORT>/webhook/panel`
     -   **Для Telegram:** Бот автоматически установит вебхук, если в `.env` указан `WEBHOOK_BASE_URL`. Путь будет `https://<ваш_домен>/<BOT_TOKEN>`.
 

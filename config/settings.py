@@ -53,6 +53,15 @@ class Settings(BaseSettings):
     CRYPTOPAY_CURRENCY_TYPE: str = Field(default="fiat")
     CRYPTOPAY_ASSET: str = Field(default="RUB")
     CRYPTOPAY_ENABLED: bool = Field(default=True)
+    PLATEGA_ENABLED: bool = Field(default=False)
+    PLATEGA_BASE_URL: str = Field(default="https://app.platega.io")
+    PLATEGA_MERCHANT_ID: Optional[str] = None
+    PLATEGA_SECRET: Optional[str] = None
+    PLATEGA_PAYMENT_METHOD: int = Field(
+        default=2, description="Platega payment method ID (e.g., 2 for SBP QR)"
+    )
+    PLATEGA_RETURN_URL: Optional[str] = Field(default=None)
+    PLATEGA_FAILED_URL: Optional[str] = Field(default=None)
 
     FREEKASSA_ENABLED: bool = Field(default=False)
     FREEKASSA_MERCHANT_ID: Optional[str] = None
@@ -63,9 +72,22 @@ class Settings(BaseSettings):
     FREEKASSA_PAYMENT_IP: Optional[str] = None
     FREEKASSA_PAYMENT_METHOD_ID: Optional[int] = None
 
+    SEVERPAY_ENABLED: bool = Field(default=False)
+    SEVERPAY_MID: Optional[int] = None
+    SEVERPAY_TOKEN: Optional[str] = None
+    SEVERPAY_RETURN_URL: Optional[str] = None
+    SEVERPAY_BASE_URL: str = Field(default="https://severpay.io/api/merchant")
+    SEVERPAY_LIFETIME_MINUTES: Optional[int] = Field(
+        default=None,
+        description="Lifetime of the payment link in minutes (30-4320, defaults to provider value)",
+    )
+
     YOOKASSA_ENABLED: bool = Field(default=True)
     STARS_ENABLED: bool = Field(default=True)
-    TRIBUTE_ENABLED: bool = Field(default=True)
+    PAYMENT_METHODS_ORDER: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of payment methods to show (e.g., severpay,freekassa,yookassa,platega,stars,cryptopay)",
+    )
 
     MONTH_1_ENABLED: bool = Field(default=True, alias="1_MONTH_ENABLED")
     MONTH_3_ENABLED: bool = Field(default=True, alias="3_MONTHS_ENABLED")
@@ -81,16 +103,16 @@ class Settings(BaseSettings):
     STARS_PRICE_3_MONTHS: Optional[int] = Field(default=None)
     STARS_PRICE_6_MONTHS: Optional[int] = Field(default=None)
     STARS_PRICE_12_MONTHS: Optional[int] = Field(default=None)
-
-
-    TRIBUTE_LINK_1_MONTH: Optional[str] = Field(default=None)
-    TRIBUTE_LINK_3_MONTHS: Optional[str] = Field(default=None)
-    TRIBUTE_LINK_6_MONTHS: Optional[str] = Field(default=None)
-    TRIBUTE_LINK_12_MONTHS: Optional[str] = Field(default=None)
-    TRIBUTE_API_KEY: Optional[str] = Field(default=None)
-    TRIBUTE_SKIP_NOTIFICATIONS: bool = Field(default=True, description="Skip renewal notifications for Tribute payments")
-    TRIBUTE_SKIP_CANCELLATION_NOTIFICATIONS: bool = Field(default=False, description="Skip cancellation notifications for Tribute payments")
     PANEL_WEBHOOK_SECRET: Optional[str] = Field(default=None)
+
+    TRAFFIC_PACKAGES: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of traffic packages in the format '<GB>:<price>', e.g. '10:199,50:799'",
+    )
+    STARS_TRAFFIC_PACKAGES: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of traffic packages priced in Stars, e.g. '5:500,20:1500'",
+    )
 
     SUBSCRIPTION_NOTIFICATIONS_ENABLED: bool = Field(default=True)
     SUBSCRIPTION_NOTIFY_ON_EXPIRE: bool = Field(default=True)
@@ -141,6 +163,9 @@ class Settings(BaseSettings):
     TRIAL_ENABLED: bool = Field(default=True)
     TRIAL_DURATION_DAYS: int = Field(default=3)
     TRIAL_TRAFFIC_LIMIT_GB: Optional[float] = Field(default=5.0)
+
+    CRYPT4_ENABLED: bool = Field(default=False, description="Enable happ crypt4 encryption for subscription URLs")
+    CRYPT4_REDIRECT_URL: Optional[str] = Field(default=None, description="Base redirect URL used for the connect button when crypt4 is enabled")
 
     WEB_SERVER_HOST: str = Field(default="0.0.0.0")
     WEB_SERVER_PORT: int = Field(default=8080)
@@ -244,19 +269,6 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def tribute_webhook_path(self) -> str:
-        return "/webhook/tribute"
-
-    @computed_field
-    @property
-    def tribute_full_webhook_url(self) -> Optional[str]:
-        base = self.WEBHOOK_BASE_URL
-        if base:
-            return f"{base.rstrip('/')}{self.tribute_webhook_path}"
-        return None
-
-    @computed_field
-    @property
     def panel_webhook_path(self) -> str:
         return "/webhook/panel"
 
@@ -292,6 +304,32 @@ class Settings(BaseSettings):
         base = self.WEBHOOK_BASE_URL
         if base:
             return f"{base.rstrip('/')}{self.freekassa_webhook_path}"
+        return None
+
+    @computed_field
+    @property
+    def severpay_webhook_path(self) -> str:
+        return "/webhook/severpay"
+
+    @computed_field
+    @property
+    def severpay_full_webhook_url(self) -> Optional[str]:
+        base = self.WEBHOOK_BASE_URL
+        if base:
+            return f"{base.rstrip('/')}{self.severpay_webhook_path}"
+        return None
+
+    @computed_field
+    @property
+    def platega_webhook_path(self) -> str:
+        return "/webhook/platega"
+
+    @computed_field
+    @property
+    def platega_full_webhook_url(self) -> Optional[str]:
+        base = self.WEBHOOK_BASE_URL
+        if base:
+            return f"{base.rstrip('/')}{self.platega_webhook_path}"
         return None
 
     # Computed YooKassa receipt fields based on recurring toggle
@@ -338,17 +376,59 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def tribute_payment_links(self) -> Dict[int, str]:
-        links: Dict[int, str] = {}
-        if self.TRIBUTE_ENABLED and self.MONTH_1_ENABLED and self.TRIBUTE_LINK_1_MONTH:
-            links[1] = self.TRIBUTE_LINK_1_MONTH
-        if self.TRIBUTE_ENABLED and self.MONTH_3_ENABLED and self.TRIBUTE_LINK_3_MONTHS:
-            links[3] = self.TRIBUTE_LINK_3_MONTHS
-        if self.TRIBUTE_ENABLED and self.MONTH_6_ENABLED and self.TRIBUTE_LINK_6_MONTHS:
-            links[6] = self.TRIBUTE_LINK_6_MONTHS
-        if self.TRIBUTE_ENABLED and self.MONTH_12_ENABLED and self.TRIBUTE_LINK_12_MONTHS:
-            links[12] = self.TRIBUTE_LINK_12_MONTHS
-        return links
+    def traffic_packages(self) -> Dict[float, float]:
+        """
+        Mapping of traffic size in GB to price in the default currency.
+        """
+        packages: Dict[float, float] = {}
+        raw = (self.TRAFFIC_PACKAGES or "").strip()
+        if not raw:
+            return packages
+        for part in raw.split(","):
+            chunk = part.strip()
+            if not chunk or ":" not in chunk:
+                continue
+            size_str, price_str = chunk.split(":", 1)
+            try:
+                size_gb = float(size_str.strip())
+                price_val = float(price_str.strip())
+                if size_gb > 0 and price_val >= 0:
+                    packages[size_gb] = price_val
+            except ValueError:
+                logging.warning("Invalid TRAFFIC_PACKAGES entry skipped: %s", chunk)
+                continue
+        return packages
+
+    @computed_field
+    @property
+    def stars_traffic_packages(self) -> Dict[float, int]:
+        """
+        Mapping of traffic size in GB to price in Telegram Stars.
+        """
+        packages: Dict[float, int] = {}
+        raw = (self.STARS_TRAFFIC_PACKAGES or "").strip()
+        if not raw:
+            return packages
+        for part in raw.split(","):
+            chunk = part.strip()
+            if not chunk or ":" not in chunk:
+                continue
+            size_str, price_str = chunk.split(":", 1)
+            try:
+                size_gb = float(size_str.strip())
+                price_val = int(float(price_str.strip()))
+                if size_gb > 0 and price_val >= 0:
+                    packages[size_gb] = price_val
+            except ValueError:
+                logging.warning("Invalid STARS_TRAFFIC_PACKAGES entry skipped: %s", chunk)
+                continue
+        return packages
+
+    @computed_field
+    @property
+    def traffic_sale_mode(self) -> bool:
+        """When true, the bot sells traffic packages instead of time-based subscriptions."""
+        return bool(self.traffic_packages or self.stars_traffic_packages)
 
     @computed_field
     @property
@@ -377,6 +457,35 @@ class Settings(BaseSettings):
         if self.REFERRAL_BONUS_DAYS_REFEREE_12_MONTHS is not None:
             bonuses[12] = self.REFERRAL_BONUS_DAYS_REFEREE_12_MONTHS
         return bonuses
+
+    @computed_field
+    @property
+    def yookassa_autopayments_active(self) -> bool:
+        """Autopay features are available only when YooKassa itself is enabled."""
+        return bool(self.YOOKASSA_ENABLED and self.YOOKASSA_AUTOPAYMENTS_ENABLED)
+
+    @computed_field
+    @property
+    def payment_methods_order(self) -> List[str]:
+        """
+        Ordered list of payment providers to show in the subscription payment keyboard.
+        """
+        default_order = [
+            "freekassa",
+            "platega",
+            "severpay",
+            "yookassa",
+            "stars",
+            "cryptopay",
+        ]
+        if not self.PAYMENT_METHODS_ORDER:
+            return default_order
+        methods = []
+        for item in self.PAYMENT_METHODS_ORDER.split(","):
+            slug = item.strip().lower()
+            if slug:
+                methods.append(slug)
+        return methods or default_order
     
     # Logging Configuration
     LOG_CHAT_ID: Optional[int] = Field(default=None, description="Telegram chat/group ID for sending notifications")
@@ -390,14 +499,21 @@ class Settings(BaseSettings):
             return None
         return v
 
-    @field_validator('REQUIRED_CHANNEL_LINK', mode='before')
+    @field_validator(
+        'REQUIRED_CHANNEL_LINK',
+        'PLATEGA_RETURN_URL',
+        'PLATEGA_FAILED_URL',
+        'SEVERPAY_RETURN_URL',
+        'CRYPT4_REDIRECT_URL',
+        mode='before',
+    )
     @classmethod
     def sanitize_optional_link(cls, v):
         if isinstance(v, str) and not v.strip():
             return None
         return v
     
-    @field_validator('USER_HWID_DEVICE_LIMIT', mode='before')
+    @field_validator('USER_HWID_DEVICE_LIMIT', 'SEVERPAY_MID', 'SEVERPAY_LIFETIME_MINUTES', mode='before')
     @classmethod
     def validate_optional_int(cls, v):
         if isinstance(v, str):
@@ -455,6 +571,20 @@ def get_settings() -> Settings:
                 if not _settings_instance.subscription_options:
                     logging.warning(
                         "CRITICAL: FreeKassa is enabled but no subscription prices are configured (RUB_PRICE_*). Users will not see payment buttons."
+                    )
+
+            if _settings_instance.PLATEGA_ENABLED:
+                if (
+                    not _settings_instance.PLATEGA_MERCHANT_ID
+                    or not _settings_instance.PLATEGA_SECRET
+                ):
+                    logging.warning(
+                        "CRITICAL: Platega is enabled but merchant credentials (PLATEGA_MERCHANT_ID/PLATEGA_SECRET) are missing. Platega payments will not work."
+                    )
+            if _settings_instance.SEVERPAY_ENABLED:
+                if not _settings_instance.SEVERPAY_MID or not _settings_instance.SEVERPAY_TOKEN:
+                    logging.warning(
+                        "CRITICAL: SeverPay is enabled but MID or TOKEN is missing. SeverPay payments will not work."
                     )
 
         except ValidationError as e:

@@ -20,6 +20,7 @@ from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.services.notification_service import NotificationService
 from db.dal import payment_dal, user_dal
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
+from bot.utils.config_link import prepare_config_links
 
 
 class FreeKassaService:
@@ -284,23 +285,28 @@ class FreeKassaService:
                 )
 
                 months = payment.subscription_duration_months or 1
+                sale_mode = "traffic" if self.settings.traffic_sale_mode else "subscription"
 
                 activation = await self.subscription_service.activate_subscription(
                     session,
                     payment.user_id,
-                    months,
+                    int(months) if sale_mode != "traffic" else 0,
                     float(payment.amount),
                     payment.payment_id,
                     provider="freekassa",
+                    sale_mode=sale_mode,
+                    traffic_gb=months if sale_mode == "traffic" else None,
                 )
 
-                referral_bonus = await self.referral_service.apply_referral_bonuses_for_payment(
-                    session,
-                    payment.user_id,
-                    months,
-                    current_payment_db_id=payment.payment_id,
-                    skip_if_active_before_payment=False,
-                )
+                referral_bonus = None
+                if sale_mode != "traffic":
+                    referral_bonus = await self.referral_service.apply_referral_bonuses_for_payment(
+                        session,
+                        payment.user_id,
+                        int(months),
+                        current_payment_db_id=payment.payment_id,
+                        skip_if_active_before_payment=False,
+                    )
 
                 await session.commit()
             except Exception as e:
@@ -312,12 +318,12 @@ class FreeKassaService:
             lang = db_user.language_code if db_user and db_user.language_code else self.settings.DEFAULT_LANGUAGE
             _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw) if self.i18n else k
 
-            config_link = None
-            final_end = None
+            raw_config_link = activation.get("subscription_url") if activation else None
+            config_link_display, connect_button_url = prepare_config_links(self.settings, raw_config_link)
+            config_link_text = config_link_display or _("config_link_not_available")
+            final_end = activation.get("end_date") if activation else None
             months = payment.subscription_duration_months or 1
-            if activation:
-                config_link = activation.get("subscription_url")
-                final_end = activation.get("end_date")
+            sale_mode = "traffic" if self.settings.traffic_sale_mode else "subscription"
 
             applied_days = 0
             if referral_bonus and referral_bonus.get("referee_new_end_date"):
@@ -327,14 +333,19 @@ class FreeKassaService:
             if not final_end and activation and activation.get("end_date"):
                 final_end = activation["end_date"]
 
-            if not config_link:
-                config_link = _("config_link_not_available")
             if final_end:
                 end_date_str = final_end.strftime("%Y-%m-%d")
             else:
                 end_date_str = _("config_link_not_available")
 
-            if applied_days:
+            traffic_label = str(int(months)) if float(months).is_integer() else f"{months:g}"
+
+            if sale_mode == "traffic":
+                text = _("payment_successful_traffic_full",
+                         traffic_gb=traffic_label,
+                         end_date=end_date_str if final_end else "",
+                         config_link=config_link_text)
+            elif applied_days:
                 inviter_name_display = _("friend_placeholder")
                 if db_user and db_user.referred_by_id:
                     inviter = await user_dal.get_user_by_id(session, db_user.referred_by_id)
@@ -351,14 +362,14 @@ class FreeKassaService:
                     bonus_days=applied_days,
                     final_end_date=end_date_str,
                     inviter_name=inviter_name_display,
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             else:
                 text = _(
                     "payment_successful_full",
                     months=months,
                     end_date=end_date_str,
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             if provider_payment_id:
                 order_info_text = _(
@@ -372,7 +383,8 @@ class FreeKassaService:
                 lang,
                 self.i18n,
                 self.settings,
-                config_link,
+                config_link_display,
+                connect_button_url=connect_button_url,
                 preserve_message=True,
             )
             try:
@@ -392,7 +404,8 @@ class FreeKassaService:
                     user_id=payment.user_id,
                     amount=float(payment.amount),
                     currency=self.default_currency,
-                    months=months,
+                    months=int(months) if sale_mode != "traffic" else 0,
+                    traffic_gb=months if sale_mode == "traffic" else None,
                     payment_provider="freekassa",
                     username=db_user.username if db_user else None,
                 )

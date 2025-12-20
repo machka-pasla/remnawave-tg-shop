@@ -23,6 +23,7 @@ from config.settings import Settings
 from bot.services.notification_service import NotificationService
 from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
+from bot.utils.config_link import prepare_config_links
 
 payment_processing_lock = asyncio.Lock()
 
@@ -40,6 +41,8 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
     metadata = payment_info_from_webhook.get("metadata", {})
     user_id_str = metadata.get("user_id")
     subscription_months_str = metadata.get("subscription_months")
+    traffic_gb_str = metadata.get("traffic_gb")
+    sale_mode = metadata.get("sale_mode") or ("traffic" if settings.traffic_sale_mode else "subscription")
     promo_code_id_str = metadata.get("promo_code_id")
     payment_db_id_str = metadata.get("payment_db_id")
     auto_renew_subscription_id_str = metadata.get(
@@ -47,8 +50,11 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
 
     # For auto-renew payments, payment_db_id may be absent. In that case,
     # we will create/ensure a payment record idempotently using provider payment id.
-    if (not user_id_str or not subscription_months_str
-            or (not payment_db_id_str and not auto_renew_subscription_id_str)):
+    if (
+        not user_id_str
+        or (not subscription_months_str and not traffic_gb_str)
+        or (not payment_db_id_str and not auto_renew_subscription_id_str)
+    ):
         logging.error(
             f"Missing crucial metadata for payment: {payment_info_from_webhook.get('id')}, metadata: {metadata}"
         )
@@ -57,15 +63,17 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
     db_user = None
     try:
         user_id = int(user_id_str)
-        subscription_months = int(subscription_months_str)
+        subscription_months = float(subscription_months_str or 0)
+        traffic_amount_gb = float(traffic_gb_str) if traffic_gb_str else subscription_months
         payment_db_id = int(
             payment_db_id_str) if payment_db_id_str and payment_db_id_str.isdigit() else None
-        is_auto_renew = bool(auto_renew_subscription_id_str and not payment_db_id)
+        is_auto_renew = bool(auto_renew_subscription_id_str and not payment_db_id and sale_mode != "traffic")
         promo_code_id = int(
             promo_code_id_str
         ) if promo_code_id_str and promo_code_id_str.isdigit() else None
 
         amount_data = payment_info_from_webhook.get("amount", {})
+        months_for_record = int(subscription_months) if sale_mode != "traffic" else 0
         payment_value = float(amount_data.get("value", 0.0))
 
         # If this is an auto-renewal (no payment_db_id in metadata), ensure a payment record exists
@@ -79,9 +87,9 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                     user_id=user_id,
                     amount=payment_value,
                     currency=amount_data.get("currency", settings.DEFAULT_CURRENCY_SYMBOL),
-                    months=subscription_months,
+                    months=months_for_record or 1,
                     description=payment_info_from_webhook.get(
-                        "description") or f"Auto-renewal for {subscription_months} months",
+                        "description") or f"Auto-renewal for {months_for_record or subscription_months} months",
                     provider="yookassa",
                     provider_payment_id=yk_payment_id_from_hook,
                 )
@@ -139,7 +147,7 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         # Try to capture and save payment method for future charges if available
         try:
             payment_method = payment_info_from_webhook.get("payment_method")
-            if getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False) and isinstance(payment_method, dict) and payment_method.get("saved", False):
+            if settings.yookassa_autopayments_active and isinstance(payment_method, dict) and payment_method.get("saved", False):
                 pm_id = payment_method.get("id")
                 pm_type = payment_method.get("type")
                 title = payment_method.get("title")
@@ -196,14 +204,18 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
             raise Exception(
                 f"DB Error: Could not update payment record {payment_db_id}")
 
+        months_for_activation = int(subscription_months) if sale_mode != "traffic" else 0
         activation_details = await subscription_service.activate_subscription(
             session,
             user_id,
-            subscription_months,
+            months_for_activation,
             payment_value,
             payment_db_id,
             promo_code_id_from_payment=promo_code_id,
-            provider="yookassa")
+            provider="yookassa",
+            sale_mode=sale_mode,
+            traffic_gb=traffic_amount_gb if sale_mode == "traffic" else None,
+        )
 
         if not activation_details or not activation_details.get('end_date'):
             logging.error(
@@ -217,13 +229,15 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         applied_promo_bonus_days = activation_details.get(
             "applied_promo_bonus_days", 0)
 
-        referral_bonus_info = await referral_service.apply_referral_bonuses_for_payment(
-            session,
-            user_id,
-            subscription_months,
-            current_payment_db_id=payment_db_id,
-            skip_if_active_before_payment=False,
-        )
+        referral_bonus_info = None
+        if sale_mode != "traffic":
+            referral_bonus_info = await referral_service.apply_referral_bonuses_for_payment(
+                session,
+                user_id,
+                months_for_activation or int(subscription_months) or 1,
+                current_payment_db_id=payment_db_id,
+                skip_if_active_before_payment=False,
+            )
         applied_referee_bonus_days_from_referral: Optional[int] = None
         if referral_bonus_info and referral_bonus_info.get(
                 "referee_new_end_date"):
@@ -236,19 +250,37 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         user_lang = db_user.language_code if db_user and db_user.language_code else settings.DEFAULT_LANGUAGE
         _ = lambda key, **kwargs: i18n.gettext(user_lang, key, **kwargs)
 
+        traffic_label = (
+            str(int(traffic_amount_gb)) if float(traffic_amount_gb).is_integer() else f"{traffic_amount_gb:g}"
+        )
+        config_link_display, connect_button_url = prepare_config_links(
+            settings, activation_details.get("subscription_url") if activation_details else None
+        )
+        config_link_text = config_link_display or _("config_link_not_available")
         # For auto-renew charges, avoid re-sending config link; send concise message
-        if is_auto_renew and final_end_date_for_user:
+        if sale_mode != "traffic" and is_auto_renew and final_end_date_for_user:
             details_message = _(
                 "yookassa_auto_renewal",
-                months=subscription_months,
+                months=int(subscription_months),
                 end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
             )
             details_markup = None
-        else:
-            config_link = activation_details.get("subscription_url") or _(
-                "config_link_not_available"
+        elif sale_mode == "traffic":
+            details_message = _(
+                "payment_successful_traffic_full",
+                traffic_gb=traffic_label,
+                end_date=final_end_date_for_user.strftime('%Y-%m-%d') if final_end_date_for_user else "—",
+                config_link=config_link_text,
             )
-
+            details_markup = get_connect_and_main_keyboard(
+                user_lang,
+                i18n,
+                settings,
+                config_link_display,
+                connect_button_url=connect_button_url,
+                preserve_message=True,
+            )
+        else:
             if applied_referee_bonus_days_from_referral and final_end_date_for_user:
                 inviter_name_display = _("friend_placeholder")
                 if db_user and db_user.referred_by_id:
@@ -263,27 +295,27 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
 
                 details_message = _(
                     "payment_successful_with_referral_bonus_full",
-                    months=subscription_months,
+                    months=int(subscription_months),
                     base_end_date=base_subscription_end_date.strftime('%Y-%m-%d'),
                     bonus_days=applied_referee_bonus_days_from_referral,
                     final_end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
                     inviter_name=inviter_name_display,
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             elif applied_promo_bonus_days > 0 and final_end_date_for_user:
                 details_message = _(
                     "payment_successful_with_promo_full",
-                    months=subscription_months,
+                    months=int(subscription_months),
                     bonus_days=applied_promo_bonus_days,
                     end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             elif final_end_date_for_user:
                 details_message = _(
                     "payment_successful_full",
-                    months=subscription_months,
+                    months=int(subscription_months),
                     end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
-                    config_link=config_link,
+                    config_link=config_link_text,
                 )
             else:
                 logging.error(
@@ -292,7 +324,12 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                 details_message = _("payment_successful_error_details")
 
             details_markup = get_connect_and_main_keyboard(
-                user_lang, i18n, settings, config_link, preserve_message=True
+                user_lang,
+                i18n,
+                settings,
+                config_link_display,
+                connect_button_url=connect_button_url,
+                preserve_message=True,
             )
         try:
             await bot.send_message(
@@ -315,9 +352,10 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                 user_id=user_id,
                 amount=payment_value,
                 currency=settings.DEFAULT_CURRENCY_SYMBOL,
-                months=subscription_months,
+                months=int(subscription_months) if sale_mode != "traffic" else 0,
                 payment_provider="yookassa",  # This is specifically for YooKassa webhook
-                username=user.username if user else None
+                username=user.username if user else None,
+                traffic_gb=traffic_amount_gb if sale_mode == "traffic" else None,
             )
         except Exception as e:
             logging.error(f"Failed to send payment notification: {e}")
@@ -499,7 +537,7 @@ async def yookassa_webhook_route(request: web.Request):
                     elif notification_object.event == YOOKASSA_EVENT_PAYMENT_WAITING_FOR_CAPTURE:
                         # Bind-only flow: save method and cancel auth if metadata has bind_only
                         metadata = payment_dict_for_processing.get("metadata", {}) or {}
-                        if getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False) and metadata.get("bind_only") == "1":
+                        if settings.yookassa_autopayments_active and metadata.get("bind_only") == "1":
                             try:
                                 user_id_str = metadata.get("user_id")
                                 if user_id_str and user_id_str.isdigit():

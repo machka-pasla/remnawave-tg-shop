@@ -7,6 +7,7 @@ from bot.middlewares.i18n import JsonI18n
 
 from db.dal import user_dal, subscription_dal, promo_code_dal, payment_dal, user_billing_dal
 from bot.utils.date_utils import add_months
+from bot.utils.config_link import prepare_config_links
 from db.models import User, Subscription
 
 from config.settings import Settings
@@ -419,6 +420,119 @@ class SubscriptionService:
             "subscription_url": final_subscription_url,
         }
 
+    async def _activate_traffic_package(
+        self,
+        session: AsyncSession,
+        user_id: int,
+        traffic_gb: float,
+        payment_amount: float,
+        payment_db_id: int,
+        provider: str = "yookassa",
+    ) -> Optional[Dict[str, Any]]:
+        """Activate or extend a traffic-based package instead of a time-based subscription."""
+        db_user = await user_dal.get_user_by_id(session, user_id)
+        if not db_user:
+            logging.error("User %s not found for traffic package activation", user_id)
+            return None
+
+        panel_user_uuid, panel_sub_link_id, panel_short_uuid, _ = (
+            await self._get_or_create_panel_user_link_details(session, user_id, db_user)
+        )
+
+        if not panel_user_uuid or not panel_sub_link_id:
+            logging.error("Failed to ensure panel linkage for user %s during traffic activation", user_id)
+            return None
+
+        panel_user_data = await self.panel_service.get_user_by_uuid(panel_user_uuid) or {}
+        traffic_info = panel_user_data.get("userTraffic") or {}
+        current_limit = panel_user_data.get("trafficLimitBytes")
+        current_used = traffic_info.get("usedTrafficBytes")
+
+        active_sub = await subscription_dal.get_active_subscription_by_user_id(
+            session, user_id, panel_user_uuid
+        )
+        if current_limit is None and active_sub:
+            current_limit = active_sub.traffic_limit_bytes
+        if current_used is None and active_sub:
+            current_used = active_sub.traffic_used_bytes
+
+        purchase_bytes = int(float(traffic_gb) * (1024**3))
+        new_limit = (current_limit or 0) + purchase_bytes
+
+        start_date = datetime.now(timezone.utc)
+        # Set a far-future expiry to satisfy panel requirements; keep the latest known expiry if it's further.
+        far_future = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        final_end_date = far_future
+        if active_sub and active_sub.end_date and active_sub.end_date > final_end_date:
+            final_end_date = active_sub.end_date
+
+        await subscription_dal.deactivate_other_active_subscriptions(
+            session, panel_user_uuid, panel_sub_link_id
+        )
+
+        sub_payload = {
+            "user_id": user_id,
+            "panel_user_uuid": panel_user_uuid,
+            "panel_subscription_uuid": panel_sub_link_id,
+            "start_date": start_date,
+            "end_date": final_end_date,
+            "duration_months": 0,
+            "is_active": True,
+            "status_from_panel": "ACTIVE",
+            "traffic_limit_bytes": new_limit,
+            "traffic_used_bytes": current_used,
+            "provider": provider,
+            "skip_notifications": True,
+            "auto_renew_enabled": False,
+        }
+
+        try:
+            new_or_updated_sub = await subscription_dal.upsert_subscription(session, sub_payload)
+        except Exception as exc:
+            logging.error("Failed to upsert traffic subscription for user %s: %s", user_id, exc, exc_info=True)
+            return None
+
+        panel_update_payload = self._build_panel_update_payload(
+            panel_user_uuid=panel_user_uuid,
+            expire_at=final_end_date,
+            status="ACTIVE",
+            traffic_limit_bytes=new_limit,
+            traffic_limit_strategy="NO_RESET",
+        )
+
+        panel_update_payload["description"] = "\n".join(
+            [
+                (db_user.username or "") if db_user else "",
+                (db_user.first_name or "") if db_user else "",
+                (db_user.last_name or "") if db_user else "",
+            ]
+        )
+
+        updated_panel_user = await self.panel_service.update_user_details_on_panel(
+            panel_user_uuid, panel_update_payload
+        )
+        if not updated_panel_user or updated_panel_user.get("error"):
+            logging.warning(
+                "Panel user details update FAILED for traffic package user %s. Response: %s",
+                panel_user_uuid,
+                updated_panel_user,
+            )
+            return None
+
+        final_subscription_url = updated_panel_user.get("subscriptionUrl")
+        final_panel_short_uuid = updated_panel_user.get("shortUuid", panel_short_uuid)
+
+        return {
+            "subscription_id": new_or_updated_sub.subscription_id,
+            "end_date": final_end_date,
+            "is_active": True,
+            "panel_user_uuid": panel_user_uuid,
+            "panel_short_uuid": final_panel_short_uuid,
+            "subscription_url": final_subscription_url,
+            "applied_promo_bonus_days": 0,
+            "traffic_limit_bytes": new_limit,
+        }
+
     async def activate_subscription(
         self,
         session: AsyncSession,
@@ -428,7 +542,20 @@ class SubscriptionService:
         payment_db_id: int,
         promo_code_id_from_payment: Optional[int] = None,
         provider: str = "yookassa",
+        sale_mode: str = "subscription",
+        traffic_gb: Optional[float] = None,
     ) -> Optional[Dict[str, Any]]:
+
+        if sale_mode == "traffic" or getattr(self.settings, "traffic_sale_mode", False):
+            target_gb = traffic_gb if traffic_gb is not None else float(months)
+            return await self._activate_traffic_package(
+                session=session,
+                user_id=user_id,
+                traffic_gb=target_gb,
+                payment_amount=payment_amount,
+                payment_db_id=payment_db_id,
+                provider=provider,
+            )
 
         db_user = await user_dal.get_user_by_id(session, user_id)
         if not db_user:
@@ -447,6 +574,11 @@ class SubscriptionService:
             )
             return None
 
+        try:
+            months_int = int(months)
+        except Exception:
+            months_int = 1
+
         current_active_sub = await subscription_dal.get_active_subscription_by_user_id(
             session, user_id, panel_user_uuid
         )
@@ -459,7 +591,7 @@ class SubscriptionService:
             start_date = current_active_sub.end_date
 
         # base duration by months
-        end_after_months = add_months(start_date, months)
+        end_after_months = add_months(start_date, months_int)
         duration_days_total = (end_after_months - start_date).days
         applied_promo_bonus_days = 0
 
@@ -501,10 +633,7 @@ class SubscriptionService:
         )
 
         auto_renew_should_enable = False
-        if (
-            provider == "yookassa"
-            and getattr(self.settings, "YOOKASSA_AUTOPAYMENTS_ENABLED", False)
-        ):
+        if provider == "yookassa" and self.settings.yookassa_autopayments_active:
             auto_renew_should_enable = await user_billing_dal.user_has_saved_payment_method(
                 session, user_id
             )
@@ -515,12 +644,12 @@ class SubscriptionService:
             "panel_subscription_uuid": panel_sub_link_id,
             "start_date": start_date,
             "end_date": final_end_date,
-            "duration_months": months,
+            "duration_months": months_int,
             "is_active": True,
             "status_from_panel": "ACTIVE",
             "traffic_limit_bytes": self.settings.user_traffic_limit_bytes,
             "provider": provider,
-            "skip_notifications": provider == "tribute" and self.settings.TRIBUTE_SKIP_NOTIFICATIONS,
+            "skip_notifications": False,
             "auto_renew_enabled": auto_renew_should_enable,
         }
         try:
@@ -717,7 +846,8 @@ class SubscriptionService:
             update_payload_local = {}
             panel_status = panel_user_data.get("status", "UNKNOWN").upper()
             panel_expire_at_str = panel_user_data.get("expireAt")
-            panel_traffic_used = panel_user_data.get("usedTrafficBytes")
+            traffic_stats = panel_user_data.get("userTraffic") or {}
+            panel_traffic_used = traffic_stats.get("usedTrafficBytes")
             panel_traffic_limit = panel_user_data.get("trafficLimitBytes")
             panel_sub_uuid_from_panel = panel_user_data.get(
                 "subscriptionUuid"
@@ -771,6 +901,8 @@ class SubscriptionService:
             if panel_user_data.get("expireAt")
             else None
         )
+        config_link_raw = panel_user_data.get("subscriptionUrl")
+        display_link, connect_button_url = prepare_config_links(self.settings, config_link_raw)
         hwid_limit = panel_user_data.get("hwidDeviceLimit")
         if hwid_limit is None:
             hwid_limit = self.settings.USER_HWID_DEVICE_LIMIT
@@ -779,9 +911,10 @@ class SubscriptionService:
             "user_id": panel_user_data.get("uuid"),
             "end_date": panel_end_date,
             "status_from_panel": panel_user_data.get("status", "UNKNOWN").upper(),
-            "config_link": panel_user_data.get("subscriptionUrl"),
+            "config_link": display_link,
+            "connect_button_url": connect_button_url,
             "traffic_limit_bytes": panel_user_data.get("trafficLimitBytes"),
-            "traffic_used_bytes": panel_user_data.get("usedTrafficBytes"),
+            "traffic_used_bytes": (panel_user_data.get("userTraffic") or {}).get("usedTrafficBytes"),
             "user_bot_username": db_user.username,
             "is_panel_data": True,
             "max_devices": hwid_limit,
@@ -825,13 +958,16 @@ class SubscriptionService:
         sub: Subscription,
     ) -> bool:
         """Attempt to charge user using saved payment method. Return True on initiated/handled, False on failure."""
+        if getattr(self.settings, "traffic_sale_mode", False):
+            logging.info("Auto-renew skipped: traffic sale mode enabled")
+            return True
         if not sub.auto_renew_enabled:
             return True
         # If autopayments are disabled globally, skip charging attempts
-        if not getattr(self.settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+        if not self.settings.yookassa_autopayments_active:
             return True
-        if sub.provider == "tribute":
-            # Tribute is paid externally; we do not auto-charge here
+        if sub.provider != "yookassa":
+            logging.info("Auto-renew skipped: provider %s does not support auto-renew", sub.provider)
             return True
 
         from db.dal.user_billing_dal import get_user_default_payment_method
@@ -904,6 +1040,7 @@ class SubscriptionService:
         status: Optional[str] = None,
         traffic_limit_bytes: Optional[int] = None,
         include_uuid: bool = True,
+        traffic_limit_strategy: Optional[str] = None,
     ) -> Dict[str, Any]:
         payload: Dict[str, Any] = {}
         if include_uuid and panel_user_uuid:
@@ -914,7 +1051,7 @@ class SubscriptionService:
             payload["status"] = status
         if traffic_limit_bytes is not None:
             payload["trafficLimitBytes"] = traffic_limit_bytes
-            payload["trafficLimitStrategy"] = self.settings.USER_TRAFFIC_STRATEGY
+            payload["trafficLimitStrategy"] = traffic_limit_strategy or self.settings.USER_TRAFFIC_STRATEGY
         if self.settings.parsed_user_squad_uuids:
             payload["activeInternalSquads"] = self.settings.parsed_user_squad_uuids
         if self.settings.parsed_user_external_squad_uuid:

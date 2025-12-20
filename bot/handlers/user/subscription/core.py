@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
@@ -22,6 +23,22 @@ from db.models import Subscription
 router = Router(name="user_subscription_core_router")
 
 
+def _shorten_hwid_for_display(hwid: Optional[str], max_length: int = 24) -> str:
+    """Trim HWID for button text to keep within Telegram limits."""
+    if not hwid:
+        return "-"
+    hwid_str = str(hwid)
+    if len(hwid_str) <= max_length:
+        return hwid_str
+    return f"{hwid_str[:8]}...{hwid_str[-6:]}"
+
+
+def _hwid_callback_token(hwid: Optional[str]) -> str:
+    """Stable short token for callback_data; avoids 64b limit with raw HWID."""
+    hwid_str = str(hwid or "")
+    return hashlib.sha256(hwid_str.encode()).hexdigest()[:32]
+
+
 async def display_subscription_options(event: Union[types.Message, types.CallbackQuery], i18n_data: dict, settings: Settings, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
@@ -40,13 +57,29 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
         return
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
-    text_content = get_text("select_subscription_period") if settings.subscription_options else get_text("no_subscription_options_available")
+    traffic_packages = getattr(settings, "traffic_packages", {}) or {}
+    stars_traffic_packages = getattr(settings, "stars_traffic_packages", {}) or {}
+    traffic_mode = bool(getattr(settings, "traffic_sale_mode", False) or stars_traffic_packages)
 
-    reply_markup = (
-        get_subscription_options_keyboard(settings.subscription_options, currency_symbol_val, current_lang, i18n)
-        if settings.subscription_options
-        else get_back_to_main_menu_markup(current_lang, i18n)
-    )
+    if traffic_mode:
+        if traffic_packages:
+            options = traffic_packages
+        elif stars_traffic_packages:
+            options = stars_traffic_packages
+            currency_symbol_val = "⭐"
+        else:
+            options = {}
+    else:
+        options = settings.subscription_options
+
+    if options:
+        text_content = get_text("select_traffic_package") if traffic_mode else get_text("select_subscription_period")
+        reply_markup = get_subscription_options_keyboard(
+            options, currency_symbol_val, current_lang, i18n, traffic_mode=traffic_mode
+        )
+    else:
+        text_content = get_text("no_subscription_options_available")
+        reply_markup = get_back_to_main_menu_markup(current_lang, i18n)
 
     target_message_obj = event.message if isinstance(event, types.CallbackQuery) else event
     if not target_message_obj:
@@ -104,7 +137,7 @@ async def my_subscription_command_handler(
         text = get_text("subscription_not_active")
 
         buy_button = InlineKeyboardButton(
-            text=get_text("menu_subscribe_inline", default="Купить"), callback_data="main_action:subscribe"
+            text=get_text("menu_subscribe_inline"), callback_data="main_action:subscribe"
         )
         back_markup = get_back_to_main_menu_markup(current_lang, i18n)
 
@@ -125,28 +158,53 @@ async def my_subscription_command_handler(
 
     end_date = active.get("end_date")
     days_left = (end_date.date() - datetime.now().date()).days if end_date else 0
-    tribute_hint = ""
-    if active.get("status_from_panel", "").lower() == "active":
-        local_sub = await subscription_dal.get_active_subscription_by_user_id(session, event.from_user.id)
-        if local_sub:
-            if local_sub.provider == "tribute":
-                link = None
-                link = settings.tribute_payment_links.get(local_sub.duration_months or 1) if hasattr(settings, "tribute_payment_links") else None
-                tribute_hint = "\n\n" + (
-                    get_text("subscription_tribute_notice_with_link", link=link) if link else get_text("subscription_tribute_notice")
-                )
+    traffic_mode = bool(getattr(settings, "traffic_sale_mode", False))
+    config_link_display = active.get("config_link")
+    connect_button_url = active.get("connect_button_url")
+    config_link_value = config_link_display or get_text("config_link_not_available")
+    def _fmt_gb(val: Optional[float]) -> str:
+        if val is None:
+            return get_text("traffic_na")
+        try:
+            if isinstance(val, (int, float)):
+                val_gb = float(val) / (2**30)
+                return f"{val_gb:.2f} GB"
+        except Exception:
+            pass
+        return str(val)
 
-    text = get_text(
-        "my_subscription_details",
-        end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
-        days_left=max(0, days_left),
-        status=active.get("status_from_panel", get_text("status_active")).capitalize(),
-        config_link=active.get("config_link") or get_text("config_link_not_available"),
-        traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
-        traffic_used=(
-            f"{active['traffic_used_bytes'] / 2**30:.2f} GB" if active.get("traffic_used_bytes") is not None else get_text("traffic_na")
-        ),
-    )
+    if traffic_mode:
+        limit_display = _fmt_gb(active.get("traffic_limit_bytes"))
+        used_display = _fmt_gb(active.get("traffic_used_bytes"))
+        remaining_display = get_text("traffic_na")
+        try:
+            limit_val = active.get("traffic_limit_bytes") or 0
+            used_val = active.get("traffic_used_bytes") or 0
+            remaining_val = max(0, float(limit_val) - float(used_val))
+            remaining_display = _fmt_gb(remaining_val)
+        except Exception:
+            pass
+        text = get_text(
+            "my_traffic_details",
+            status=active.get("status_from_panel", get_text("status_active")).capitalize(),
+            end_date=end_date.strftime("%Y-%m-%d") if end_date else get_text("traffic_no_expiry"),
+            traffic_limit=limit_display,
+            traffic_used=used_display,
+            traffic_left=remaining_display,
+            config_link=config_link_value,
+        )
+    else:
+        text = get_text(
+            "my_subscription_details",
+            end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
+            days_left=max(0, days_left),
+            status=active.get("status_from_panel", get_text("status_active")).capitalize(),
+            config_link=config_link_value,
+            traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
+            traffic_used=(
+                f"{active['traffic_used_bytes'] / 2**30:.2f} GB" if active.get("traffic_used_bytes") is not None else get_text("traffic_na")
+            ),
+        )
 
     base_markup = get_back_to_main_menu_markup(current_lang, i18n)
     kb = base_markup.inline_keyboard
@@ -164,7 +222,7 @@ async def my_subscription_command_handler(
                 )
             ])
         else:
-            cfg_link_val = (active or {}).get("config_link")
+            cfg_link_val = connect_button_url or config_link_display
             if cfg_link_val:
                 prepend_rows.append([
                     InlineKeyboardButton(
@@ -224,8 +282,8 @@ async def my_subscription_command_handler(
                 )
             ])
 
-        # 2) Auto-renew toggle (if supported and not tribute)
-        if local_sub and local_sub.provider != "tribute" and getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+        # 2) Auto-renew toggle (YooKassa only)
+        if not traffic_mode and local_sub and local_sub.provider == "yookassa" and settings.yookassa_autopayments_active:
             toggle_text = (
                 get_text("autorenew_disable_button") if local_sub.auto_renew_enabled else get_text("autorenew_enable_button")
             )
@@ -237,7 +295,7 @@ async def my_subscription_command_handler(
             ])
 
         # 3) Payment methods management (when autopayments enabled)
-        if getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+        if not traffic_mode and settings.yookassa_autopayments_active:
             prepend_rows.append([
                 InlineKeyboardButton(text=get_text("payment_methods_manage_button"), callback_data="pm:manage")
             ])
@@ -254,17 +312,17 @@ async def my_subscription_command_handler(
         except Exception:
             pass
         try:
-            await event.message.edit_text(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+            await event.message.edit_text(text, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
         except Exception:
             await bot.send_message(
                 chat_id=target.chat.id,
-                text=text + tribute_hint,
+                text=text,
                 reply_markup=markup,
                 parse_mode="HTML",
                 disable_web_page_preview=True,
             )
     else:
-        await target.answer(text + tribute_hint, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+        await target.answer(text, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
 
 
 @router.callback_query(F.data == "main_action:my_devices")
@@ -321,6 +379,12 @@ async def my_devices_command_handler(
             await target.answer(get_text("no_devices_found"))
         return
 
+    devices_list_raw = []
+    if isinstance(devices, dict):
+        devices_list_raw = devices.get("devices") or []
+    elif isinstance(devices, list):
+        devices_list_raw = devices
+
     max_devices_value = active.get("max_devices")
     max_devices_display = get_text("devices_unlimited_label")
     if max_devices_value not in (None, 0):
@@ -331,19 +395,22 @@ async def my_devices_command_handler(
         except (TypeError, ValueError):
             max_devices_display = str(max_devices_value)
 
-    if not devices or not devices.get('devices') or len(devices.get('devices')) == 0:
+    if not devices_list_raw:
         text = get_text("no_devices_details_found_message", max_devices=max_devices_display)
     else:
         devices_list = []
-        current_devices = len(devices.get('devices') or [])
-        for index, device in enumerate(devices.get('devices') or [], start=1):
+        current_devices = len(devices_list_raw)
+        for index, device in enumerate(devices_list_raw, start=1):
             device_model = device.get('deviceModel') or None
             platform = device.get('platform') or None
             user_agent = device.get('userAgent') or None
             os_version = device.get('osVersion') or None
             created_at = device.get('createdAt')
             hwid = device.get('hwid')
-            created_at_str = datetime.fromisoformat(created_at).strftime("%d.%m.%Y %H:%M")
+            try:
+                created_at_str = datetime.fromisoformat(created_at).strftime("%d.%m.%Y %H:%M") if created_at else "-"
+            except Exception:
+                created_at_str = str(created_at)
 
             device_details = get_text("device_details", index=index, device_model=device_model, platform=platform, os_version=os_version, created_at_str=created_at_str, user_agent=user_agent, hwid=hwid)
             devices_list.append(device_details)
@@ -354,11 +421,14 @@ async def my_devices_command_handler(
     kb = base_markup.inline_keyboard
 
     devices_kb = []
-    for index, device in enumerate(devices.get('devices') or [], start=1):
+    for index, device in enumerate(devices_list_raw, start=1):
         hwid = device.get('hwid')
-        device_button_text = get_text("disconnect_device_button", hwid=hwid, index=index)
+        if not hwid:
+            continue
+        device_button_text = get_text("disconnect_device_button", hwid=_shorten_hwid_for_display(hwid), index=index)
+        hwid_token = _hwid_callback_token(hwid)
 
-        devices_kb.append([InlineKeyboardButton(text=device_button_text, callback_data=f"disconnect_device:{hwid}")])
+        devices_kb.append([InlineKeyboardButton(text=device_button_text, callback_data=f"disconnect_device:{hwid_token}")])
     kb = devices_kb + kb
     markup = InlineKeyboardMarkup(inline_keyboard=kb)
 
@@ -397,7 +467,7 @@ async def disconnect_device_handler(
         return
 
     try:
-        _, hwid = callback.data.split(":", 1)
+        _, hwid_token = callback.data.split(":", 1)
     except Exception:
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)
@@ -406,8 +476,30 @@ async def disconnect_device_handler(
         return
 
     active = await subscription_service.get_active_subscription_details(session, callback.from_user.id)
-    if not active:
+    if not active or not active.get("user_id"):
         await callback.answer(get_text("subscription_not_active"), show_alert=True)
+        return
+
+    devices = await panel_service.get_user_devices(active.get("user_id"))
+    if not devices:
+        await callback.answer(get_text("no_devices_found"), show_alert=True)
+        return
+
+    devices_list_raw = []
+    if isinstance(devices, dict):
+        devices_list_raw = devices.get("devices") or []
+    elif isinstance(devices, list):
+        devices_list_raw = devices
+
+    hwid = None
+    for device in devices_list_raw:
+        hwid_candidate = device.get("hwid")
+        if hwid_candidate and _hwid_callback_token(hwid_candidate) == hwid_token:
+            hwid = hwid_candidate
+            break
+
+    if not hwid:
+        await callback.answer(get_text("error_try_again"), show_alert=True)
         return
 
     success = await panel_service.disconnect_device(active.get("user_id"), hwid)
@@ -452,8 +544,8 @@ async def toggle_autorenew_handler(
     if not sub or sub.user_id != callback.from_user.id:
         await callback.answer(get_text("error_try_again"), show_alert=True)
         return
-    if sub.provider == "tribute":
-        await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
+    if sub.provider != "yookassa":
+        await callback.answer(get_text("error_try_again"), show_alert=True)
         return
     if enable:
         has_saved_card = await user_billing_dal.user_has_saved_payment_method(session, callback.from_user.id)
@@ -510,8 +602,8 @@ async def confirm_autorenew_handler(
     if not sub or sub.user_id != callback.from_user.id:
         await callback.answer(get_text("error_try_again"), show_alert=True)
         return
-    if sub.provider == "tribute":
-        await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
+    if sub.provider != "yookassa":
+        await callback.answer(get_text("error_try_again"), show_alert=True)
         return
     if enable:
         has_saved_card = await user_billing_dal.user_has_saved_payment_method(session, callback.from_user.id)
@@ -549,7 +641,7 @@ async def autorenew_cancel_from_webhook_button(
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
     get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
 
-    # Disable auto-renew on the active subscription (non-tribute)
+    # Disable auto-renew on the active subscription
     from db.dal import subscription_dal
     sub = await subscription_dal.get_active_subscription_by_user_id(session, callback.from_user.id)
     if not sub:
@@ -558,9 +650,9 @@ async def autorenew_cancel_from_webhook_button(
         except Exception:
             pass
         return
-    if sub.provider == "tribute":
+    if sub.provider != "yookassa":
         try:
-            await callback.answer(get_text("subscription_autorenew_not_supported_for_tribute"), show_alert=True)
+            await callback.answer(get_text("error_try_again"), show_alert=True)
         except Exception:
             pass
         return

@@ -22,7 +22,7 @@ router = Router(name="user_subscription_payment_methods_router")
 async def payment_methods_manage(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -51,9 +51,9 @@ async def payment_methods_manage(callback: types.CallbackQuery, settings: Settin
                 return get_text("payment_method_wallet_title", last4=l4)
             return get_text("payment_method_wallet_title", last4="****")
         if last4:
-            network_name = network or get_text("payment_network_card", default="Card")
+            network_name = network or get_text("payment_network_card")
             return get_text("payment_method_card_title", network=network_name, last4=last4)
-        network_name = network or get_text("payment_network_generic", default="Payment method")
+        network_name = network or get_text("payment_network_generic")
         return get_text("payment_method_generic_title", network=network_name)
 
     for m in methods:
@@ -75,7 +75,7 @@ async def payment_methods_manage(callback: types.CallbackQuery, settings: Settin
 async def payment_method_bind(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession, yookassa_service: YooKassaService):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -109,7 +109,7 @@ async def payment_method_bind(callback: types.CallbackQuery, settings: Settings,
 async def payment_method_delete_confirm(callback: types.CallbackQuery, settings: Settings, i18n_data: dict):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -130,7 +130,7 @@ async def payment_method_delete_confirm(callback: types.CallbackQuery, settings:
 async def payment_method_delete(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -177,9 +177,9 @@ async def payment_method_delete(callback: types.CallbackQuery, settings: Setting
                         return _("payment_method_wallet_title", last4=l4)
                     return _("payment_method_wallet_title", last4="****")
                 if last4:
-                    network_name = network or _("payment_network_card", default="Card")
+                    network_name = network or _("payment_network_card")
                     return _("payment_method_card_title", network=network_name, last4=last4)
-                network_name = network or _("payment_network_generic", default="Payment method")
+                network_name = network or _("payment_network_generic")
                 return _("payment_method_generic_title", network=network_name)
             title = _format_pm_title(m.card_network, m.card_last4)
             cards.append((str(m.method_id), title if not m.is_default else f"⭐ {title}"))
@@ -204,7 +204,7 @@ async def payment_method_delete(callback: types.CallbackQuery, settings: Setting
 async def payment_method_view(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -239,9 +239,9 @@ async def payment_method_view(callback: types.CallbackQuery, settings: Settings,
                     return _("payment_method_wallet_title", last4=l4)
                 return _("payment_method_wallet_title", last4="****")
             if last4:
-                network_name = network or _("payment_network_card", default="Card")
+                network_name = network or _("payment_network_card")
                 return _("payment_method_card_title", network=network_name, last4=last4)
-            network_name = network or _("payment_network_generic", default="Payment method")
+            network_name = network or _("payment_network_generic")
             return _("payment_method_generic_title", network=network_name)
 
         title = _format_pm_title(sel.card_network, sel.card_last4)
@@ -307,9 +307,9 @@ async def payment_method_view(callback: types.CallbackQuery, settings: Settings,
                 return _("payment_method_wallet_title", last4=l4)
             return _("payment_method_wallet_title", last4="****")
         if last4:
-            network_name = network or _("payment_network_card", default="Card")
+            network_name = network or _("payment_network_card")
             return _("payment_method_card_title", network=network_name, last4=last4)
-        network_name = network or _("payment_network_generic", default="Payment method")
+        network_name = network or _("payment_network_generic")
         return _("payment_method_generic_title", network=network_name)
 
     title = _format_pm_title(billing.card_network, billing.card_last4)
@@ -325,7 +325,7 @@ async def payment_method_view(callback: types.CallbackQuery, settings: Settings,
 async def payment_method_history(callback: types.CallbackQuery, settings: Settings, i18n_data: dict, session: AsyncSession, yookassa_service: YooKassaService):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
-    if not getattr(settings, 'YOOKASSA_AUTOPAYMENTS_ENABLED', False):
+    if not settings.yookassa_autopayments_active:
         try:
             _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
             await callback.answer(_("error_service_unavailable"), show_alert=True)
@@ -390,8 +390,15 @@ async def payment_method_history(callback: types.CallbackQuery, settings: Settin
         await callback.message.edit_text(_("payment_method_no_history"), reply_markup=back_markup)
         return
 
+    traffic_mode = getattr(settings, "traffic_sale_mode", False)
+
     def _format_item(p: Payment) -> str:
-        title = p.description or _("subscription_purchase_title", months=p.subscription_duration_months or 1)
+        if traffic_mode:
+            units_val = p.subscription_duration_months or 0
+            units_display = str(int(units_val)) if float(units_val).is_integer() else f"{units_val:g}"
+            title = p.description or _("traffic_purchase_title", traffic_gb=units_display)
+        else:
+            title = p.description or _("subscription_purchase_title", months=p.subscription_duration_months or 1)
         date_str = p.created_at.strftime('%Y-%m-%d') if p.created_at else "N/A"
         return f"{date_str} — {title} — {p.amount:.2f} {p.currency}"
 
@@ -433,9 +440,9 @@ async def payment_methods_list(callback: types.CallbackQuery, settings: Settings
                     return get_text("payment_method_wallet_title", last4=l4)
                 return get_text("payment_method_wallet_title", last4="****")
             if last4:
-                network_name = network or get_text("payment_network_card", default="Card")
+                network_name = network or get_text("payment_network_card")
                 return get_text("payment_method_card_title", network=network_name, last4=last4)
-            network_name = network or get_text("payment_network_generic", default="Payment method")
+            network_name = network or get_text("payment_network_generic")
             return get_text("payment_method_generic_title", network=network_name)
         title = _format_pm_title(m.card_network, m.card_last4)
         cards.append((str(m.method_id), title if not m.is_default else f"⭐ {title}"))
@@ -454,5 +461,4 @@ async def payment_methods_list(callback: types.CallbackQuery, settings: Settings
         await callback.answer()
     except Exception:
         pass
-
 

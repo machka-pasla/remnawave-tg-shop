@@ -338,8 +338,7 @@ async def export_logs_csv_handler(callback: types.CallbackQuery,
     _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
 
     await callback.answer(_(
-        "admin_logs_csv_export_started",
-        default="🔄 Начинаю экспорт логов в CSV..."
+        "admin_logs_csv_export_started"
     ))
 
     try:
@@ -349,8 +348,7 @@ async def export_logs_csv_handler(callback: types.CallbackQuery,
         
         if not logs_models:
             await callback.message.answer(_(
-                "admin_logs_csv_no_data",
-                default="❌ Нет данных для экспорта"
+                "admin_logs_csv_no_data"
             ))
             return
 
@@ -360,16 +358,16 @@ async def export_logs_csv_handler(callback: types.CallbackQuery,
         
         # Write header
         headers = [
-            _("admin_csv_header_log_id", default="Log ID"),
-            _("admin_csv_header_timestamp", default="Timestamp"),
-            _("admin_csv_header_user_id", default="User ID"),
-            _("admin_csv_header_telegram_username", default="Telegram Username"),
-            _("admin_csv_header_telegram_first_name", default="Telegram First Name"),
-            _("admin_csv_header_event_type", default="Event Type"),
-            _("admin_csv_header_content", default="Content"),
-            _("admin_csv_header_is_admin_event", default="Is Admin Event"),
-            _("admin_csv_header_target_user_id", default="Target User ID"),
-            _("admin_csv_header_raw_update_preview", default="Raw Update Preview")
+            _("admin_csv_header_log_id"),
+            _("admin_csv_header_timestamp"),
+            _("admin_csv_header_user_id"),
+            _("admin_csv_header_telegram_username"),
+            _("admin_csv_header_telegram_first_name"),
+            _("admin_csv_header_event_type"),
+            _("admin_csv_header_content"),
+            _("admin_csv_header_is_admin_event"),
+            _("admin_csv_header_target_user_id"),
+            _("admin_csv_header_raw_update_preview")
         ]
         csv_writer.writerow(headers)
         
@@ -414,7 +412,6 @@ async def export_logs_csv_handler(callback: types.CallbackQuery,
             csv_file,
             caption=_(
                 "admin_logs_csv_export_success",
-                default="✅ Экспорт логов завершен!\n\n📊 Записей: {count}\n📅 Дата экспорта: {date}",
                 count=len(logs_models),
                 date=now.strftime('%Y-%m-%d %H:%M:%S')
             )
@@ -424,6 +421,5 @@ async def export_logs_csv_handler(callback: types.CallbackQuery,
         logging.error(f"Error exporting logs to CSV: {e}", exc_info=True)
         await callback.message.answer(_(
             "admin_logs_csv_export_failed",
-            default="❌ Ошибка при экспорте логов: {error}",
             error=str(e)
         ))

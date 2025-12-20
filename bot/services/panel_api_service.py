@@ -1,6 +1,7 @@
 import aiohttp
 import logging
 import json
+import re
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 import asyncio
@@ -345,18 +346,19 @@ class PanelApiService:
             status: str = "ACTIVE",
             log_response: bool = True) -> Optional[Dict[str, Any]]:
 
-        if not (6 <= len(username_on_panel) <= 34 and
-                username_on_panel.replace('_', '').replace('-', '').isalnum()):
-            if not (username_on_panel.startswith("tg_")
-                    and username_on_panel.split("tg_")[-1].isdigit()):
-                msg = f"Panel username '{username_on_panel}' does not meet panel requirements."
-                logging.error(msg)
-                return {
-                    "error": True,
-                    "status_code": 400,
-                    "message": msg,
-                    "errorCode": "VALIDATION_ERROR_USERNAME"
-                }
+        username_is_valid = (
+            3 <= len(username_on_panel) <= 36
+            and re.match(r"^[A-Za-z0-9_-]+$", username_on_panel) is not None
+        )
+        if not username_is_valid:
+            msg = f"Panel username '{username_on_panel}' does not meet panel requirements."
+            logging.error(msg)
+            return {
+                "error": True,
+                "status_code": 400,
+                "message": msg,
+                "errorCode": "VALIDATION_ERROR_USERNAME"
+            }
 
         now = datetime.now(timezone.utc)
         expire_at_dt = now + timedelta(days=default_expire_days)

@@ -74,24 +74,26 @@ async def referral_command_handler(event: Union[types.Message,
         return
 
     bonus_info_parts = []
-    if settings.subscription_options:
+    if getattr(settings, "traffic_sale_mode", False):
+        bonus_details_str = _("referral_not_available_for_traffic")
+    else:
+        if settings.subscription_options:
+            for months_period_key, _price in sorted(
+                    settings.subscription_options.items()):
 
-        for months_period_key, _price in sorted(
-                settings.subscription_options.items()):
+                inv_bonus = settings.referral_bonus_inviter.get(months_period_key)
+                ref_bonus = settings.referral_bonus_referee.get(months_period_key)
+                if inv_bonus is not None or ref_bonus is not None:
+                    bonus_info_parts.append(
+                        _("referral_bonus_per_period",
+                          months=months_period_key,
+                          inviter_bonus_days=inv_bonus
+                          if inv_bonus is not None else _("no_bonus_placeholder"),
+                          referee_bonus_days=ref_bonus
+                          if ref_bonus is not None else _("no_bonus_placeholder")))
 
-            inv_bonus = settings.referral_bonus_inviter.get(months_period_key)
-            ref_bonus = settings.referral_bonus_referee.get(months_period_key)
-            if inv_bonus is not None or ref_bonus is not None:
-                bonus_info_parts.append(
-                    _("referral_bonus_per_period",
-                      months=months_period_key,
-                      inviter_bonus_days=inv_bonus
-                      if inv_bonus is not None else _("no_bonus_placeholder"),
-                      referee_bonus_days=ref_bonus
-                      if ref_bonus is not None else _("no_bonus_placeholder")))
-
-    bonus_details_str = "\n".join(bonus_info_parts) if bonus_info_parts else _(
-        "referral_no_bonuses_configured")
+        bonus_details_str = "\n".join(bonus_info_parts) if bonus_info_parts else _(
+            "referral_no_bonuses_configured")
 
     # Get referral statistics
     referral_stats = await referral_service.get_referral_stats(session, inviter_user_id)
