@@ -430,6 +430,8 @@ class Settings(BaseSettings):
         """When true, the bot sells traffic packages instead of time-based subscriptions."""
         return bool(self.traffic_packages or self.stars_traffic_packages)
 
+    @computed_field
+    @property
     def referral_bonus_inviter(self) -> Dict[int, int]:
         bonuses: Dict[int, int] = {}
         if self.REFERRAL_BONUS_DAYS_INVITER_1_MONTH is not None:
