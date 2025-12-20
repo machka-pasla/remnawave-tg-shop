@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
@@ -20,6 +21,22 @@ from db.dal import subscription_dal, user_billing_dal
 from db.models import Subscription
 
 router = Router(name="user_subscription_core_router")
+
+
+def _shorten_hwid_for_display(hwid: Optional[str], max_length: int = 24) -> str:
+    """Trim HWID for button text to keep within Telegram limits."""
+    if not hwid:
+        return "-"
+    hwid_str = str(hwid)
+    if len(hwid_str) <= max_length:
+        return hwid_str
+    return f"{hwid_str[:8]}...{hwid_str[-6:]}"
+
+
+def _hwid_callback_token(hwid: Optional[str]) -> str:
+    """Stable short token for callback_data; avoids 64b limit with raw HWID."""
+    hwid_str = str(hwid or "")
+    return hashlib.sha256(hwid_str.encode()).hexdigest()[:32]
 
 
 async def display_subscription_options(event: Union[types.Message, types.CallbackQuery], i18n_data: dict, settings: Settings, session: AsyncSession):
@@ -362,6 +379,12 @@ async def my_devices_command_handler(
             await target.answer(get_text("no_devices_found"))
         return
 
+    devices_list_raw = []
+    if isinstance(devices, dict):
+        devices_list_raw = devices.get("devices") or []
+    elif isinstance(devices, list):
+        devices_list_raw = devices
+
     max_devices_value = active.get("max_devices")
     max_devices_display = get_text("devices_unlimited_label")
     if max_devices_value not in (None, 0):
@@ -372,19 +395,22 @@ async def my_devices_command_handler(
         except (TypeError, ValueError):
             max_devices_display = str(max_devices_value)
 
-    if not devices or not devices.get('devices') or len(devices.get('devices')) == 0:
+    if not devices_list_raw:
         text = get_text("no_devices_details_found_message", max_devices=max_devices_display)
     else:
         devices_list = []
-        current_devices = len(devices.get('devices') or [])
-        for index, device in enumerate(devices.get('devices') or [], start=1):
+        current_devices = len(devices_list_raw)
+        for index, device in enumerate(devices_list_raw, start=1):
             device_model = device.get('deviceModel') or None
             platform = device.get('platform') or None
             user_agent = device.get('userAgent') or None
             os_version = device.get('osVersion') or None
             created_at = device.get('createdAt')
             hwid = device.get('hwid')
-            created_at_str = datetime.fromisoformat(created_at).strftime("%d.%m.%Y %H:%M")
+            try:
+                created_at_str = datetime.fromisoformat(created_at).strftime("%d.%m.%Y %H:%M") if created_at else "-"
+            except Exception:
+                created_at_str = str(created_at)
 
             device_details = get_text("device_details", index=index, device_model=device_model, platform=platform, os_version=os_version, created_at_str=created_at_str, user_agent=user_agent, hwid=hwid)
             devices_list.append(device_details)
@@ -395,11 +421,14 @@ async def my_devices_command_handler(
     kb = base_markup.inline_keyboard
 
     devices_kb = []
-    for index, device in enumerate(devices.get('devices') or [], start=1):
+    for index, device in enumerate(devices_list_raw, start=1):
         hwid = device.get('hwid')
-        device_button_text = get_text("disconnect_device_button", hwid=hwid, index=index)
+        if not hwid:
+            continue
+        device_button_text = get_text("disconnect_device_button", hwid=_shorten_hwid_for_display(hwid), index=index)
+        hwid_token = _hwid_callback_token(hwid)
 
-        devices_kb.append([InlineKeyboardButton(text=device_button_text, callback_data=f"disconnect_device:{hwid}")])
+        devices_kb.append([InlineKeyboardButton(text=device_button_text, callback_data=f"disconnect_device:{hwid_token}")])
     kb = devices_kb + kb
     markup = InlineKeyboardMarkup(inline_keyboard=kb)
 
@@ -438,7 +467,7 @@ async def disconnect_device_handler(
         return
 
     try:
-        _, hwid = callback.data.split(":", 1)
+        _, hwid_token = callback.data.split(":", 1)
     except Exception:
         try:
             await callback.answer(get_text("error_try_again"), show_alert=True)
@@ -447,8 +476,30 @@ async def disconnect_device_handler(
         return
 
     active = await subscription_service.get_active_subscription_details(session, callback.from_user.id)
-    if not active:
+    if not active or not active.get("user_id"):
         await callback.answer(get_text("subscription_not_active"), show_alert=True)
+        return
+
+    devices = await panel_service.get_user_devices(active.get("user_id"))
+    if not devices:
+        await callback.answer(get_text("no_devices_found"), show_alert=True)
+        return
+
+    devices_list_raw = []
+    if isinstance(devices, dict):
+        devices_list_raw = devices.get("devices") or []
+    elif isinstance(devices, list):
+        devices_list_raw = devices
+
+    hwid = None
+    for device in devices_list_raw:
+        hwid_candidate = device.get("hwid")
+        if hwid_candidate and _hwid_callback_token(hwid_candidate) == hwid_token:
+            hwid = hwid_candidate
+            break
+
+    if not hwid:
+        await callback.answer(get_text("error_try_again"), show_alert=True)
         return
 
     success = await panel_service.disconnect_device(active.get("user_id"), hwid)
