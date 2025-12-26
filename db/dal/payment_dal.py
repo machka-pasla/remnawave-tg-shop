@@ -60,17 +60,18 @@ async def ensure_payment_with_provider_id(
     """Idempotently create a payment record for a provider event.
 
     If a payment with the same provider_payment_id already exists, returns it.
-    Otherwise creates a new succeeded payment with provided data.
+    Otherwise creates a new pending payment with provided data.
     """
     existing = await get_payment_by_provider_payment_id(session, provider_payment_id)
     if existing:
         return existing
 
+    pending_status = f"pending_{provider}" if provider else "pending"
     payment_payload: Dict[str, Any] = {
         "user_id": user_id,
         "amount": float(amount),
         "currency": currency,
-        "status": "succeeded",
+        "status": pending_status,
         "description": description,
         "subscription_duration_months": months,
         "provider_payment_id": provider_payment_id,

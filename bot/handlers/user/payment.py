@@ -75,44 +75,53 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         amount_data = payment_info_from_webhook.get("amount", {})
         months_for_record = int(subscription_months) if sale_mode != "traffic" else 0
         payment_value = float(amount_data.get("value", 0.0))
+        yk_payment_id_from_hook = payment_info_from_webhook.get("id")
 
+        payment_record = None
         # If this is an auto-renewal (no payment_db_id in metadata), ensure a payment record exists
         if payment_db_id is None and auto_renew_subscription_id_str:
             try:
-                # Create/ensure provider payment by YooKassa payment id for idempotency
-                yk_payment_id_from_hook = payment_info_from_webhook.get("id")
+                if not yk_payment_id_from_hook:
+                    logging.error(
+                        "Auto-renew webhook missing YooKassa payment id; cannot ensure payment record."
+                    )
+                    return
                 from db.dal import payment_dal as _payment_dal
-                ensured_payment = await _payment_dal.ensure_payment_with_provider_id(
-                    session,
-                    user_id=user_id,
-                    amount=payment_value,
-                    currency=amount_data.get("currency", settings.DEFAULT_CURRENCY_SYMBOL),
-                    months=months_for_record or 1,
-                    description=payment_info_from_webhook.get(
-                        "description") or f"Auto-renewal for {months_for_record or subscription_months} months",
-                    provider="yookassa",
-                    provider_payment_id=yk_payment_id_from_hook,
+                payment_record = await _payment_dal.get_payment_by_provider_payment_id(
+                    session, yk_payment_id_from_hook
                 )
-                payment_db_id = ensured_payment.payment_id
-                # Also persist yookassa_payment_id field if not set yet
-                try:
-                    await _payment_dal.update_payment_status_by_db_id(
+                if not payment_record:
+                    payment_record = await _payment_dal.ensure_payment_with_provider_id(
                         session,
-                        payment_db_id,
-                        payment_info_from_webhook.get("status", "succeeded"),
-                        yk_payment_id_from_hook,
+                        user_id=user_id,
+                        amount=payment_value,
+                        currency=amount_data.get("currency", settings.DEFAULT_CURRENCY_SYMBOL),
+                        months=months_for_record or 1,
+                        description=payment_info_from_webhook.get(
+                            "description") or f"Auto-renewal for {months_for_record or subscription_months} months",
+                        provider="yookassa",
+                        provider_payment_id=yk_payment_id_from_hook,
                     )
-                except Exception:
-                    # Non-fatal; continue processing
-                    logging.exception(
-                        "Failed to backfill yookassa_payment_id for ensured auto-renew payment"
-                    )
+                payment_db_id = payment_record.payment_id
             except Exception as e_ensure:
                 logging.error(
                     f"Failed to ensure payment record for auto-renew webhook (YK {payment_info_from_webhook.get('id')}): {e_ensure}",
                     exc_info=True,
                 )
                 return
+        elif payment_db_id is not None:
+            payment_record = await payment_dal.get_payment_by_db_id(session, payment_db_id)
+            if not payment_record:
+                logging.error(
+                    f"Payment record {payment_db_id} not found for YK ID {yk_payment_id_from_hook}."
+                )
+                return
+
+        if payment_record and payment_record.status == "succeeded":
+            logging.info(
+                f"Skipping duplicate YooKassa webhook for payment {payment_db_id} (YK: {yk_payment_id_from_hook})."
+            )
+            return
 
         db_user = await user_dal.get_user_by_id(session, user_id)
         if not db_user:
@@ -143,7 +152,6 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         return
 
     try:
-        yk_payment_id_from_hook = payment_info_from_webhook.get("id")
         # Try to capture and save payment method for future charges if available
         try:
             payment_method = payment_info_from_webhook.get("payment_method")
@@ -192,18 +200,6 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                     logging.exception("Failed to persist multi-card YooKassa method from webhook")
         except Exception:
             logging.exception("Failed to persist YooKassa payment method from webhook")
-        updated_payment_record = await payment_dal.update_payment_status_by_db_id(
-            session,
-            payment_db_id=payment_db_id,
-            new_status=payment_info_from_webhook.get("status", "succeeded"),
-            yk_payment_id=yk_payment_id_from_hook)
-        if not updated_payment_record:
-            logging.error(
-                f"Failed to update payment record {payment_db_id} for yk_id {yk_payment_id_from_hook}"
-            )
-            raise Exception(
-                f"DB Error: Could not update payment record {payment_db_id}")
-
         months_for_activation = int(subscription_months) if sale_mode != "traffic" else 0
         activation_details = await subscription_service.activate_subscription(
             session,
@@ -223,6 +219,18 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
             )
             raise Exception(
                 f"Subscription Error: Failed to activate for user {user_id}")
+
+        updated_payment_record = await payment_dal.update_payment_status_by_db_id(
+            session,
+            payment_db_id=payment_db_id,
+            new_status=payment_info_from_webhook.get("status", "succeeded"),
+            yk_payment_id=yk_payment_id_from_hook)
+        if not updated_payment_record:
+            logging.error(
+                f"Failed to update payment record {payment_db_id} for yk_id {yk_payment_id_from_hook}"
+            )
+            raise Exception(
+                f"DB Error: Could not update payment record {payment_db_id}")
 
         base_subscription_end_date = activation_details['end_date']
         final_end_date_for_user = base_subscription_end_date
