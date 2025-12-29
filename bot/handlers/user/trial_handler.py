@@ -88,7 +88,7 @@ async def request_trial_confirmation_handler(
             pass
 
         end_date_obj = activation_result.get("end_date")
-        config_link_display_for_trial, connect_button_url_for_trial = prepare_config_links(
+        config_link_display_for_trial, connect_button_url_for_trial = await prepare_config_links(
             settings, activation_result.get("subscription_url")
         )
         config_link_for_trial = config_link_display_for_trial or _("config_link_not_available")
@@ -240,7 +240,7 @@ async def confirm_activate_trial_handler(
             pass
 
         end_date_obj = activation_result.get("end_date")
-        config_link_display_for_trial, connect_button_url_for_trial = prepare_config_links(
+        config_link_display_for_trial, connect_button_url_for_trial = await prepare_config_links(
             settings, activation_result.get("subscription_url")
         )
         config_link_for_trial = config_link_display_for_trial or _("config_link_not_available")

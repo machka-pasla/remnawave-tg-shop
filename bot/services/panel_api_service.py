@@ -562,3 +562,20 @@ class PanelApiService:
         if response_data and not response_data.get("error") and "response" in response_data:
             return response_data.get("response")
         return None
+
+    async def encrypt_happ_link(self, link_to_encrypt: str) -> Optional[str]:
+        """Encrypt a subscription link using the panel's happ crypt4 API.
+
+        Returns the encrypted link string or None if encryption failed.
+        """
+        payload = {"linkToEncrypt": link_to_encrypt}
+        response_data = await self._request(
+            "POST",
+            "/system/tools/happ/encrypt",
+            json=payload,
+            log_full_response=False
+        )
+        if response_data and not response_data.get("error") and "response" in response_data:
+            return response_data.get("response", {}).get("encryptedLink")
+        logging.error(f"Failed to encrypt happ link. Response: {response_data}")
+        return None

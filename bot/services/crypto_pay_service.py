@@ -190,7 +190,7 @@ class CryptoPayService:
             _ = lambda k, **kw: i18n.gettext(lang, k, **kw)
 
             raw_config_link = activation.get("subscription_url") if activation else None
-            display_link, button_link = prepare_config_links(settings, raw_config_link)
+            display_link, button_link = await prepare_config_links(settings, raw_config_link)
             config_link_text = display_link or _("config_link_not_available")
             final_end = activation.get("end_date")
             applied_days = 0

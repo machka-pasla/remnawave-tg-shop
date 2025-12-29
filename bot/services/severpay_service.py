@@ -233,7 +233,7 @@ class SeverPayService:
                 _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw) if self.i18n else k
 
                 raw_config_link = activation.get("subscription_url") if activation else None
-                config_link_display, connect_button_url = prepare_config_links(self.settings, raw_config_link)
+                config_link_display, connect_button_url = await prepare_config_links(self.settings, raw_config_link)
                 config_link_text = config_link_display or _("config_link_not_available")
                 final_end = activation.get("end_date") if activation else None
                 applied_days = 0

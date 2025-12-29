@@ -902,7 +902,7 @@ class SubscriptionService:
             else None
         )
         config_link_raw = panel_user_data.get("subscriptionUrl")
-        display_link, connect_button_url = prepare_config_links(self.settings, config_link_raw)
+        display_link, connect_button_url = await prepare_config_links(self.settings, config_link_raw)
         hwid_limit = panel_user_data.get("hwidDeviceLimit")
         if hwid_limit is None:
             hwid_limit = self.settings.USER_HWID_DEVICE_LIMIT

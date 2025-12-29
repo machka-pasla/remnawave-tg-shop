@@ -253,7 +253,7 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         traffic_label = (
             str(int(traffic_amount_gb)) if float(traffic_amount_gb).is_integer() else f"{traffic_amount_gb:g}"
         )
-        config_link_display, connect_button_url = prepare_config_links(
+        config_link_display, connect_button_url = await prepare_config_links(
             settings, activation_details.get("subscription_url") if activation_details else None
         )
         config_link_text = config_link_display or _("config_link_not_available")

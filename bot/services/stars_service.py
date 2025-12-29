@@ -123,7 +123,7 @@ class StarsService:
         _ = lambda k, **kw: i18n.gettext(current_lang, k, **kw) if i18n else k
 
         raw_config_link = activation_details.get("subscription_url") if activation_details else None
-        config_link_display, connect_button_url = prepare_config_links(self.settings, raw_config_link)
+        config_link_display, connect_button_url = await prepare_config_links(self.settings, raw_config_link)
         config_link_text = config_link_display or _("config_link_not_available")
 
         if sale_mode == "traffic":

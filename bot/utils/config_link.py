@@ -1,48 +1,22 @@
-import base64
 import logging
-from functools import lru_cache
-from pathlib import Path
 from typing import Optional, Tuple
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-
 from config.settings import Settings
+from bot.services.panel_api_service import PanelApiService
 
 CRYPT4_PREFIX = "happ://crypt4/"
 
 
-@lru_cache(maxsize=1)
-def _load_crypt4_public_key() -> Optional[RSAPublicKey]:
-    """Load and cache the happ crypt4 public key from the project root."""
-    pem_path = Path(__file__).resolve().parent.parent.parent / "happ-crypt4.pem"
-    try:
-        pem_bytes = pem_path.read_bytes()
-        key = serialization.load_pem_public_key(pem_bytes)
-        return key if isinstance(key, RSAPublicKey) else None
-    except FileNotFoundError:
-        logging.error("Crypt4 public key file not found at %s", pem_path)
-    except Exception as exc:
-        logging.error("Failed to load crypt4 public key: %s", exc, exc_info=True)
+async def _encrypt_raw_link(settings: Settings, raw_link: str) -> Optional[str]:
+    """Encrypt the raw subscription URL using the panel's happ crypt4 API."""
+    async with PanelApiService(settings) as panel_service:
+        encrypted_link = await panel_service.encrypt_happ_link(raw_link)
+        if encrypted_link:
+            return encrypted_link
     return None
 
 
-def _encrypt_raw_link(raw_link: str) -> Optional[str]:
-    """Encrypt the raw subscription URL with RSA PKCS#1 v1.5 and return base64 payload."""
-    public_key = _load_crypt4_public_key()
-    if not public_key:
-        return None
-
-    try:
-        encrypted = public_key.encrypt(raw_link.encode("utf-8"), padding.PKCS1v15())
-        return base64.b64encode(encrypted).decode("utf-8")
-    except Exception as exc:
-        logging.error("Failed to encrypt config link with crypt4: %s", exc, exc_info=True)
-        return None
-
-
-def prepare_config_links(settings: Settings, raw_link: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+async def prepare_config_links(settings: Settings, raw_link: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
     """
     Build the user-facing connection key and the URL for the connect button.
 
@@ -61,7 +35,7 @@ def prepare_config_links(settings: Settings, raw_link: Optional[str]) -> Tuple[O
     button_link = cleaned
 
     if settings.CRYPT4_ENABLED:
-        encrypted_payload = _encrypt_raw_link(cleaned)
+        encrypted_payload = await _encrypt_raw_link(settings, cleaned)
         if encrypted_payload:
             display_link = f"{CRYPT4_PREFIX}{encrypted_payload}"
             button_link = display_link
