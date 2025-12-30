@@ -4,8 +4,6 @@ from typing import Optional, Tuple
 from config.settings import Settings
 from bot.services.panel_api_service import PanelApiService
 
-CRYPT4_PREFIX = "happ://crypt4/"
-
 
 async def _encrypt_raw_link(settings: Settings, raw_link: str) -> Optional[str]:
     """Encrypt the raw subscription URL using the panel's happ crypt4 API."""
@@ -21,7 +19,7 @@ async def prepare_config_links(settings: Settings, raw_link: Optional[str]) -> T
     Build the user-facing connection key and the URL for the connect button.
 
     Returns (display_link, button_link). When CRYPT4 is enabled the display link
-    is encrypted and prefixed with happ://crypt4/, and the button link is wrapped
+    is encrypted and prefixed with happ://crypt4/ by panel API, and the button link is wrapped
     with CRYPT4_REDIRECT_URL if provided.
     """
     if not raw_link:
@@ -37,7 +35,7 @@ async def prepare_config_links(settings: Settings, raw_link: Optional[str]) -> T
     if settings.CRYPT4_ENABLED:
         encrypted_payload = await _encrypt_raw_link(settings, cleaned)
         if encrypted_payload:
-            display_link = f"{CRYPT4_PREFIX}{encrypted_payload}"
+            display_link = encrypted_payload
             button_link = display_link
         else:
             logging.error("CRYPT4_ENABLED is set but encryption failed; using raw link as fallback.")
