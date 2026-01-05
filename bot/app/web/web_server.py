@@ -23,6 +23,7 @@ async def build_and_start_web_app(
     app["i18n"] = dp.get("i18n_instance")
     for key in (
         "yookassa_service",
+        "nalogo_service",
         "subscription_service",
         "referral_service",
         "panel_service",

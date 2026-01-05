@@ -46,6 +46,15 @@ class Settings(BaseSettings):
         description="When true, new YooKassa payments in autopay mode force card binding without a user checkbox."
     )
 
+    NALOGO_INN: Optional[str] = Field(
+        default=None,
+        description="INN for nalog.ru (self-employed) authentication"
+    )
+    NALOGO_PASSWORD: Optional[str] = Field(
+        default=None,
+        description="Password for nalog.ru (self-employed) authentication"
+    )
+
     WEBHOOK_BASE_URL: Optional[str] = None
 
     CRYPTOPAY_TOKEN: Optional[str] = None
@@ -555,6 +564,16 @@ def get_settings() -> Settings:
             if not _settings_instance.YOOKASSA_SHOP_ID or not _settings_instance.YOOKASSA_SECRET_KEY:
                 logging.warning(
                     "CRITICAL: YooKassa credentials (SHOP_ID or SECRET_KEY) are not set. Payments will not work."
+                )
+            if (
+                _settings_instance.NALOGO_INN
+                or _settings_instance.NALOGO_PASSWORD
+            ) and not (
+                _settings_instance.NALOGO_INN
+                and _settings_instance.NALOGO_PASSWORD
+            ):
+                logging.warning(
+                    "WARNING: Nalogo credentials are incomplete. Receipt sending will be disabled."
                 )
             if _settings_instance.FREEKASSA_ENABLED:
                 if (

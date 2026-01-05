@@ -86,6 +86,8 @@
     | `YOOKASSA_SECRET_KEY`| Секретный ключ магазина YooKassa. |
     | `YOOKASSA_AUTOPAYMENTS_ENABLED` | Включить автопродление (сохранение карт, автосписания, управление способами оплаты). |
     | `YOOKASSA_AUTOPAYMENTS_REQUIRE_CARD_BINDING` | Требовать обязательную привязку карты при оплате с автосписанием. Установите `false`, чтобы пользователю показывался чекбокс «Сохранить карту». |
+    | `NALOGO_INN` | ИНН для авторизации в nalog.ru (самозанятый). |
+    | `NALOGO_PASSWORD` | Пароль для авторизации в nalog.ru (самозанятый). |
     | `CRYPTOPAY_ENABLED` | Включить/выключить CryptoPay (`true`/`false`). |
     | `CRYPTOPAY_TOKEN` | Токен из вашего CryptoPay App. |
     | `FREEKASSA_ENABLED` | Включить/выключить FreeKassa (`true`/`false`). |

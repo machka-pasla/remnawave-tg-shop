@@ -18,6 +18,7 @@ from bot.services.subscription_service import SubscriptionService
 from bot.services.referral_service import ReferralService
 from bot.services.panel_api_service import PanelApiService
 from bot.services.yookassa_service import YooKassaService
+from bot.services.nalogo_service import NalogoService
 from bot.middlewares.i18n import JsonI18n
 from config.settings import Settings
 from bot.services.notification_service import NotificationService
@@ -37,7 +38,8 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                                      i18n: JsonI18n, settings: Settings,
                                      panel_service: PanelApiService,
                                      subscription_service: SubscriptionService,
-                                     referral_service: ReferralService):
+                                     referral_service: ReferralService,
+                                     nalogo_service: Optional[NalogoService] = None):
     metadata = payment_info_from_webhook.get("metadata", {})
     user_id_str = metadata.get("user_id")
     subscription_months_str = metadata.get("subscription_months")
@@ -144,6 +146,18 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
 
     try:
         yk_payment_id_from_hook = payment_info_from_webhook.get("id")
+        payment_before_update = None
+        if payment_db_id is not None:
+            payment_before_update = await payment_dal.get_payment_by_db_id(
+                session,
+                payment_db_id,
+            )
+        should_send_nalogo_receipt = bool(
+            nalogo_service
+            and nalogo_service.configured
+            and payment_before_update
+            and not payment_before_update.yookassa_payment_id
+        )
         # Try to capture and save payment method for future charges if available
         try:
             payment_method = payment_info_from_webhook.get("payment_method")
@@ -253,6 +267,25 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
         traffic_label = (
             str(int(traffic_amount_gb)) if float(traffic_amount_gb).is_integer() else f"{traffic_amount_gb:g}"
         )
+        if should_send_nalogo_receipt:
+            receipt_item_name = payment_info_from_webhook.get("description")
+            if not receipt_item_name:
+                if sale_mode == "traffic":
+                    receipt_item_name = f"Remnawave traffic package {traffic_label} GB"
+                else:
+                    receipt_item_name = f"Remnawave subscription {int(subscription_months)} months"
+            try:
+                await nalogo_service.create_income_receipt(
+                    item_name=receipt_item_name,
+                    amount=payment_value,
+                    quantity=1.0,
+                    operation_time=datetime.now(timezone.utc),
+                )
+            except Exception:
+                logging.exception(
+                    "Failed to send Nalogo receipt for payment %s",
+                    yk_payment_id_from_hook,
+                )
         config_link_display, connect_button_url = await prepare_config_links(
             settings, activation_details.get("subscription_url") if activation_details else None
         )
@@ -429,6 +462,7 @@ async def yookassa_webhook_route(request: web.Request):
         subscription_service: SubscriptionService = request.app[
             'subscription_service']
         referral_service: ReferralService = request.app['referral_service']
+        nalogo_service: Optional[NalogoService] = request.app.get('nalogo_service')
         async_session_factory: sessionmaker = request.app[
             'async_session_factory']
     except KeyError as e_app_ctx:
@@ -521,7 +555,8 @@ async def yookassa_webhook_route(request: web.Request):
                             await process_successful_payment(
                                 session, bot, payment_dict_for_processing,
                                 i18n_instance, settings, panel_service,
-                                subscription_service, referral_service)
+                                subscription_service, referral_service,
+                                nalogo_service)
                             await session.commit()
                         else:
                             logging.warning(

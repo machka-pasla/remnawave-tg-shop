@@ -14,6 +14,7 @@ from bot.services.panel_webhook_service import PanelWebhookService
 from bot.services.freekassa_service import FreeKassaService
 from bot.services.platega_service import PlategaService
 from bot.services.severpay_service import SeverPayService
+from bot.services.nalogo_service import NalogoService
 
 
 def build_core_services(
@@ -72,6 +73,10 @@ def build_core_services(
         bot_username_for_default_return=bot_username_for_default_return,
         settings_obj=settings,
     )
+    nalogo_service = NalogoService(
+        settings.NALOGO_INN,
+        settings.NALOGO_PASSWORD,
+    )
 
     # Wire services that depend on each other
     try:
@@ -92,6 +97,7 @@ def build_core_services(
         "freekassa_service": freekassa_service,
         "panel_webhook_service": panel_webhook_service,
         "yookassa_service": yookassa_service,
+        "nalogo_service": nalogo_service,
         "platega_service": platega_service,
         "severpay_service": severpay_service,
     }
