@@ -87,19 +87,31 @@ def get_trial_confirmation_keyboard(lang: str,
 
 
 def get_subscription_options_keyboard(subscription_options: Dict[
-    int, Optional[int]], currency_symbol_val: str, lang: str,
-                                      i18n_instance) -> InlineKeyboardMarkup:
+    float, Optional[float]], currency_symbol_val: str, lang: str,
+                                      i18n_instance, traffic_mode: bool = False) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+    def _format_gb(val: float) -> str:
+        return str(int(val)) if float(val).is_integer() else f"{val:g}"
     if subscription_options:
         for months, price in subscription_options.items():
             if price is not None:
-                button_text = _("subscribe_for_months_button",
-                                months=months,
-                                price=price,
-                                currency_symbol=currency_symbol_val)
+                if traffic_mode:
+                    button_text = _(
+                        "buy_traffic_package_button",
+                        traffic_gb=_format_gb(months),
+                        price=price,
+                        currency_symbol=currency_symbol_val,
+                    )
+                    callback_data = f"subscribe_period:{_format_gb(months)}"
+                else:
+                    button_text = _("subscribe_for_months_button",
+                                    months=months,
+                                    price=price,
+                                    currency_symbol=currency_symbol_val)
+                    callback_data = f"subscribe_period:{months}"
                 builder.button(text=button_text,
-                               callback_data=f"subscribe_period:{months}")
+                               callback_data=callback_data)
         builder.adjust(1)
     builder.row(
         InlineKeyboardButton(text=_(key="back_to_main_menu_button"),
@@ -108,26 +120,46 @@ def get_subscription_options_keyboard(subscription_options: Dict[
 
 
 def get_payment_method_keyboard(months: int, price: float,
-                                tribute_url: Optional[str],
                                 stars_price: Optional[int],
                                 currency_symbol_val: str, lang: str,
-                                i18n_instance, settings: Settings) -> InlineKeyboardMarkup:
+                                i18n_instance, settings: Settings, sale_mode: str = "subscription") -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
-    if settings.FREEKASSA_ENABLED:
-        builder.button(text=_("pay_with_sbp_button"),
-                       callback_data=f"pay_fk:{months}:{price}")
-    if settings.YOOKASSA_ENABLED:
-        builder.button(text=_("pay_with_yookassa_button"),
-                       callback_data=f"pay_yk:{months}:{price}")
-    if settings.TRIBUTE_ENABLED and tribute_url:
-        builder.button(text=_("pay_with_tribute_button"), url=tribute_url)
-    if settings.STARS_ENABLED and stars_price is not None:
-        builder.button(text=_("pay_with_stars_button"),
-                       callback_data=f"pay_stars:{months}:{stars_price}")
-    if settings.CRYPTOPAY_ENABLED:
-        builder.button(text=_("pay_with_cryptopay_button"),
-                       callback_data=f"pay_crypto:{months}:{price}")
+    def _format_value(val: float) -> str:
+        return str(int(val)) if float(val).is_integer() else f"{val:g}"
+    value_str = _format_value(months)
+    mode_suffix = f":{sale_mode}"
+    for method in settings.payment_methods_order:
+        if method == "severpay" and getattr(settings, "SEVERPAY_ENABLED", False):
+            builder.button(
+                text=_("pay_with_severpay_button"),
+                callback_data=f"pay_severpay:{value_str}:{price}{mode_suffix}",
+            )
+        elif method == "freekassa" and settings.FREEKASSA_ENABLED:
+            builder.button(
+                text=_("pay_with_sbp_button"),
+                callback_data=f"pay_fk:{value_str}:{price}{mode_suffix}",
+            )
+        elif method == "platega" and settings.PLATEGA_ENABLED:
+            builder.button(
+                text=_("pay_with_platega_button"),
+                callback_data=f"pay_platega:{value_str}:{price}{mode_suffix}",
+            )
+        elif method == "yookassa" and settings.YOOKASSA_ENABLED:
+            builder.button(
+                text=_("pay_with_yookassa_button"),
+                callback_data=f"pay_yk:{value_str}:{price}{mode_suffix}",
+            )
+        elif method == "stars" and settings.STARS_ENABLED and stars_price is not None:
+            builder.button(
+                text=_("pay_with_stars_button"),
+                callback_data=f"pay_stars:{value_str}:{stars_price}{mode_suffix}",
+            )
+        elif method == "cryptopay" and settings.CRYPTOPAY_ENABLED:
+            builder.button(
+                text=_("pay_with_cryptopay_button"),
+                callback_data=f"pay_crypto:{value_str}:{price}{mode_suffix}",
+            )
     builder.button(text=_(key="cancel_button"),
                    callback_data="main_action:subscribe")
     builder.adjust(1)
@@ -158,28 +190,33 @@ def get_yk_autopay_choice_keyboard(
     lang: str,
     i18n_instance,
     has_saved_cards: bool = True,
+    sale_mode: str = "subscription",
 ) -> InlineKeyboardMarkup:
     """Keyboard for choosing between saved card charge or new card payment when auto-renew is enabled."""
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
     price_str = str(price)
+    def _format_value(val: float) -> str:
+        return str(int(val)) if float(val).is_integer() else f"{val:g}"
+    value_str = _format_value(months)
+    suffix = f":{sale_mode}"
     if has_saved_cards:
         builder.row(
             InlineKeyboardButton(
                 text=_(key="yookassa_autopay_pay_saved_card_button"),
-                callback_data=f"pay_yk_saved_list:{months}:{price_str}",
+                callback_data=f"pay_yk_saved_list:{value_str}:{price_str}{suffix}",
             )
         )
     builder.row(
         InlineKeyboardButton(
             text=_(key="yookassa_autopay_pay_new_card_button"),
-            callback_data=f"pay_yk_new:{months}:{price_str}",
+            callback_data=f"pay_yk_new:{value_str}:{price_str}{suffix}",
         )
     )
     builder.row(
         InlineKeyboardButton(
             text=_(key="back_to_payment_methods_button"),
-            callback_data=f"subscribe_period:{months}",
+            callback_data=f"subscribe_period:{value_str}",
         )
     )
     return builder.as_markup()
@@ -192,6 +229,7 @@ def get_yk_saved_cards_keyboard(
     lang: str,
     i18n_instance,
     page: int = 0,
+    sale_mode: str = "subscription",
 ) -> InlineKeyboardMarkup:
     """Paginated keyboard for selecting a saved YooKassa card."""
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
@@ -201,12 +239,16 @@ def get_yk_saved_cards_keyboard(
     start = page * per_page
     end = min(total, start + per_page)
     price_str = str(price)
+    def _format_value(val: float) -> str:
+        return str(int(val)) if float(val).is_integer() else f"{val:g}"
+    value_str = _format_value(months)
+    suffix = f":{sale_mode}"
 
     for method_id, title in cards[start:end]:
         builder.row(
             InlineKeyboardButton(
                 text=title,
-                callback_data=f"pay_yk_use_saved:{months}:{price_str}:{method_id}",
+                callback_data=f"pay_yk_use_saved:{value_str}:{price_str}:{method_id}{suffix}",
             )
         )
 
@@ -215,14 +257,14 @@ def get_yk_saved_cards_keyboard(
         nav_buttons.append(
             InlineKeyboardButton(
                 text="⬅️",
-                callback_data=f"pay_yk_saved_list:{months}:{price_str}:{page-1}",
+                callback_data=f"pay_yk_saved_list:{value_str}:{price_str}:{page-1}{suffix}",
             )
         )
     if end < total:
         nav_buttons.append(
             InlineKeyboardButton(
                 text="➡️",
-                callback_data=f"pay_yk_saved_list:{months}:{price_str}:{page+1}",
+                callback_data=f"pay_yk_saved_list:{value_str}:{price_str}:{page+1}{suffix}",
             )
         )
     if nav_buttons:
@@ -231,13 +273,13 @@ def get_yk_saved_cards_keyboard(
     builder.row(
         InlineKeyboardButton(
             text=_(key="yookassa_autopay_pay_new_card_button"),
-            callback_data=f"pay_yk_new:{months}:{price_str}",
+            callback_data=f"pay_yk_new:{value_str}:{price_str}{suffix}",
         )
     )
     builder.row(
         InlineKeyboardButton(
             text=_(key="back_to_autopay_method_choice_button"),
-            callback_data=f"pay_yk:{months}:{price_str}",
+            callback_data=f"pay_yk:{value_str}:{price_str}{suffix}",
         )
     )
     return builder.as_markup()
@@ -329,10 +371,12 @@ def get_connect_and_main_keyboard(
         i18n_instance,
         settings: Settings,
         config_link: Optional[str],
+        connect_button_url: Optional[str] = None,
         preserve_message: bool = False) -> InlineKeyboardMarkup:
     """Keyboard with a connect button and a back to main menu button."""
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+    button_target = connect_button_url or config_link
 
     if settings.SUBSCRIPTION_MINI_APP_URL:
         builder.row(
@@ -341,9 +385,9 @@ def get_connect_and_main_keyboard(
                 web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL),
             )
         )
-    elif config_link:
+    elif button_target:
         builder.row(
-            InlineKeyboardButton(text=_("connect_button"), url=config_link)
+            InlineKeyboardButton(text=_("connect_button"), url=button_target)
         )
     else:
         builder.row(

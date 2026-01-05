@@ -21,7 +21,10 @@ class YooKassaService:
 
         self.settings = settings_obj
 
-        if not shop_id or not secret_key:
+        if self.settings and not self.settings.YOOKASSA_ENABLED:
+            logging.warning("YooKassa is disabled via YOOKASSA_ENABLED flag. Payment functionality will be DISABLED.")
+            self.configured = False
+        elif not shop_id or not secret_key:
             logging.warning(
                 "YooKassa SHOP_ID or SECRET_KEY not configured in settings. "
                 "Payment functionality will be DISABLED.")
@@ -111,10 +114,12 @@ class YooKassaService:
                 capture = False
                 amount = max(amount, 1.00)
             builder.set_capture(capture)
-            builder.set_confirmation({
-                "type": ConfirmationType.REDIRECT,
-                "return_url": self.return_url
-            })
+            if not payment_method_id:
+                # Saved payment_method_id charges must omit confirmation per YooKassa API
+                builder.set_confirmation({
+                    "type": ConfirmationType.REDIRECT,
+                    "return_url": self.return_url
+                })
             builder.set_description(description)
             builder.set_metadata(metadata)
             if save_payment_method:

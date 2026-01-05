@@ -1,6 +1,7 @@
 import aiohttp
 import logging
 import json
+import re
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 import asyncio
@@ -339,23 +340,25 @@ class PanelApiService:
             default_traffic_limit_strategy: str = "NO_RESET",
             hwid_device_limit: Optional[int] = None,
             specific_squad_uuids: Optional[List[str]] = None,
+            external_squad_uuid: Optional[str] = None,
             description: Optional[str] = None,
             tag: Optional[str] = None,
             status: str = "ACTIVE",
             log_response: bool = True) -> Optional[Dict[str, Any]]:
 
-        if not (6 <= len(username_on_panel) <= 34 and
-                username_on_panel.replace('_', '').replace('-', '').isalnum()):
-            if not (username_on_panel.startswith("tg_")
-                    and username_on_panel.split("tg_")[-1].isdigit()):
-                msg = f"Panel username '{username_on_panel}' does not meet panel requirements."
-                logging.error(msg)
-                return {
-                    "error": True,
-                    "status_code": 400,
-                    "message": msg,
-                    "errorCode": "VALIDATION_ERROR_USERNAME"
-                }
+        username_is_valid = (
+            3 <= len(username_on_panel) <= 36
+            and re.match(r"^[A-Za-z0-9_-]+$", username_on_panel) is not None
+        )
+        if not username_is_valid:
+            msg = f"Panel username '{username_on_panel}' does not meet panel requirements."
+            logging.error(msg)
+            return {
+                "error": True,
+                "status_code": 400,
+                "message": msg,
+                "errorCode": "VALIDATION_ERROR_USERNAME"
+            }
 
         now = datetime.now(timezone.utc)
         expire_at_dt = now + timedelta(days=default_expire_days)
@@ -383,6 +386,8 @@ class PanelApiService:
                 )
         if specific_squad_uuids:
             payload["activeInternalSquads"] = specific_squad_uuids
+        if external_squad_uuid:
+            payload["externalSquadUuid"] = external_squad_uuid
         if telegram_id is not None: payload["telegramId"] = telegram_id
         if email: payload["email"] = email
         if description: payload["description"] = description
@@ -556,4 +561,21 @@ class PanelApiService:
         response_data = await self._request("GET", "/system/stats/nodes", log_full_response=False)
         if response_data and not response_data.get("error") and "response" in response_data:
             return response_data.get("response")
+        return None
+
+    async def encrypt_happ_link(self, link_to_encrypt: str) -> Optional[str]:
+        """Encrypt a subscription link using the panel's happ crypt4 API.
+
+        Returns the encrypted link string or None if encryption failed.
+        """
+        payload = {"linkToEncrypt": link_to_encrypt}
+        response_data = await self._request(
+            "POST",
+            "/system/tools/happ/encrypt",
+            json=payload,
+            log_full_response=False
+        )
+        if response_data and not response_data.get("error") and "response" in response_data:
+            return response_data.get("response", {}).get("encryptedLink")
+        logging.error(f"Failed to encrypt happ link. Response: {response_data}")
         return None

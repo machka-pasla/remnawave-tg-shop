@@ -3,7 +3,7 @@ import asyncio
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.text_decorations import html_decoration as hd
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import TelegramBadRequest
 from datetime import datetime, timezone
 from typing import Optional, Union, Dict, Any, Callable
 
@@ -14,6 +14,10 @@ from bot.utils.message_queue import get_queue_manager
 from bot.utils.text_sanitizer import (
     display_name_or_fallback,
     username_for_display,
+)
+from bot.utils.telegram_markup import (
+    is_profile_link_error,
+    remove_profile_link_buttons,
 )
 
 
@@ -48,7 +52,6 @@ class NotificationService:
                 InlineKeyboardButton(
                     text=translate(
                         "log_open_profile_link",
-                        default="👤 Открыть профиль",
                     ),
                     url=f"tg://user?id={user_id}",
                 )
@@ -60,7 +63,6 @@ class NotificationService:
                 InlineKeyboardButton(
                     text=translate(
                         "log_open_referrer_profile_button",
-                        default="👤 Открыть профиль пригласившего",
                     ),
                     url=f"tg://user?id={referrer_id}",
                 )
@@ -81,14 +83,42 @@ class NotificationService:
         queue_manager = get_queue_manager()
         if not queue_manager:
             logging.warning("Message queue manager not available, falling back to direct send")
+            final_thread_id = thread_id or self.settings.LOG_THREAD_ID
+
+            def _build_kwargs(markup: Optional[InlineKeyboardMarkup]) -> Dict[str, Any]:
+                kwargs: Dict[str, Any] = {
+                    "chat_id": self.settings.LOG_CHAT_ID,
+                    "text": message,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True,
+                }
+                if markup:
+                    kwargs["reply_markup"] = markup
+                if final_thread_id:
+                    kwargs["message_thread_id"] = final_thread_id
+                return kwargs
+
             try:
-                await self.bot.send_message(
-                    chat_id=self.settings.LOG_CHAT_ID,
-                    text=message,
-                    parse_mode="HTML",
-                    disable_web_page_preview=True,
-                    reply_markup=reply_markup,
-                    message_thread_id=thread_id or self.settings.LOG_THREAD_ID
+                await self.bot.send_message(**_build_kwargs(reply_markup))
+            except TelegramBadRequest as exc:
+                if is_profile_link_error(exc):
+                    fallback_markup = remove_profile_link_buttons(reply_markup)
+                    logging.warning(
+                        "Telegram rejected profile buttons for log chat %s: %s. "
+                        "Retrying without tg:// links.",
+                        self.settings.LOG_CHAT_ID,
+                        getattr(exc, "message", "") or str(exc),
+                    )
+                    try:
+                        await self.bot.send_message(**_build_kwargs(fallback_markup))
+                    except Exception as retry_exc:
+                        logging.error(
+                            "Failed to send notification without profile buttons to log "
+                            f"channel {self.settings.LOG_CHAT_ID}: {retry_exc}"
+                        )
+                    return
+                logging.error(
+                    f"Failed to send notification to log channel {self.settings.LOG_CHAT_ID}: {exc}"
                 )
             except Exception as e:
                 logging.error(f"Failed to send notification to log channel {self.settings.LOG_CHAT_ID}: {e}")
@@ -168,16 +198,11 @@ class NotificationService:
             referrer_link = hd.link(str(referred_by_id), f"tg://user?id={referred_by_id}")
             referral_text = _(
                 "log_referral_suffix",
-                default=" (реферал от {referrer_link})",
                 referrer_link=referrer_link,
             )
         
         message = _(
             "log_new_user_registration",
-            default="👤 <b>Новый пользователь</b>\n\n"
-                   "🆔 ID: <code>{user_id}</code>\n"
-                   "👤 Имя: {user_display}{referral_text}\n"
-                   "📅 Время: {timestamp}",
             user_id=user_id,
             user_display=user_display,
             referral_text=referral_text,
@@ -190,7 +215,8 @@ class NotificationService:
     
     async def notify_payment_received(self, user_id: int, amount: float, currency: str,
                                     months: int, payment_provider: str, 
-                                    username: Optional[str] = None):
+                                    username: Optional[str] = None,
+                                    traffic_gb: Optional[float] = None):
         """Send notification about successful payment"""
         if not self.settings.LOG_PAYMENTS:
             return
@@ -208,25 +234,33 @@ class NotificationService:
             "freekassa": "💳",
             "cryptopay": "₿",
             "stars": "⭐",
-            "tribute": "💎"
+            "platega": "💳",
+            "severpay": "💳",
         }.get(payment_provider.lower(), "💰")
-        
-        message = _(
-            "log_payment_received",
-            default="{provider_emoji} <b>Получен платеж</b>\n\n"
-                   "👤 Пользователь: {user_display}\n"
-                   "💰 Сумма: <b>{amount} {currency}</b>\n"
-                   "📅 Период: <b>{months} мес.</b>\n"
-                   "🏦 Провайдер: {payment_provider}\n"
-                   "🕐 Время: {timestamp}",
-            provider_emoji=provider_emoji,
-            user_display=user_display,
-            amount=amount,
-            currency=currency,
-            months=months,
-            payment_provider=payment_provider,
-            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        )
+
+        if traffic_gb is not None:
+            traffic_label = str(int(traffic_gb)) if float(traffic_gb).is_integer() else f"{traffic_gb:g}"
+            message = _(
+                "log_payment_received_traffic",
+                provider_emoji=provider_emoji,
+                user_display=user_display,
+                amount=amount,
+                currency=currency,
+                traffic_gb=traffic_label,
+                payment_provider=payment_provider,
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+        else:
+            message = _(
+                "log_payment_received",
+                provider_emoji=provider_emoji,
+                user_display=user_display,
+                amount=amount,
+                currency=currency,
+                months=months,
+                payment_provider=payment_provider,
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
         
         # Send to log channel
         profile_keyboard = self._build_profile_keyboard(_, user_id)
@@ -248,11 +282,6 @@ class NotificationService:
         
         message = _(
             "log_promo_activation",
-            default="🎁 <b>Активирован промокод</b>\n\n"
-                   "👤 Пользователь: {user_display}\n"
-                   "🏷 Код: <code>{promo_code}</code>\n"
-                   "🎯 Бонус: <b>+{bonus_days} дн.</b>\n"
-                   "🕐 Время: {timestamp}",
             user_display=user_display,
             promo_code=promo_code,
             bonus_days=bonus_days,
@@ -279,10 +308,6 @@ class NotificationService:
         
         message = _(
             "log_trial_activation",
-            default="🆓 <b>Активирован триал</b>\n\n"
-                   "👤 Пользователь: {user_display}\n"
-                   "⏰ Действует до: <b>{end_date}</b>\n"
-                   "🕐 Время: {timestamp}",
             user_display=user_display,
             end_date=end_date.strftime("%Y-%m-%d %H:%M"),
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -311,12 +336,6 @@ class NotificationService:
         
         message = _(
             "log_panel_sync",
-            default="{status_emoji} <b>Синхронизация с панелью</b>\n\n"
-                   "📊 Статус: <b>{status}</b>\n"
-                   "👥 Обработано пользователей: <b>{users_processed}</b>\n"
-                   "📋 Синхронизировано подписок: <b>{subs_synced}</b>\n"
-                   "🕐 Время: {timestamp}\n\n"
-                   "📝 Детали:\n{details}",
             status_emoji=status_emoji,
             status=status,
             users_processed=users_processed,
@@ -347,11 +366,6 @@ class NotificationService:
 
         message = _(
             "log_suspicious_promo",
-            default="⚠️ <b>Подозрительная попытка ввода промокода</b>\n\n"
-            "👤 Пользователь: {user_display}\n"
-            "🆔 ID: <code>{user_id}</code>\n"
-            "📝 Ввод: <pre>{suspicious_input}</pre>\n"
-            "🕐 Время: {timestamp}",
             user_display=hd.quote(user_display),
             user_id=user_id,
             suspicious_input=hd.quote(suspicious_input),

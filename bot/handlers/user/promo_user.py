@@ -130,16 +130,21 @@ async def process_promo_code_input(message: types.Message, state: FSMContext,
 
             new_end_date = result if isinstance(result, datetime) else None
             active = await subscription_service.get_active_subscription_details(session, user.id)
-            config_link = active.get("config_link") if active else None
-            config_link = config_link or _("config_link_not_available")
+            config_link_display = active.get("config_link") if active else None
+            connect_button_url = active.get("connect_button_url") if active else None
+            config_link_text = config_link_display or _("config_link_not_available")
 
             response_to_user_text = _(
                 "promo_code_applied_success_full",
                 end_date=(new_end_date.strftime("%d.%m.%Y %H:%M:%S") if new_end_date else "N/A"),
-                config_link=config_link,
+                config_link=config_link_text,
             )
             reply_markup = get_connect_and_main_keyboard(
-                current_lang, i18n, settings, config_link
+                current_lang,
+                i18n,
+                settings,
+                config_link_display,
+                connect_button_url=connect_button_url,
             )
         else:
             await session.rollback()

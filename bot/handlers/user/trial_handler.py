@@ -13,6 +13,7 @@ from bot.keyboards.inline.user_keyboards import (
     get_main_menu_inline_keyboard,
     get_connect_and_main_keyboard,
 )
+from bot.utils.config_link import prepare_config_links
 from bot.middlewares.i18n import JsonI18n
 from bot.utils.menu_renderer import update_menu_message
 from .start import send_main_menu
@@ -81,7 +82,9 @@ async def request_trial_confirmation_handler(
 
     final_message_text_in_chat = ""
     show_trial_button_after_action = False
+    config_link_display_for_trial = None
     config_link_for_trial = None
+    connect_button_url_for_trial = None
 
     if activation_result and activation_result.get("activated"):
         try:
@@ -90,9 +93,10 @@ async def request_trial_confirmation_handler(
             pass
 
         end_date_obj = activation_result.get("end_date")
-        config_link_for_trial = activation_result.get("subscription_url") or _(
-            "config_link_not_available"
+        config_link_display_for_trial, connect_button_url_for_trial = await prepare_config_links(
+            settings, activation_result.get("subscription_url")
         )
+        config_link_for_trial = config_link_display_for_trial or _("config_link_not_available")
 
         traffic_gb_val = activation_result.get(
             "traffic_gb", settings.TRIAL_TRAFFIC_LIMIT_GB
@@ -147,7 +151,11 @@ async def request_trial_confirmation_handler(
 
     reply_markup = (
         get_connect_and_main_keyboard(
-            current_lang, i18n, settings, config_link_for_trial
+            current_lang,
+            i18n,
+            settings,
+            config_link_display_for_trial,
+            connect_button_url=connect_button_url_for_trial,
         )
         if activation_result and activation_result.get("activated")
         else get_main_menu_inline_keyboard(
@@ -214,7 +222,9 @@ async def confirm_activate_trial_handler(
 
     final_message_text_in_chat = ""
     show_trial_button_after_action = False
+    config_link_display_for_trial = None
     config_link_for_trial = None
+    connect_button_url_for_trial = None
 
     if activation_result and activation_result.get("activated"):
         try:
@@ -223,9 +233,10 @@ async def confirm_activate_trial_handler(
             pass
 
         end_date_obj = activation_result.get("end_date")
-        config_link_for_trial = activation_result.get("subscription_url") or _(
-            "config_link_not_available"
+        config_link_display_for_trial, connect_button_url_for_trial = await prepare_config_links(
+            settings, activation_result.get("subscription_url")
         )
+        config_link_for_trial = config_link_display_for_trial or _("config_link_not_available")
 
         traffic_gb_val = activation_result.get(
             "traffic_gb", settings.TRIAL_TRAFFIC_LIMIT_GB
@@ -268,7 +279,11 @@ async def confirm_activate_trial_handler(
 
     reply_markup = (
         get_connect_and_main_keyboard(
-            current_lang, i18n, settings, config_link_for_trial
+            current_lang,
+            i18n,
+            settings,
+            config_link_display_for_trial,
+            connect_button_url=connect_button_url_for_trial,
         )
         if activation_result and activation_result.get("activated")
         else get_main_menu_inline_keyboard(

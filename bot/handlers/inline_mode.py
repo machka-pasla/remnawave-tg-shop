@@ -103,20 +103,16 @@ async def create_referral_result(
         # Create message content (use same text as friend message)
         message_text = _(
             "referral_friend_message",
-            default="🚀 Привет! Попробуй этот VPN - быстрый, надёжный и доступный!\n\n"
-                   "🎁 По моей ссылке тебе дадут бонусные дни к подписке!\n\n{referral_link}",
             referral_link=referral_link
         )
         
         return InlineQueryResultArticle(
             id="referral_link",
             title=_(
-                "inline_referral_title",
-                default="🎁 Пригласить друга"
+                "inline_referral_title"
             ),
             description=_(
-                "inline_referral_description", 
-                default="Поделиться реферальной ссылкой для получения бонусов"
+                "inline_referral_description"
             ),
             input_message_content=InputTextMessageContent(
                 message_text=message_text,
@@ -167,13 +163,6 @@ async def create_user_stats_result(session: AsyncSession, i18n_instance, lang: s
         
         stats_text = _(
             "inline_user_stats_message",
-            default="📊 <b>Статистика Бота</b>\n👥 Пользователи\n\n"
-                   "📊 Всего: <b>{total}</b>\n"
-                   "💳 С платной подпиской: <b>{paid}</b>\n"
-                   "🆓 На пробном периоде: <b>{trial}</b>\n"
-                   "😴 Неактивных: <b>{inactive}</b>\n"
-                   "🚫 Заблокированных: <b>{banned}</b>\n"
-                   "🎁 Привлечено по реферальной программе: <b>{referral}</b>",
             total=user_stats['total_users'],
             active_today=user_stats['active_today'],
             paid=user_stats['paid_subscriptions'],
@@ -186,12 +175,10 @@ async def create_user_stats_result(session: AsyncSession, i18n_instance, lang: s
         return InlineQueryResultArticle(
             id="admin_user_stats",
             title=_(
-                "inline_admin_user_stats_title",
-                default="📊 Статистика пользователей"
+                "inline_admin_user_stats_title"
             ),
             description=_(
                 "inline_user_stats_description",
-                default="Всего: {total}, Платных: {active}",
                 total=user_stats['total_users'],
                 active=user_stats['paid_subscriptions']
             ),
@@ -217,12 +204,6 @@ async def create_financial_stats_result(session: AsyncSession, i18n_instance, la
         
         stats_text = _(
             "inline_financial_stats_message",
-            default="💰 <b>Финансовая статистика</b>\n\n"
-                   "📅 За сегодня: <b>{today:.2f} RUB</b>\n"
-                   "   ({today_count} платежей)\n"
-                   "📅 За неделю: <b>{week:.2f} RUB</b>\n"
-                   "📅 За месяц: <b>{month:.2f} RUB</b>\n"
-                   "🏆 За все время: <b>{all_time:.2f} RUB</b>",
             today=financial_stats['today_revenue'],
             today_count=financial_stats['today_payments_count'],
             week=financial_stats['week_revenue'],
@@ -233,12 +214,10 @@ async def create_financial_stats_result(session: AsyncSession, i18n_instance, la
         return InlineQueryResultArticle(
             id="admin_financial_stats",
             title=_(
-                "inline_admin_financial_stats_title",
-                default="💰 Финансовая статистика"
+                "inline_admin_financial_stats_title"
             ),
             description=_(
                 "inline_financial_description",
-                default="Сегодня: {today} RUB",
                 today=f"{financial_stats['today_revenue']:.2f}"
             ),
             input_message_content=InputTextMessageContent(
@@ -311,17 +290,6 @@ async def create_system_stats_result(session: AsyncSession, i18n_instance, lang:
                 
                 stats_text = _(
                     "inline_system_stats_message",
-                    default="🖥 <b>Статистика панели</b>\n\n"
-                           "🟢 Онлайн: <b>{online}</b>\n"
-                           "📊 Активных: <b>{active}</b>\n"
-                           "🔴 Отключенных: <b>{disabled}</b>\n"
-                           "⏰ Истекшие: <b>{expired}</b>\n"
-                           "⚠️ Ограниченные: <b>{limited}</b>\n"
-                           "👥 Всего пользователей: <b>{total}</b>\n"
-                           "💾 Использование RAM: <b>{memory:.1f}%</b>\n"
-                           "📊 Трафик за неделю: <b>{week_traffic}</b>\n"
-                           "📊 Трафик за месяц: <b>{month_traffic}</b>\n"
-                           "🔗 Активных нод: <b>{active_nodes}/{total_nodes}</b>",
                     online=online_now,
                     active=active_users,
                     disabled=disabled_users,
@@ -335,17 +303,15 @@ async def create_system_stats_result(session: AsyncSession, i18n_instance, lang:
                     total_nodes=total_nodes
                 )
             else:
-                stats_text = _("inline_panel_stats_error", default="❌ Ошибка получения данных с панели")
+                stats_text = _("inline_panel_stats_error")
         
         return InlineQueryResultArticle(
             id="admin_system_stats",
             title=_(
-                "inline_admin_system_stats_title",
-                default="🖥 Системная статистика"
+                "inline_admin_system_stats_title"
             ),
             description=_(
                 "inline_system_description",
-                default="🟢 Онлайн: {online}, 📊 Активных: {active}",
                 online=online_now,
                 active=active_users
             ),
@@ -359,15 +325,14 @@ async def create_system_stats_result(session: AsyncSession, i18n_instance, lang:
     except Exception as e:
         logging.error(f"Error creating system stats result: {e}")
         # Fallback error message
-        error_text = _("inline_panel_stats_error", default="❌ Ошибка получения данных с панели")
+        error_text = _("inline_panel_stats_error")
         
         return InlineQueryResultArticle(
             id="admin_system_stats",
             title=_(
-                "inline_admin_system_stats_title", 
-                default="🖥 Системная статистика"
+                "inline_admin_system_stats_title"
             ),
-            description=_("inline_system_error", default="Ошибка получения данных"),
+            description=_("inline_system_error"),
             input_message_content=InputTextMessageContent(
                 message_text=error_text,
                 parse_mode="HTML"
@@ -375,5 +340,3 @@ async def create_system_stats_result(session: AsyncSession, i18n_instance, lang:
             thumbnail_url=settings.INLINE_SYSTEM_STATS_THUMBNAIL_URL
         )
         return None
-
-

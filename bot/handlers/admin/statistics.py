@@ -34,30 +34,30 @@ async def show_statistics_handler(callback: types.CallbackQuery,
     user_stats = await user_dal.get_enhanced_user_statistics(session)
     
     stats_text_parts.append(
-        f"\n<b>👥 {_('admin_enhanced_users_stats_header', default='Пользователи')}</b>"
+        f"\n<b>👥 {_('admin_enhanced_users_stats_header')}</b>"
     )
     stats_text_parts.append(
-        f"📊 {_('admin_user_stats_total_label', default='Всего')}: <b>{user_stats['total_users']}</b>"
+        f"📊 {_('admin_user_stats_total_label')}: <b>{user_stats['total_users']}</b>"
     )
     # Removed: Active today moved to panel stats
     stats_text_parts.append(
-        f"💳 {_('admin_user_stats_paid_subs_label', default='С платной подпиской')}: <b>{user_stats['paid_subscriptions']}</b>"
+        f"💳 {_('admin_user_stats_paid_subs_label')}: <b>{user_stats['paid_subscriptions']}</b>"
     )
     stats_text_parts.append(
-        f"🆓 {_('admin_user_stats_trial_label', default='На пробном периоде')}: <b>{user_stats['trial_users']}</b>"
+        f"🆓 {_('admin_user_stats_trial_label')}: <b>{user_stats['trial_users']}</b>"
     )
     stats_text_parts.append(
-        f"😴 {_('admin_user_stats_inactive_label', default='Неактивных')}: <b>{user_stats['inactive_users']}</b>"
+        f"😴 {_('admin_user_stats_inactive_label')}: <b>{user_stats['inactive_users']}</b>"
     )
     stats_text_parts.append(
-        f"🚫 {_('admin_user_stats_banned_label', default='Заблокированных')}: <b>{user_stats['banned_users']}</b>"
+        f"🚫 {_('admin_user_stats_banned_label')}: <b>{user_stats['banned_users']}</b>"
     )
     stats_text_parts.append(
-        f"🎁 {_('admin_user_stats_referral_label', default='Привлечено по реферальной программе')}: <b>{user_stats['referral_users']}</b>"
+        f"🎁 {_('admin_user_stats_referral_label')}: <b>{user_stats['referral_users']}</b>"
     )
     
     # Panel Statistics - moved above financial
-    stats_text_parts.append(f"\n<b>🖥 {_('admin_panel_stats_header', default='Статистика панели')}</b>")
+    stats_text_parts.append(f"\n<b>🖥 {_('admin_panel_stats_header')}</b>")
     
     try:
         async with PanelApiService(settings) as panel_service:
@@ -80,12 +80,12 @@ async def show_statistics_handler(callback: types.CallbackQuery,
                 total_users = users.get('totalUsers', 0)
                 online_now = online_stats.get('onlineNow', 0)
                 
-                stats_text_parts.append(f"🟢 {_('admin_panel_online_label', default='Онлайн')}: <b>{online_now}</b>")
-                stats_text_parts.append(f"📊 {_('admin_panel_active_label', default='Активных')}: <b>{active_users}</b>")
-                stats_text_parts.append(f"🔴 {_('admin_panel_disabled_label', default='Отключенных')}: <b>{disabled_users}</b>")
-                stats_text_parts.append(f"⏰ {_('admin_panel_expired_label', default='Истекшие')}: <b>{expired_users}</b>")
-                stats_text_parts.append(f"⚠️ {_('admin_panel_limited_label', default='Ограниченные')}: <b>{limited_users}</b>")
-                stats_text_parts.append(f"👥 {_('admin_panel_total_users_label', default='Всего пользователей')}: <b>{total_users}</b>")
+                stats_text_parts.append(f"🟢 {_('admin_panel_online_label')}: <b>{online_now}</b>")
+                stats_text_parts.append(f"📊 {_('admin_panel_active_label')}: <b>{active_users}</b>")
+                stats_text_parts.append(f"🔴 {_('admin_panel_disabled_label')}: <b>{disabled_users}</b>")
+                stats_text_parts.append(f"⏰ {_('admin_panel_expired_label')}: <b>{expired_users}</b>")
+                stats_text_parts.append(f"⚠️ {_('admin_panel_limited_label')}: <b>{limited_users}</b>")
+                stats_text_parts.append(f"👥 {_('admin_panel_total_users_label')}: <b>{total_users}</b>")
                 
                 # System resources
                 memory = system_stats.get('memory', {})
@@ -93,9 +93,9 @@ async def show_statistics_handler(callback: types.CallbackQuery,
                     memory_total = memory.get('total', 1)
                     memory_used = memory.get('used', 0)
                     memory_usage = (memory_used / memory_total) * 100 if memory_total > 0 else 0
-                    stats_text_parts.append(f"💾 {_('admin_panel_memory_usage_label', default='Использование RAM')}: <b>{memory_usage:.1f}%</b>")
+                    stats_text_parts.append(f"💾 {_('admin_panel_memory_usage_label')}: <b>{memory_usage:.1f}%</b>")
             else:
-                stats_text_parts.append(f"⚠️ {_('admin_panel_system_stats_error', default='Ошибка получения системной статистики')}")
+                stats_text_parts.append(f"⚠️ {_('admin_panel_system_stats_error')}")
             
             # Bandwidth stats
             if bandwidth_stats:
@@ -107,13 +107,13 @@ async def show_statistics_handler(callback: types.CallbackQuery,
                 
                 if week_traffic:
                     week_total = week_traffic.get('current', '0 B')
-                    stats_text_parts.append(f"📊 {_('admin_panel_traffic_week_label', default='Трафик за неделю')}: <b>{week_total}</b>")
+                    stats_text_parts.append(f"📊 {_('admin_panel_traffic_week_label')}: <b>{week_total}</b>")
                     
                 if month_traffic:
                     month_total = month_traffic.get('current', '0 B')
-                    stats_text_parts.append(f"📊 {_('admin_panel_traffic_month_label', default='Трафик за месяц')}: <b>{month_total}</b>")
+                    stats_text_parts.append(f"📊 {_('admin_panel_traffic_month_label')}: <b>{month_total}</b>")
             else:
-                stats_text_parts.append(f"⚠️ {_('admin_panel_bandwidth_stats_error', default='Ошибка получения статистики трафика')}")
+                stats_text_parts.append(f"⚠️ {_('admin_panel_bandwidth_stats_error')}")
             
             # Nodes stats  
             if nodes_stats and 'lastSevenDays' in nodes_stats:
@@ -124,35 +124,35 @@ async def show_statistics_handler(callback: types.CallbackQuery,
                     unique_nodes.add(node_data.get('nodeName', ''))
                 total_nodes_count = len(unique_nodes)
                 # Assume all nodes are active since we don't have status info
-                stats_text_parts.append(f"🔗 {_('admin_panel_nodes_label', default='Активных нод')}: <b>{total_nodes_count}/{total_nodes_count}</b>")
+                stats_text_parts.append(f"🔗 {_('admin_panel_nodes_label')}: <b>{total_nodes_count}/{total_nodes_count}</b>")
             else:
                 # Use nodes total from system stats as fallback
                 nodes_info = system_stats.get('nodes', {}) if system_stats else {}
                 total_online = nodes_info.get('totalOnline', 0)
-                stats_text_parts.append(f"🔗 {_('admin_panel_nodes_label', default='Активных нод')}: <b>{total_online}</b>")
+                stats_text_parts.append(f"🔗 {_('admin_panel_nodes_label')}: <b>{total_online}</b>")
                 
     except Exception as e:
         logging.error(f"Failed to fetch panel statistics: {e}", exc_info=True)
-        stats_text_parts.append(f"❌ {_('admin_panel_stats_fetch_error', default='Ошибка получения данных с панели')}")
-        stats_text_parts.append(f"⚠️ {_('admin_panel_stats_error_details', default='Детали')}: {str(e)}")
+        stats_text_parts.append(f"❌ {_('admin_panel_stats_fetch_error')}")
+        stats_text_parts.append(f"⚠️ {_('admin_panel_stats_error_details')}: {str(e)}")
 
     # Financial statistics
     financial_stats = await payment_dal.get_financial_statistics(session)
     
     stats_text_parts.append(
-        f"\n<b>💰 {_('admin_financial_stats_header', default='Финансовая статистика')}</b>"
+        f"\n<b>💰 {_('admin_financial_stats_header')}</b>"
     )
     stats_text_parts.append(
-        f"📅 {_('admin_financial_today_label', default='За сегодня')}: <b>{financial_stats['today_revenue']:.2f} RUB</b> ({financial_stats['today_payments_count']} {_('admin_financial_payments_label', default='платежей')})"
+        f"📅 {_('admin_financial_today_label')}: <b>{financial_stats['today_revenue']:.2f} RUB</b> ({financial_stats['today_payments_count']} {_('admin_financial_payments_label')})"
     )
     stats_text_parts.append(
-        f"📅 {_('admin_financial_week_label', default='За неделю')}: <b>{financial_stats['week_revenue']:.2f} RUB</b>"
+        f"📅 {_('admin_financial_week_label')}: <b>{financial_stats['week_revenue']:.2f} RUB</b>"
     )
     stats_text_parts.append(
-        f"📅 {_('admin_financial_month_label', default='За месяц')}: <b>{financial_stats['month_revenue']:.2f} RUB</b>"
+        f"📅 {_('admin_financial_month_label')}: <b>{financial_stats['month_revenue']:.2f} RUB</b>"
     )
     stats_text_parts.append(
-        f"🏆 {_('admin_financial_all_time_label', default='За все время')}: <b>{financial_stats['all_time_revenue']:.2f} RUB</b>"
+        f"🏆 {_('admin_financial_all_time_label')}: <b>{financial_stats['all_time_revenue']:.2f} RUB</b>"
     )
 
     last_payments_models: List[
@@ -162,8 +162,21 @@ async def show_statistics_handler(callback: types.CallbackQuery,
         stats_text_parts.append(
             f"\n<b>{_('admin_stats_recent_payments_header')}</b>")
         for payment in last_payments_models:
-            status_emoji = "✅" if payment.status == 'succeeded' else (
-                "⏳" if payment.status in ['pending', 'pending_yookassa', 'pending_freekassa'] else "❌")
+            pending_statuses = [
+                "pending",
+                "pending_yookassa",
+                "pending_freekassa",
+                "pending_platega",
+                "pending_severpay",
+                "pending_cryptopay",
+            ]
+            status_emoji = (
+                "✅"
+                if payment.status == "succeeded"
+                else "⏳"
+                if payment.status in pending_statuses
+                else "❌"
+            )
 
             user_info = f"User {payment.user_id}"
             if payment.user and payment.user.username:

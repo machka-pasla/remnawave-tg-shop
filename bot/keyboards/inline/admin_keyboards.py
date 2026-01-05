@@ -26,7 +26,7 @@ def get_admin_panel_keyboard(i18n_instance, lang: str,
                    callback_data="admin_section:promo_marketing")
     
     # Реклама
-    builder.button(text=_(key="admin_ads_section", default="📈 Реклама"),
+    builder.button(text=_(key="admin_ads_section"),
                    callback_data="admin_action:ads")
 
     # Системные функции
@@ -43,7 +43,7 @@ def get_stats_monitoring_keyboard(i18n_instance, lang: str) -> InlineKeyboardMar
     
     builder.button(text=_(key="admin_stats_button"),
                    callback_data="admin_action:stats")
-    builder.button(text=_(key="admin_view_payments_button", default="💰 Платежи"),
+    builder.button(text=_(key="admin_view_payments_button"),
                    callback_data="admin_action:view_payments")
     builder.button(text=_(key="admin_view_logs_menu_button"),
                    callback_data="admin_action:view_logs_menu")
@@ -125,7 +125,7 @@ def get_system_functions_keyboard(i18n_instance, lang: str) -> InlineKeyboardMar
 def get_ads_menu_keyboard(i18n_instance, lang: str) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
-    builder.button(text=_(key="admin_ads_create_button", default="➕ Создать кампанию"),
+    builder.button(text=_(key="admin_ads_create_button"),
                    callback_data="admin_action:ads_create")
     builder.button(text=_(key="back_to_admin_panel_button"),
                    callback_data="admin_action:main")
@@ -156,7 +156,7 @@ def get_ads_list_keyboard(
         if current_page > 0:
             row.append(
                 InlineKeyboardButton(
-                    text="⬅️ " + _("prev_page_button", default="Prev"),
+                    text="⬅️ " + _("prev_page_button"),
                     callback_data=f"admin_ads:page:{current_page - 1}",
                 )
             )
@@ -169,14 +169,14 @@ def get_ads_list_keyboard(
         if current_page < total_pages - 1:
             row.append(
                 InlineKeyboardButton(
-                    text=_("next_page_button", default="Next") + " ➡️",
+                    text=_("next_page_button") + " ➡️",
                     callback_data=f"admin_ads:page:{current_page + 1}",
                 )
             )
         if row:
             builder.row(*row)
 
-    builder.button(text=_(key="admin_ads_create_button", default="➕ Создать кампанию"),
+    builder.button(text=_(key="admin_ads_create_button"),
                    callback_data="admin_action:ads_create")
     builder.button(text=_(key="back_to_admin_panel_button"),
                    callback_data="admin_action:main")
@@ -188,9 +188,9 @@ def get_ad_card_keyboard(i18n_instance, lang: str, campaign_id: int, back_page: 
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
     # Dangerous action: Delete campaign
-    builder.button(text=_(key="admin_ads_delete_button", default="🗑 Удалить кампанию"),
+    builder.button(text=_(key="admin_ads_delete_button"),
                    callback_data=f"admin_ads:delete:{campaign_id}:{back_page}")
-    builder.button(text=_(key="back_to_ads_list_button", default="⬅️ К списку"),
+    builder.button(text=_(key="back_to_ads_list_button"),
                    callback_data=f"admin_ads:page:{back_page}")
     builder.button(text=_(key="back_to_admin_panel_button"),
                    callback_data="admin_action:main")
@@ -227,12 +227,12 @@ def get_logs_pagination_keyboard(
     if current_page > 0:
         row_buttons.append(
             InlineKeyboardButton(
-                text="⬅️ " + _("prev_page_button", default="Prev"),
+                text="⬅️ " + _("prev_page_button"),
                 callback_data=f"{base_callback_data}:{current_page - 1}"))
     if current_page < total_pages - 1:
         row_buttons.append(
             InlineKeyboardButton(
-                text=_("next_page_button", default="Next") + " ➡️",
+                text=_("next_page_button") + " ➡️",
                 callback_data=f"{base_callback_data}:{current_page + 1}"))
 
     if row_buttons: builder.row(*row_buttons)
@@ -386,8 +386,7 @@ def get_user_card_keyboard(user_id: int,
             callback_data=f"admin_ban_confirm:{user_id}:{banned_list_page}")
     builder.button(
         text=_(
-            key="user_card_open_profile_button",
-            default="👤 Open profile"
+            key="user_card_open_profile_button"
         ),
         url=f"tg://user?id={user_id}"
     )
@@ -418,16 +417,13 @@ def get_broadcast_confirmation_keyboard(lang: str,
 
     # Row: target selection (all / active / inactive)
     target_all_label = _(
-        key="broadcast_target_all_button",
-        default="👥 Все"
+        key="broadcast_target_all_button"
     )
     target_active_label = _(
-        key="broadcast_target_active_button",
-        default="✅ Активные"
+        key="broadcast_target_active_button"
     )
     target_inactive_label = _(
-        key="broadcast_target_inactive_button",
-        default="⌛ Неактивные"
+        key="broadcast_target_inactive_button"
     )
 
     # Highlight current selection with a prefix
@@ -449,9 +445,9 @@ def get_broadcast_confirmation_keyboard(lang: str,
     builder.adjust(3)
 
     # Row: confirmation
-    builder.button(text=_(key="confirm_broadcast_send_button", default="🚀 Отправить"),
+    builder.button(text=_(key="confirm_broadcast_send_button"),
                    callback_data="broadcast_final_action:send")
-    builder.button(text=_(key="cancel_broadcast_button", default="❌ Отмена"),
+    builder.button(text=_(key="cancel_broadcast_button"),
                    callback_data="broadcast_final_action:cancel")
     builder.adjust(2)
     return builder.as_markup()
